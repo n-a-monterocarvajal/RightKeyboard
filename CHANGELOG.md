@@ -17,6 +17,12 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 - Campo de nombre para identificar teclados que Windows reporta sin nombre.
 - Menú de bandeja ampliado con **Configuración** y un renderer visual propio.
 
+### Validación en curso
+
+- Compilación Release con .NET SDK 10.0.301 sin errores ni advertencias.
+- Veinticinco pruebas automatizadas correctas en Windows x64.
+- La certificación física, el instalador por usuario y los artefactos de publicación siguen pendientes; este estado no corresponde todavía a una candidata de lanzamiento.
+
 ### Añadido
 
 - Identificación visible del dispositivo mediante propiedades Plug and Play.

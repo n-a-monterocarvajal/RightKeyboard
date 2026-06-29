@@ -8,6 +8,8 @@ La primera prueba host de `1.5.0-alpha.1` confirmó el funcionamiento y aportó 
 
 El alcance incluye además un [instalador por usuario](docs/distribucion-1.5.md) sin elevación, inicio automático activado por defecto, una única raíz de archivos administrados por RightKeyboard y exportación/importación de preferencias.
 
+La promoción a candidata y estable se rige por la [matriz de calidad y criterios de publicación](docs/calidad-1.5.md).
+
 ### Identificación visible del teclado
 
 El selector debe indicar qué teclado generó la pulsación. La información se obtendrá de propiedades Plug and Play compatibles con Windows, priorizando:

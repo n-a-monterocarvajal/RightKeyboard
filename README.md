@@ -31,11 +31,13 @@ C:\Users\<usuario>\AppData\Local\RightKeyboard\preferences.json
 
 La opción **Limpiar preferencias** vacía las asociaciones y la lista de dispositivos ignorados. No modifica las distribuciones instaladas en Windows. Si existe un `config.txt` creado por la versión 1.4, RightKeyboard lo migra automáticamente al nuevo formato.
 
-El instalador activa de forma predeterminada el inicio con Windows. Se puede cambiar posteriormente desde **Configuración** o desde las aplicaciones de inicio de Windows.
+El instalador activa de forma predeterminada el inicio con Windows para el usuario actual, sin requerir permisos administrativos. Se puede cambiar posteriormente desde **Configuración** o desde las aplicaciones de inicio de Windows.
 
 Cerrar el selector sin aceptar no crea una asociación. Las pulsaciones de modificadores, las liberaciones de tecla y los eventos de teclado sintéticos no abren el selector. El selector permite asignar un nombre al dispositivo, agrupa las distribuciones por idioma y permite ignorar periféricos que publican entradas de teclado sin ser teclados, como ciertos mouse con botones avanzados.
 
-Desde **Configuración** se pueden editar preferencias sin repetir el flujo de detección. La exportación genera un JSON portable; al importar se puede combinar o reemplazar la configuración actual y RightKeyboard crea primero un respaldo en `%LOCALAPPDATA%\RightKeyboard\exports`.
+Desde **Configuración** se pueden editar preferencias sin repetir el flujo de detección. La exportación genera un archivo JSON; al importar se puede combinar o reemplazar la configuración actual y RightKeyboard crea primero un respaldo en `%LOCALAPPDATA%\RightKeyboard\exports`. La portabilidad entre equipos forma parte de la validación pendiente de 1.5.
+
+> **Estado de la versión 1.5:** la rama en desarrollo todavía no constituye una versión publicable. La matriz de validación, los bloqueantes y los criterios de promoción están en [docs/calidad-1.5.md](docs/calidad-1.5.md).
 
 El contrato del esquema, las validaciones, las rutas y el alcance exacto de **Limpiar preferencias** se documentan en [Preferencias y portabilidad de RightKeyboard 1.5](docs/preferencias-1.5.md).
 
