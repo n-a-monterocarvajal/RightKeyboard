@@ -14,12 +14,14 @@ public sealed class LayoutSelectionDialog : Form
         SetStyle(ControlStyles.ApplyThemingImplicitly, true);
 
         Text = "Seleccionar distribución del teclado";
+        AccessibleDescription = "Asigna un nombre y una distribución al teclado detectado.";
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         MaximizeBox = false;
         ShowInTaskbar = false;
         AutoScaleMode = AutoScaleMode.Dpi;
+        Font = SystemFonts.MessageBoxFont;
         ClientSize = new Size(620, 590);
         MinimumSize = new Size(540, 500);
         Padding = new Padding(28);
@@ -68,16 +70,20 @@ public sealed class LayoutSelectionDialog : Form
             Text = suggestedName,
             PlaceholderText = $"Teclado {device.TechnicalId.Split(' ').LastOrDefault()}",
             Margin = new Padding(0, 0, 0, 8),
-            AccessibleName = "Nombre para este teclado"
+            AccessibleName = "Nombre para este teclado",
+            AccessibleDescription = "Alias opcional para reconocer el dispositivo más adelante."
         };
         devicePanel.Controls.Add(customNameTextBox);
-        devicePanel.Controls.Add(new Label
+        Label detectedDeviceLabel = new()
         {
             AutoSize = true,
             ForeColor = SystemColors.GrayText,
             Text = $"Detectado: {device.DisplayName}  ·  {device.TechnicalId}",
-            AccessibleName = "Información detectada del dispositivo"
-        });
+            MaximumSize = new Size(420, 0),
+            AccessibleName = "Información detectada del dispositivo",
+            AccessibleDescription = $"Nombre detectado: {device.DisplayName}. Identificador técnico: {device.TechnicalId}."
+        };
+        devicePanel.Controls.Add(detectedDeviceLabel);
 
         Panel listContainer = new()
         {
@@ -94,7 +100,8 @@ public sealed class LayoutSelectionDialog : Form
             WrapContents = false,
             Padding = new Padding(12),
             BackColor = SystemColors.Window,
-            AccessibleName = "Idiomas y distribuciones de teclado"
+            AccessibleName = "Idiomas y distribuciones de teclado",
+            AccessibleDescription = "Usa Tab para entrar en la lista y las flechas para cambiar la selección."
         };
         layoutList.SizeChanged += (_, _) => ResizeLayoutRows();
         listContainer.Controls.Add(layoutList);
@@ -104,7 +111,7 @@ public sealed class LayoutSelectionDialog : Form
             AutoSize = true,
             ForeColor = SystemColors.GrayText,
             Text = "Elige una distribución. Si el dispositivo no es un teclado, puedes ignorarlo y recuperarlo después desde Configuración.",
-            MaximumSize = new Size(560, 0),
+            MaximumSize = new Size(460, 0),
             Margin = new Padding(0, 14, 0, 14)
         };
 
@@ -116,13 +123,14 @@ public sealed class LayoutSelectionDialog : Form
             WrapContents = false,
             Margin = new Padding(0)
         };
-        acceptButton = ActionButton("Aceptar");
+        acceptButton = ActionButton("&Aceptar");
         acceptButton.Enabled = false;
         acceptButton.Click += (_, _) => AcceptSelection();
-        Button cancelButton = ActionButton("Cancelar");
+        Button cancelButton = ActionButton("&Cancelar");
         cancelButton.DialogResult = DialogResult.Cancel;
-        Button ignoreButton = ActionButton("Ignorar este dispositivo");
+        Button ignoreButton = ActionButton("&Ignorar este dispositivo");
         ignoreButton.Margin = new Padding(0);
+        ignoreButton.AccessibleDescription = "Guarda el dispositivo como ignorado; puede recuperarse desde Configuración.";
         ignoreButton.Click += (_, _) => IgnoreDevice();
         actions.Controls.Add(acceptButton);
         actions.Controls.Add(cancelButton);
@@ -138,7 +146,11 @@ public sealed class LayoutSelectionDialog : Form
         CancelButton = cancelButton;
 
         LoadLayouts();
-        Shown += (_, _) => customNameTextBox.SelectAll();
+        Shown += (_, _) =>
+        {
+            customNameTextBox.SelectAll();
+            customNameTextBox.Focus();
+        };
     }
 
     public Layout? SelectedLayout { get; private set; }
@@ -176,7 +188,8 @@ public sealed class LayoutSelectionDialog : Form
                     Padding = new Padding(16, 0, 12, 0),
                     Margin = new Padding(0, 0, 0, 4),
                     Tag = layout,
-                    AccessibleName = $"{language.Key}, {layout.LayoutName}"
+                    AccessibleName = $"{language.Key}, {layout.LayoutName}",
+                    AccessibleDescription = "Distribución disponible. Usa las flechas para recorrer la lista."
                 };
                 row.FlatAppearance.BorderColor = SystemColors.ControlLight;
                 row.FlatAppearance.CheckedBackColor = SystemColors.GradientActiveCaption;
@@ -247,7 +260,10 @@ public sealed class LayoutSelectionDialog : Form
     {
         Text = text,
         AutoSize = true,
+        AutoSizeMode = AutoSizeMode.GrowAndShrink,
+        MinimumSize = new Size(88, 36),
         Margin = new Padding(8, 0, 0, 0),
-        Padding = new Padding(12, 4, 12, 4)
+        Padding = new Padding(12, 4, 12, 4),
+        UseVisualStyleBackColor = true
     };
 }

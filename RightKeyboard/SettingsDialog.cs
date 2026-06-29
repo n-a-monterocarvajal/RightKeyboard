@@ -34,10 +34,13 @@ internal sealed class SettingsDialog : Form
 
         SetStyle(ControlStyles.ApplyThemingImplicitly, true);
         Text = "Configuración de RightKeyboard";
+        AccessibleDescription = "Edita alias, distribuciones y dispositivos ignorados, incluso si están desconectados.";
         StartPosition = FormStartPosition.CenterScreen;
         MinimumSize = new Size(800, 540);
         ClientSize = new Size(920, 620);
         AutoScaleMode = AutoScaleMode.Dpi;
+        Font = SystemFonts.MessageBoxFont;
+        KeyPreview = true;
         Padding = new Padding(24);
         Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
 
@@ -68,11 +71,23 @@ internal sealed class SettingsDialog : Form
         content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 38));
         content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 62));
 
-        Panel leftPanel = new()
+        TableLayoutPanel leftPanel = new()
         {
             Dock = DockStyle.Fill,
-            Padding = new Padding(0, 0, 18, 0)
+            ColumnCount = 1,
+            RowCount = 2,
+            Padding = new Padding(0, 0, 18, 0),
+            Margin = new Padding(0)
         };
+        leftPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        leftPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        leftPanel.Controls.Add(new Label
+        {
+            AutoSize = true,
+            Text = "Dispositivos conocidos",
+            Font = new Font(Font, FontStyle.Bold),
+            Margin = new Padding(0, 0, 0, 10)
+        }, 0, 0);
         deviceList = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
@@ -80,9 +95,11 @@ internal sealed class SettingsDialog : Form
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
             Padding = new Padding(0, 0, 8, 0),
-            AccessibleName = "Dispositivos conocidos"
+            AccessibleName = "Dispositivos conocidos",
+            AccessibleDescription = "Incluye dispositivos conectados, desconectados e ignorados."
         };
         deviceList.SizeChanged += (_, _) => ResizeDeviceButtons();
+        deviceList.FontChanged += (_, _) => ResizeDeviceButtons();
         emptyLabel = new Label
         {
             AutoSize = true,
@@ -90,7 +107,7 @@ internal sealed class SettingsDialog : Form
             ForeColor = SystemColors.GrayText,
             Padding = new Padding(8)
         };
-        leftPanel.Controls.Add(deviceList);
+        leftPanel.Controls.Add(deviceList, 0, 1);
 
         TableLayoutPanel editor = new()
         {
@@ -99,7 +116,8 @@ internal sealed class SettingsDialog : Form
             RowCount = 11,
             Padding = new Padding(20),
             BackColor = SystemColors.Window,
-            ForeColor = SystemColors.WindowText
+            ForeColor = SystemColors.WindowText,
+            AccessibleName = "Editor del dispositivo seleccionado"
         };
         editor.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         editor.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -118,7 +136,9 @@ internal sealed class SettingsDialog : Form
         {
             Dock = DockStyle.Top,
             PlaceholderText = "Nombre reconocible",
-            Margin = new Padding(0, 6, 0, 16)
+            Margin = new Padding(0, 6, 0, 16),
+            AccessibleName = "Nombre para este teclado",
+            AccessibleDescription = "Alias opcional que se muestra en lugar del nombre detectado."
         };
         editor.Controls.Add(customNameTextBox);
 
@@ -135,7 +155,10 @@ internal sealed class SettingsDialog : Form
             Dock = DockStyle.Top,
             DropDownStyle = ComboBoxStyle.DropDownList,
             DisplayMember = nameof(RightKeyboard.Layout.Name),
-            Margin = new Padding(0, 6, 0, 14)
+            Margin = new Padding(0, 6, 0, 14),
+            MaxDropDownItems = 12,
+            AccessibleName = "Distribución del teclado",
+            AccessibleDescription = "Idioma y distribución que se aplicarán al usar este dispositivo."
         };
         layoutComboBox.Items.Add("Sin distribución");
         layoutComboBox.Items.AddRange(layouts.Cast<object>().ToArray());
@@ -145,7 +168,8 @@ internal sealed class SettingsDialog : Form
         {
             AutoSize = true,
             Text = "Ignorar eventos de este dispositivo",
-            Margin = new Padding(0, 0, 0, 16)
+            Margin = new Padding(0, 0, 0, 16),
+            AccessibleDescription = "Impide que RightKeyboard cambie la distribución al recibir eventos del dispositivo."
         };
         ignoredCheckBox.CheckedChanged += (_, _) => layoutComboBox.Enabled = !ignoredCheckBox.Checked;
         editor.Controls.Add(ignoredCheckBox);
@@ -157,9 +181,10 @@ internal sealed class SettingsDialog : Form
             WrapContents = false,
             Margin = new Padding(0)
         };
-        saveButton = ActionButton("Guardar cambios");
+        saveButton = ActionButton("&Guardar cambios");
+        saveButton.AccessibleDescription = "Guarda el alias, la distribución y el estado ignorado. Atajo: Control más S.";
         saveButton.Click += (_, _) => SaveSelectedPreference();
-        forgetButton = ActionButton("Olvidar dispositivo");
+        forgetButton = ActionButton("&Olvidar dispositivo");
         forgetButton.Click += (_, _) => ForgetSelectedDevice();
         preferenceActions.Controls.Add(saveButton);
         preferenceActions.Controls.Add(forgetButton);
@@ -174,17 +199,27 @@ internal sealed class SettingsDialog : Form
         content.Controls.Add(leftPanel, 0, 0);
         content.Controls.Add(editor, 1, 0);
 
-        FlowLayoutPanel footer = new()
+        TableLayoutPanel footer = new()
+        {
+            AutoSize = true,
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 1,
+            Margin = new Padding(0, 20, 0, 0)
+        };
+        footer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        FlowLayoutPanel secondaryActions = new()
         {
             AutoSize = true,
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = false,
-            Margin = new Padding(0, 20, 0, 0)
+            WrapContents = true,
+            Margin = new Padding(0)
         };
-        Button exportButton = ActionButton("Exportar");
+        Button exportButton = ActionButton("&Exportar");
         exportButton.Click += (_, _) => ExportConfiguration();
-        Button importButton = ActionButton("Importar");
+        Button importButton = ActionButton("&Importar");
         importButton.Click += (_, _) => ImportConfiguration();
         startupCheckBox = new CheckBox
         {
@@ -193,13 +228,14 @@ internal sealed class SettingsDialog : Form
             Checked = StartupManager.IsEnabled,
             Margin = new Padding(24, 8, 0, 0)
         };
-        Button closeButton = ActionButton("Cerrar");
+        Button closeButton = ActionButton("&Cerrar");
         closeButton.DialogResult = DialogResult.OK;
-        closeButton.Margin = new Padding(24, 0, 0, 0);
-        footer.Controls.Add(exportButton);
-        footer.Controls.Add(importButton);
-        footer.Controls.Add(startupCheckBox);
-        footer.Controls.Add(closeButton);
+        closeButton.Margin = new Padding(16, 0, 0, 0);
+        secondaryActions.Controls.Add(exportButton);
+        secondaryActions.Controls.Add(importButton);
+        secondaryActions.Controls.Add(startupCheckBox);
+        footer.Controls.Add(secondaryActions, 0, 0);
+        footer.Controls.Add(closeButton, 1, 0);
 
         root.Controls.Add(title, 0, 0);
         root.Controls.Add(content, 0, 1);
@@ -209,6 +245,14 @@ internal sealed class SettingsDialog : Form
         CancelButton = closeButton;
 
         startupCheckBox.CheckedChanged += (_, _) => StartupManager.SetEnabled(startupCheckBox.Checked);
+        KeyDown += (_, eventArgs) =>
+        {
+            if (eventArgs.Control && eventArgs.KeyCode == Keys.S && saveButton.Enabled)
+            {
+                SaveSelectedPreference();
+                eventArgs.SuppressKeyPress = true;
+            }
+        };
         RefreshDeviceList();
     }
 
@@ -228,12 +272,10 @@ internal sealed class SettingsDialog : Form
         foreach (DevicePreference preference in configuration.Devices.Values
                      .OrderBy(preference => preference.DisplayName, StringComparer.CurrentCultureIgnoreCase))
         {
-            string state = connected.Contains(preference.Identity) ? "Conectado" : "Desconectado";
-            string mode = configuration.IgnoredDevices.Contains(preference.Identity)
-                ? "Ignorado"
-                : configuration.LayoutMappings.TryGetValue(preference.Identity, out Layout? layout)
-                    ? layout.Name
-                    : "Sin distribución";
+            bool isConnected = connected.Contains(preference.Identity);
+            bool isIgnored = configuration.IgnoredDevices.Contains(preference.Identity);
+            configuration.LayoutMappings.TryGetValue(preference.Identity, out Layout? layout);
+            DevicePresentation presentation = DevicePresentation.Create(isConnected, isIgnored, layout);
             RadioButton button = new()
             {
                 Appearance = Appearance.Button,
@@ -242,12 +284,15 @@ internal sealed class SettingsDialog : Form
                 FlatStyle = FlatStyle.Flat,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(12, 6, 12, 6),
-                Text = $"{preference.DisplayName}\r\n{state} · {mode}",
+                Text = presentation.GetListText(preference.DisplayName),
                 Tag = preference.Identity,
                 Margin = new Padding(0, 0, 0, 8),
-                AccessibleName = $"{preference.DisplayName}, {state}, {mode}"
+                AutoEllipsis = true,
+                AccessibleName = presentation.GetAccessibleName(preference.DisplayName),
+                AccessibleDescription = "Selecciona el dispositivo para editar sus preferencias."
             };
             button.FlatAppearance.BorderColor = SystemColors.ControlLight;
+            button.FlatAppearance.CheckedBackColor = SystemColors.GradientActiveCaption;
             button.CheckedChanged += (_, _) =>
             {
                 if (button.Checked)
@@ -279,6 +324,7 @@ internal sealed class SettingsDialog : Form
         foreach (RadioButton button in deviceList.Controls.OfType<RadioButton>())
         {
             button.Width = width;
+            button.Height = Math.Max(76, (Font.Height * 3) + 16);
         }
     }
 
@@ -291,6 +337,9 @@ internal sealed class SettingsDialog : Form
         technicalIdLabel.Text = $"Identificador: {preference.TechnicalId}";
         bool connected = devices.Any(device => device.Identity == identity);
         statusLabel.Text = $"Estado: {(connected ? "Conectado" : "Desconectado")} · Última detección: {preference.LastSeenUtc.ToLocalTime():g}";
+        statusLabel.AccessibleDescription = connected
+            ? "El dispositivo está conectado actualmente."
+            : "El dispositivo no está conectado, pero sus preferencias siguen siendo editables.";
         ignoredCheckBox.Checked = configuration.IgnoredDevices.Contains(identity);
         layoutComboBox.SelectedItem = configuration.LayoutMappings.TryGetValue(identity, out Layout? layout)
             ? layouts.FirstOrDefault(candidate => candidate.Identifier == layout.Identifier) ?? layout
@@ -442,8 +491,11 @@ internal sealed class SettingsDialog : Form
     private static Button ActionButton(string text) => new()
     {
         AutoSize = true,
+        AutoSizeMode = AutoSizeMode.GrowAndShrink,
+        MinimumSize = new Size(88, 36),
         Text = text,
         Padding = new Padding(12, 4, 12, 4),
-        Margin = new Padding(0, 0, 8, 0)
+        Margin = new Padding(0, 0, 8, 0),
+        UseVisualStyleBackColor = true
     };
 }

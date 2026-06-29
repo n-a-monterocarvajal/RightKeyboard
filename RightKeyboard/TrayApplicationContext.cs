@@ -23,16 +23,34 @@ internal sealed class TrayApplicationContext : ApplicationContext
         {
             Renderer = new ModernMenuRenderer(),
             ShowImageMargin = false,
+            ShowCheckMargin = false,
             Padding = new Padding(4),
-            Font = SystemFonts.MessageBoxFont
+            Font = SystemFonts.MessageBoxFont,
+            AccessibleName = "Menú de RightKeyboard"
         };
-        menu.Items.Add("Configuración", null, (_, _) => ShowSettings());
-        menu.Items.Add("Limpiar preferencias", null, (_, _) => ClearPreferences());
+        ToolStripMenuItem settingsItem = new("&Configuración", null, (_, _) => ShowSettings())
+        {
+            AccessibleName = "Configuración",
+            AccessibleDescription = "Abre la edición de dispositivos y preferencias."
+        };
+        ToolStripMenuItem clearItem = new("&Limpiar preferencias", null, (_, _) => ClearPreferences())
+        {
+            AccessibleName = "Limpiar preferencias",
+            AccessibleDescription = "Elimina las preferencias guardadas después de pedir confirmación."
+        };
+        ToolStripMenuItem exitItem = new("&Salir", null, (_, _) => ExitThread())
+        {
+            AccessibleName = "Salir",
+            AccessibleDescription = "Cierra RightKeyboard."
+        };
+        menu.Items.Add(settingsItem);
+        menu.Items.Add(clearItem);
         menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add("Salir", null, (_, _) => ExitThread());
-        foreach (ToolStripItem item in menu.Items)
+        menu.Items.Add(exitItem);
+        foreach (ToolStripMenuItem item in menu.Items.OfType<ToolStripMenuItem>())
         {
             item.Padding = new Padding(8, 5, 18, 5);
+            item.AutoToolTip = false;
         }
 
         notifyIcon = new NotifyIcon
@@ -42,6 +60,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
             Text = "RightKeyboard",
             Visible = true
         };
+        notifyIcon.DoubleClick += (_, _) => ShowSettings();
 
         inputWindow = new RawInputWindow();
         inputWindow.KeyboardInput += OnKeyboardInput;
@@ -187,6 +206,16 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     private void ClearPreferences()
     {
+        if (MessageBox.Show(
+                "Se eliminarán todos los alias, distribuciones y dispositivos ignorados.\n\nEsta acción no se puede deshacer.",
+                "Limpiar preferencias",
+                MessageBoxButtons.OKCancel,
+                MessageBoxIcon.Warning,
+                MessageBoxDefaultButton.Button2) != DialogResult.OK)
+        {
+            return;
+        }
+
         try
         {
             configuration.Clear();
