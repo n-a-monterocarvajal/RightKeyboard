@@ -31,11 +31,11 @@ internal static class API
         uint deviceCount,
         uint structureSize);
 
-    [DllImport("user32.dll", SetLastError = true)]
+    [DllImport("user32.dll", EntryPoint = "GetRawInputData", SetLastError = true)]
     private static extern uint GetRawInputData(
         nint rawInput,
         uint command,
-        nint data,
+        out RAWINPUT data,
         ref uint size,
         uint headerSize);
 
@@ -85,41 +85,24 @@ internal static class API
     internal static bool TryReadKeyboardEvent(nint rawInputHandle, out RawKeyboardEvent keyboardEvent)
     {
         keyboardEvent = default;
-        uint size = 0;
+        uint size = (uint)Marshal.SizeOf<RAWINPUT>();
         uint headerSize = (uint)Marshal.SizeOf<RAWINPUTHEADER>();
-
-        if (GetRawInputData(rawInputHandle, RidInput, 0, ref size, headerSize) == uint.MaxValue || size == 0)
+        uint bytesRead = GetRawInputData(rawInputHandle, RidInput, out RAWINPUT input, ref size, headerSize);
+        if (bytesRead == uint.MaxValue ||
+            bytesRead < headerSize ||
+            input.Header.Type != RimTypeKeyboard ||
+            input.Header.Device == 0)
         {
             return false;
         }
 
-        nint buffer = Marshal.AllocHGlobal(checked((int)size));
-        try
-        {
-            uint bytesRead = GetRawInputData(rawInputHandle, RidInput, buffer, ref size, headerSize);
-            if (bytesRead == uint.MaxValue || bytesRead < headerSize)
-            {
-                return false;
-            }
-
-            RAWINPUT input = Marshal.PtrToStructure<RAWINPUT>(buffer);
-            if (input.Header.Type != RimTypeKeyboard || input.Header.Device == 0)
-            {
-                return false;
-            }
-
-            keyboardEvent = new RawKeyboardEvent(
-                input.Header.Device,
-                input.Keyboard.VirtualKey,
-                input.Keyboard.MakeCode,
-                input.Keyboard.Flags,
-                input.Keyboard.Message);
-            return true;
-        }
-        finally
-        {
-            Marshal.FreeHGlobal(buffer);
-        }
+        keyboardEvent = new RawKeyboardEvent(
+            input.Header.Device,
+            input.Data.Keyboard.VirtualKey,
+            input.Data.Keyboard.MakeCode,
+            input.Data.Keyboard.Flags,
+            input.Data.Keyboard.Message);
+        return true;
     }
 
     internal static IReadOnlyList<RawInputDeviceList> GetKeyboardDevices()

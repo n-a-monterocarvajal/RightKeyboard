@@ -5,6 +5,7 @@ namespace RightKeyboard;
 internal sealed class RawInputWindow : NativeWindow, IDisposable
 {
     private static readonly nint MessageOnlyWindow = new(-3);
+    private readonly System.Windows.Forms.Timer devicesChangedTimer = new() { Interval = 200 };
 
     public RawInputWindow()
     {
@@ -14,6 +15,7 @@ internal sealed class RawInputWindow : NativeWindow, IDisposable
             Parent = MessageOnlyWindow
         });
 
+        devicesChangedTimer.Tick += OnDevicesChangedTimerTick;
         API.RegisterKeyboardInput(Handle);
     }
 
@@ -25,11 +27,15 @@ internal sealed class RawInputWindow : NativeWindow, IDisposable
     {
         if (message.Msg == API.WmInput && API.TryReadKeyboardEvent(message.LParam, out RawKeyboardEvent keyboardEvent))
         {
-            KeyboardInput?.Invoke(keyboardEvent);
+            if (keyboardEvent.IsKeyDown)
+            {
+                KeyboardInput?.Invoke(keyboardEvent);
+            }
         }
         else if (message.Msg == API.WmInputDeviceChange)
         {
-            DevicesChanged?.Invoke();
+            devicesChangedTimer.Stop();
+            devicesChangedTimer.Start();
         }
 
         // DefWindowProc debe recibir WM_INPUT para que Windows libere sus recursos internos.
@@ -38,8 +44,17 @@ internal sealed class RawInputWindow : NativeWindow, IDisposable
 
     public void Dispose()
     {
+        devicesChangedTimer.Stop();
+        devicesChangedTimer.Tick -= OnDevicesChangedTimerTick;
+        devicesChangedTimer.Dispose();
         KeyboardInput = null;
         DevicesChanged = null;
         DestroyHandle();
+    }
+
+    private void OnDevicesChangedTimerTick(object? sender, EventArgs e)
+    {
+        devicesChangedTimer.Stop();
+        DevicesChanged?.Invoke();
     }
 }

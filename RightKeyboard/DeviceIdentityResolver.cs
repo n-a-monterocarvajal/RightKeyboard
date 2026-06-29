@@ -7,6 +7,16 @@ namespace RightKeyboard;
 internal sealed class DeviceIdentityResolver
 {
     private readonly Dictionary<string, DeviceDescriptor> cache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Func<string, DeviceProperties>? propertyReader;
+
+    public DeviceIdentityResolver()
+    {
+    }
+
+    internal DeviceIdentityResolver(Func<string, DeviceProperties> propertyReader)
+    {
+        this.propertyReader = propertyReader;
+    }
 
     public DeviceDescriptor Resolve(string devicePath)
     {
@@ -15,7 +25,45 @@ internal sealed class DeviceIdentityResolver
             return descriptor;
         }
 
-        DeviceProperties properties = SetupApi.ReadDeviceProperties(devicePath);
+        DeviceProperties properties = propertyReader?.Invoke(devicePath) ?? SetupApi.ReadDeviceProperties(devicePath);
+        descriptor = BuildDescriptor(devicePath, properties);
+        if (!properties.IsEmpty)
+        {
+            cache[devicePath] = descriptor;
+        }
+
+        return descriptor;
+    }
+
+    public void Refresh(IEnumerable<string> devicePaths)
+    {
+        string[] paths = devicePaths.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        IReadOnlyDictionary<string, DeviceProperties>? propertiesByPath = propertyReader is null
+            ? SetupApi.ReadDeviceProperties(paths)
+            : null;
+        Dictionary<string, DeviceDescriptor> refreshed = new(StringComparer.OrdinalIgnoreCase);
+
+        foreach (string path in paths)
+        {
+            DeviceProperties properties = propertiesByPath is null
+                ? propertyReader!(path)
+                : propertiesByPath[path];
+            refreshed[path] = properties.IsEmpty &&
+                              cache.TryGetValue(path, out DeviceDescriptor? previous) &&
+                              !previous.Identity.StartsWith("device:", StringComparison.OrdinalIgnoreCase)
+                ? previous
+                : BuildDescriptor(path, properties);
+        }
+
+        cache.Clear();
+        foreach ((string path, DeviceDescriptor descriptor) in refreshed)
+        {
+            cache[path] = descriptor;
+        }
+    }
+
+    internal static DeviceDescriptor BuildDescriptor(string devicePath, DeviceProperties properties)
+    {
         string displayName = BuildDisplayName(properties);
         string fingerprint = BuildFingerprint(properties, displayName);
 
@@ -39,14 +87,12 @@ internal sealed class DeviceIdentityResolver
             technicalId = $"Dispositivo {hash[..8]}";
         }
 
-        descriptor = new DeviceDescriptor(
+        return new DeviceDescriptor(
             identity,
             fingerprint,
             displayName,
             technicalId,
             DeviceClassifier.IsClearlyNonKeyboard(displayName));
-        cache[devicePath] = descriptor;
-        return descriptor;
     }
 
     private static string BuildDisplayName(DeviceProperties properties)
@@ -78,12 +124,16 @@ internal sealed class DeviceIdentityResolver
     private static string? FirstUsefulName(params string?[] candidates) =>
         candidates.FirstOrDefault(candidate => !string.IsNullOrWhiteSpace(candidate) && !IsGenericName(candidate));
 
-    private static bool IsGenericName(string value) => value.Trim() is
-        "HID Keyboard Device" or
-        "Dispositivo de teclado HID" or
-        "Standard PS/2 Keyboard" or
-        "Teclado estándar PS/2" or
-        "Teclado sin nombre";
+    private static bool IsGenericName(string value) => GenericNames.Contains(value.Trim());
+
+    private static readonly HashSet<string> GenericNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "HID Keyboard Device",
+        "Dispositivo de teclado HID",
+        "Standard PS/2 Keyboard",
+        "Teclado estándar PS/2",
+        "Teclado sin nombre"
+    };
 
     private static bool IsGenericManufacturer(string value) =>
         value.Trim().Equals("(Standard keyboards)", StringComparison.OrdinalIgnoreCase) ||
@@ -99,7 +149,7 @@ internal sealed class DeviceIdentityResolver
         string TechnicalId,
         bool IsClearlyNonKeyboard);
 
-    private sealed record DeviceProperties(
+    internal sealed record DeviceProperties(
         Guid? ContainerId,
         string? InstanceId,
         string? BusReportedDescription,
@@ -109,6 +159,15 @@ internal sealed class DeviceIdentityResolver
         IReadOnlyList<string> HardwareIds)
     {
         public static DeviceProperties Empty { get; } = new(null, null, null, null, null, null, []);
+
+        public bool IsEmpty =>
+            ContainerId is null &&
+            string.IsNullOrWhiteSpace(InstanceId) &&
+            string.IsNullOrWhiteSpace(BusReportedDescription) &&
+            string.IsNullOrWhiteSpace(FriendlyName) &&
+            string.IsNullOrWhiteSpace(Description) &&
+            string.IsNullOrWhiteSpace(Manufacturer) &&
+            HardwareIds.Count == 0;
     }
 
     private static class SetupApi
@@ -213,8 +272,21 @@ internal sealed class DeviceIdentityResolver
         [DllImport("setupapi.dll", SetLastError = true)]
         private static extern bool SetupDiDestroyDeviceInfoList(nint deviceInfoSet);
 
-        public static DeviceProperties ReadDeviceProperties(string expectedPath)
+        public static DeviceProperties ReadDeviceProperties(string expectedPath) =>
+            ReadDeviceProperties([expectedPath])[expectedPath];
+
+        public static IReadOnlyDictionary<string, DeviceProperties> ReadDeviceProperties(
+            IReadOnlyCollection<string> expectedPaths)
         {
+            Dictionary<string, DeviceProperties> result = expectedPaths.ToDictionary(
+                path => path,
+                _ => DeviceProperties.Empty,
+                StringComparer.OrdinalIgnoreCase);
+            if (result.Count == 0)
+            {
+                return result;
+            }
+
             Guid interfaceClass = KeyboardInterfaceClass;
             nint deviceSet = SetupDiGetClassDevsW(
                 ref interfaceClass,
@@ -224,7 +296,7 @@ internal sealed class DeviceIdentityResolver
 
             if (deviceSet == InvalidHandleValue)
             {
-                return DeviceProperties.Empty;
+                return result;
             }
 
             try
@@ -238,7 +310,7 @@ internal sealed class DeviceIdentityResolver
 
                     if (!SetupDiEnumDeviceInterfaces(deviceSet, 0, ref interfaceClass, index, ref interfaceData))
                     {
-                        return DeviceProperties.Empty;
+                        return result;
                     }
 
                     DeviceInfoData deviceInfo = new()
@@ -276,12 +348,12 @@ internal sealed class DeviceIdentityResolver
 
                         int pathOffset = IntPtr.Size == 8 ? 8 : 4;
                         string? actualPath = Marshal.PtrToStringUni(detailBuffer + pathOffset);
-                        if (!string.Equals(actualPath, expectedPath, StringComparison.OrdinalIgnoreCase))
+                        if (actualPath is null || !result.ContainsKey(actualPath))
                         {
                             continue;
                         }
 
-                        return new DeviceProperties(
+                        result[actualPath] = new DeviceProperties(
                             ReadGuidProperty(deviceSet, ref deviceInfo, ContainerIdKey),
                             ReadInstanceId(deviceSet, ref deviceInfo),
                             ReadStringProperty(deviceSet, ref deviceInfo, BusReportedDescriptionKey),
@@ -289,6 +361,11 @@ internal sealed class DeviceIdentityResolver
                             ReadRegistryStrings(deviceSet, ref deviceInfo, SpdrpDeviceDescription).FirstOrDefault(),
                             ReadRegistryStrings(deviceSet, ref deviceInfo, SpdrpManufacturer).FirstOrDefault(),
                             ReadRegistryStrings(deviceSet, ref deviceInfo, SpdrpHardwareId));
+
+                        if (result.Values.All(properties => !properties.IsEmpty))
+                        {
+                            return result;
+                        }
                     }
                     finally
                     {

@@ -6,10 +6,15 @@ public static class DeviceClassifier
     private static readonly string[] NonKeyboardTerms =
     [
         "mouse",
+        "ratón",
+        "raton",
         "trackball",
         "touchpad",
         "trackpad",
-        "mx master"
+        "pointing device",
+        "dispositivo señalador",
+        "mx master",
+        "mx anywhere"
     ];
 
     public static bool IsClearlyNonKeyboard(string displayName)

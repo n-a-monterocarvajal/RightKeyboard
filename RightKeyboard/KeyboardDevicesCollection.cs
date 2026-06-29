@@ -46,19 +46,26 @@ public sealed class KeyboardDevicesCollection : IEnumerable<KeyboardDevice>
         devicesByHandle.Clear();
         devicesByPath.Clear();
 
+        List<(API.RawInputDeviceList RawDevice, string Path)> detected = [];
         foreach (API.RawInputDeviceList rawDevice in API.GetKeyboardDevices())
         {
             try
             {
                 string path = API.GetRawInputDeviceName(rawDevice.Device);
-                KeyboardDevice device = CreateDevice(path, rawDevice.Device);
-                devicesByHandle[device.Handle] = device;
-                devicesByPath[device.DevicePath] = device;
+                detected.Add((rawDevice, path));
             }
             catch
             {
                 // Un dispositivo puede desaparecer entre la enumeración y la consulta.
             }
+        }
+
+        identityResolver.Refresh(detected.Select(item => item.Path));
+        foreach ((API.RawInputDeviceList rawDevice, string path) in detected)
+        {
+            KeyboardDevice device = CreateDevice(path, rawDevice.Device);
+            devicesByHandle[device.Handle] = device;
+            devicesByPath[device.DevicePath] = device;
         }
     }
 

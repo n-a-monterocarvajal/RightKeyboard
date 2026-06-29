@@ -39,6 +39,38 @@ public sealed class RawKeyboardEventTests
         Assert.That(keyboardEvent.CanStartMapping, Is.False);
     }
 
+    [TestCase(0x00)]
+    [TestCase(0xE5)]
+    [TestCase(0xE7)]
+    public void SyntheticOrUndefinedKey_DoesNotStartMapping(int virtualKey)
+    {
+        RawKeyboardEvent keyboardEvent = new(1, checked((ushort)virtualKey), 0, 0, 0x0100);
+
+        Assert.That(keyboardEvent.CanStartMapping, Is.False);
+    }
+
+    [TestCase(0x0101)]
+    [TestCase(0x0105)]
+    [TestCase(0x0000)]
+    public void NonKeyDownMessage_DoesNotStartMapping(int message)
+    {
+        RawKeyboardEvent keyboardEvent = new(1, 0x41, 0x1E, 0, checked((uint)message));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(keyboardEvent.IsKeyDown, Is.False);
+            Assert.That(keyboardEvent.CanStartMapping, Is.False);
+        });
+    }
+
+    [Test]
+    public void SystemKeyDown_CanStartMapping()
+    {
+        RawKeyboardEvent keyboardEvent = new(1, 0x41, 0x1E, 0, 0x0104);
+
+        Assert.That(keyboardEvent.CanStartMapping, Is.True);
+    }
+
     [Test]
     public void RegularKeyDown_CanStartMapping()
     {

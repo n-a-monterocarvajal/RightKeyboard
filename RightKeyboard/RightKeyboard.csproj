@@ -13,4 +13,8 @@
     <Description>Asocia cada teclado físico con una distribución de teclado de Windows.</Description>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="RightKeyboard.NUnit" />
+  </ItemGroup>
 </Project>

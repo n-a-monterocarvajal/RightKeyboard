@@ -8,11 +8,18 @@ public readonly record struct RawKeyboardEvent(
     uint Message)
 {
     private const ushort KeyBreak = 0x0001;
-    private const ushort FakeKey = 0x00FF;
+    private const uint KeyDown = 0x0100;
+    private const uint SystemKeyDown = 0x0104;
 
-    public bool IsKeyDown => (Flags & KeyBreak) == 0;
+    public bool IsKeyDown => (Flags & KeyBreak) == 0 && Message is KeyDown or SystemKeyDown;
 
-    public bool CanStartMapping => IsKeyDown && VirtualKey != FakeKey && !IsModifier(VirtualKey);
+    public bool CanStartMapping => IsKeyDown && IsUsableKey(VirtualKey) && !IsModifier(VirtualKey);
+
+    private static bool IsUsableKey(ushort key) => key is not (
+        0x00 or // Sin tecla virtual
+        0xE5 or // VK_PROCESSKEY
+        0xE7 or // VK_PACKET
+        0xFF);  // Tecla falsa de Raw Input
 
     private static bool IsModifier(ushort key) => key is
         0x10 or // Shift
