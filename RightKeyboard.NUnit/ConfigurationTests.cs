@@ -23,35 +23,62 @@ public sealed class ConfigurationTests
     }
 
     [Test]
-    public void SaveAndLoad_PreservesMappingsAndIgnoredDevices()
+    public void SaveAndLoad_PreservesAliasMappingAndIgnoredDevice()
     {
         string path = Path.Combine(temporaryDirectory, "preferences.json");
         Configuration configuration = new();
-        KeyboardDevice keyboard = Device("container:keyboard", "MODEL-A", "Teclado principal");
+        KeyboardDevice keyboard = Device("container:keyboard", "MODEL-A", "Teclado sin nombre");
         KeyboardDevice mouse = Device("container:mouse", "MODEL-M", "MX Master 3S", nonKeyboard: true);
-        configuration.SetLayout(keyboard, spanish);
-        configuration.Ignore(mouse);
+        configuration.SetLayout(keyboard, spanish, "Teclado oficina");
+        configuration.Ignore(mouse, "Mouse principal");
 
         configuration.Save(path);
-        Configuration loaded = Configuration.LoadConfiguration(
-            new KeyboardDevicesCollection(),
-            path,
-            [spanish]);
+        Configuration loaded = Configuration.LoadConfiguration(new KeyboardDevicesCollection(), path, [spanish]);
 
         Assert.Multiple(() =>
         {
-            Assert.That(loaded.LayoutMappings[keyboard.Identity].Layout.Identifier, Is.EqualTo(spanish.Identifier));
-            Assert.That(loaded.LayoutMappings[keyboard.Identity].DisplayName, Is.EqualTo("Teclado principal"));
-            Assert.That(loaded.IgnoredDevices.ContainsKey(mouse.Identity), Is.True);
-            Assert.That(File.ReadAllText(path), Does.Contain("\"version\": 2"));
+            Assert.That(loaded.LayoutMappings[keyboard.Identity].Identifier, Is.EqualTo(spanish.Identifier));
+            Assert.That(loaded.Devices[keyboard.Identity].CustomName, Is.EqualTo("Teclado oficina"));
+            Assert.That(loaded.Devices[keyboard.Identity].DetectedName, Is.EqualTo("Teclado sin nombre"));
+            Assert.That(loaded.IgnoredDevices.Contains(mouse.Identity), Is.True);
+            Assert.That(loaded.Devices[mouse.Identity].CustomName, Is.EqualTo("Mouse principal"));
+            Assert.That(File.ReadAllText(path), Does.Contain("\"version\": 3"));
         });
     }
 
     [Test]
-    public void ReconnectedUniqueDevice_RecoversLayoutFromFingerprint()
+    public void Version2File_IsMigratedInMemory()
+    {
+        string path = Path.Combine(temporaryDirectory, "preferences-v2.json");
+        File.WriteAllText(path, """
+        {
+          "version": 2,
+          "mappings": [
+            {
+              "identity": "container:old",
+              "fingerprint": "MODEL-A",
+              "displayName": "Teclado anterior",
+              "layout": "000000000000040A"
+            }
+          ],
+          "ignoredDevices": []
+        }
+        """);
+
+        Configuration loaded = Configuration.LoadConfiguration(new KeyboardDevicesCollection(), path, [spanish]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(loaded.Devices["container:old"].DetectedName, Is.EqualTo("Teclado anterior"));
+            Assert.That(loaded.LayoutMappings["container:old"], Is.SameAs(spanish));
+        });
+    }
+
+    [Test]
+    public void ReconnectedUniqueDevice_RecoversLayoutAndAliasFromFingerprint()
     {
         Configuration configuration = new();
-        configuration.SetLayout(Device("container:old", "MODEL-A", "Teclado"), spanish);
+        configuration.SetLayout(Device("container:old", "MODEL-A", "Teclado"), spanish, "Mi teclado");
 
         bool found = configuration.TryGetLayout(
             Device("container:new", "MODEL-A", "Teclado"),
@@ -64,7 +91,7 @@ public sealed class ConfigurationTests
             Assert.That(found, Is.True);
             Assert.That(layout, Is.SameAs(spanish));
             Assert.That(learnedIdentity, Is.True);
-            Assert.That(configuration.LayoutMappings.ContainsKey("container:new"), Is.True);
+            Assert.That(configuration.Devices["container:new"].CustomName, Is.EqualTo("Mi teclado"));
         });
     }
 
@@ -84,26 +111,43 @@ public sealed class ConfigurationTests
     }
 
     [Test]
-    public void IgnoredDevice_RecoversDecisionAfterIdentityChanges()
+    public void UpdatePreference_CanRenameChangeLayoutAndIgnore()
     {
         Configuration configuration = new();
-        configuration.Ignore(Device("container:old", "MODEL-M", "MX Master 3S", nonKeyboard: true));
+        KeyboardDevice keyboard = Device("device:keyboard", "MODEL-A", "Teclado");
+        configuration.SetLayout(keyboard, spanish);
 
-        bool ignored = configuration.IsIgnored(
-            Device("container:new", "MODEL-M", "MX Master 3S", nonKeyboard: true),
-            connectedDevicesWithSameFingerprint: 1,
-            out bool learnedIdentity);
+        configuration.UpdatePreference(keyboard.Identity, "Teclado viaje", null, ignored: true);
 
         Assert.Multiple(() =>
         {
-            Assert.That(ignored, Is.True);
-            Assert.That(learnedIdentity, Is.True);
-            Assert.That(configuration.IgnoredDevices.ContainsKey("container:new"), Is.True);
+            Assert.That(configuration.Devices[keyboard.Identity].CustomName, Is.EqualTo("Teclado viaje"));
+            Assert.That(configuration.IgnoredDevices.Contains(keyboard.Identity), Is.True);
+            Assert.That(configuration.LayoutMappings.ContainsKey(keyboard.Identity), Is.False);
         });
     }
 
     [Test]
-    public void Clear_RemovesMappingsAndIgnoredDevices()
+    public void MergeFrom_CanCombineOrReplace()
+    {
+        Configuration current = new();
+        current.SetLayout(Device("device:a", "MODEL-A", "A"), spanish, "A local");
+        Configuration imported = new();
+        imported.Ignore(Device("device:b", "MODEL-B", "B"), "B importado");
+
+        current.MergeFrom(imported, replace: false);
+        Assert.That(current.Devices.Keys, Is.EquivalentTo(new[] { "device:a", "device:b" }));
+
+        current.MergeFrom(imported, replace: true);
+        Assert.Multiple(() =>
+        {
+            Assert.That(current.Devices.Keys, Is.EquivalentTo(new[] { "device:b" }));
+            Assert.That(current.IgnoredDevices.Contains("device:b"), Is.True);
+        });
+    }
+
+    [Test]
+    public void Clear_RemovesAllDeviceData()
     {
         string path = Path.Combine(temporaryDirectory, "preferences.json");
         Configuration configuration = new();
@@ -114,10 +158,10 @@ public sealed class ConfigurationTests
 
         Assert.Multiple(() =>
         {
+            Assert.That(configuration.Devices, Is.Empty);
             Assert.That(configuration.LayoutMappings, Is.Empty);
             Assert.That(configuration.IgnoredDevices, Is.Empty);
-            Assert.That(File.ReadAllText(path), Does.Contain("\"mappings\": []"));
-            Assert.That(File.ReadAllText(path), Does.Contain("\"ignoredDevices\": []"));
+            Assert.That(File.ReadAllText(path), Does.Contain("\"devices\": []"));
         });
     }
 

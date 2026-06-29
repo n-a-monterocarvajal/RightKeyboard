@@ -19,9 +19,21 @@ internal sealed class TrayApplicationContext : ApplicationContext
         devices = new KeyboardDevicesCollection();
         configuration = LoadConfiguration();
 
-        menu = new ContextMenuStrip();
+        menu = new ContextMenuStrip
+        {
+            Renderer = new ModernMenuRenderer(),
+            ShowImageMargin = false,
+            Padding = new Padding(4),
+            Font = SystemFonts.MessageBoxFont
+        };
+        menu.Items.Add("Configuración", null, (_, _) => ShowSettings());
         menu.Items.Add("Limpiar preferencias", null, (_, _) => ClearPreferences());
+        menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Salir", null, (_, _) => ExitThread());
+        foreach (ToolStripItem item in menu.Items)
+        {
+            item.Padding = new Padding(8, 5, 18, 5);
+        }
 
         notifyIcon = new NotifyIcon
         {
@@ -120,11 +132,11 @@ internal sealed class TrayApplicationContext : ApplicationContext
         selectingLayout = true;
         try
         {
-            using LayoutSelectionDialog dialog = new(device);
+            using LayoutSelectionDialog dialog = new(device, configuration.GetDisplayName(device));
             DialogResult result = dialog.ShowDialog();
             if (result == DialogResult.Ignore)
             {
-                configuration.Ignore(device);
+                configuration.Ignore(device, dialog.CustomName);
                 SaveConfiguration();
                 return;
             }
@@ -134,7 +146,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 return;
             }
 
-            configuration.SetLayout(device, dialog.SelectedLayout);
+            configuration.SetLayout(device, dialog.SelectedLayout, dialog.CustomName);
             SaveConfiguration();
             ApplyLayout(dialog.SelectedLayout);
         }
@@ -145,6 +157,25 @@ internal sealed class TrayApplicationContext : ApplicationContext
     }
 
     private void OnDevicesChanged() => devices.Refresh();
+
+    private void ShowSettings()
+    {
+        if (selectingLayout)
+        {
+            return;
+        }
+
+        selectingLayout = true;
+        try
+        {
+            using SettingsDialog dialog = new(configuration, devices, SaveConfiguration);
+            dialog.ShowDialog();
+        }
+        finally
+        {
+            selectingLayout = false;
+        }
+    }
 
     private static void ApplyLayout(Layout layout)
     {
@@ -186,6 +217,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     protected override void ExitThreadCore()
     {
+        SaveConfiguration();
         notifyIcon.Visible = false;
         inputWindow.KeyboardInput -= OnKeyboardInput;
         inputWindow.DevicesChanged -= OnDevicesChanged;

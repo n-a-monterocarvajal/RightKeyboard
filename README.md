@@ -2,8 +2,9 @@
 
 RightKeyboard asocia cada teclado físico conectado a Windows con una distribución de teclado distinta. Al escribir, la aplicación detecta qué dispositivo generó la pulsación y solicita a la ventana activa que use la distribución elegida para ese teclado.
 
-La aplicación se ejecuta en segundo plano y su única interfaz permanente es el icono del área de notificación de Windows. El menú secundario contiene exactamente dos acciones:
+La aplicación se ejecuta en segundo plano y su única interfaz permanente es el icono del área de notificación de Windows. El menú secundario contiene estas acciones:
 
+- **Configuración**: administra nombres, distribuciones, dispositivos ignorados, inicio con Windows, exportación e importación.
 - **Limpiar preferencias**: elimina las asociaciones guardadas entre teclados y distribuciones.
 - **Salir**: detiene RightKeyboard.
 
@@ -32,7 +33,9 @@ La opción **Limpiar preferencias** vacía las asociaciones y la lista de dispos
 
 Para iniciar RightKeyboard con la sesión de Windows, abre `shell:startup` desde **Ejecutar** y coloca allí un acceso directo al ejecutable.
 
-Cerrar el selector sin aceptar no crea una asociación. Las pulsaciones de modificadores, las liberaciones de tecla y los eventos de teclado sintéticos no abren el selector. El selector identifica el dispositivo, agrupa las distribuciones por idioma y permite ignorar periféricos que publican entradas de teclado sin ser teclados, como ciertos mouse con botones avanzados.
+Cerrar el selector sin aceptar no crea una asociación. Las pulsaciones de modificadores, las liberaciones de tecla y los eventos de teclado sintéticos no abren el selector. El selector permite asignar un nombre al dispositivo, agrupa las distribuciones por idioma y permite ignorar periféricos que publican entradas de teclado sin ser teclados, como ciertos mouse con botones avanzados.
+
+Desde **Configuración** se pueden editar preferencias sin repetir el flujo de detección. La exportación genera un JSON portable; al importar se puede combinar o reemplazar la configuración actual y RightKeyboard crea primero un respaldo en `%LOCALAPPDATA%\RightKeyboard\exports`.
 
 ## Compilación y pruebas
 

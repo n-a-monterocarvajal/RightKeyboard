@@ -2,13 +2,13 @@ namespace RightKeyboard;
 
 public sealed class LayoutSelectionDialog : Form
 {
-    private readonly TreeView layoutTree;
+    private readonly FlowLayoutPanel layoutList;
     private readonly Button acceptButton;
-    private readonly Button cancelButton;
-    private readonly Button ignoreButton;
+    private readonly TextBox customNameTextBox;
     private readonly KeyboardDevice device;
+    private RadioButton? selectedLayoutButton;
 
-    public LayoutSelectionDialog(KeyboardDevice device)
+    public LayoutSelectionDialog(KeyboardDevice device, string suggestedName)
     {
         this.device = device;
         SetStyle(ControlStyles.ApplyThemingImplicitly, true);
@@ -20,9 +20,9 @@ public sealed class LayoutSelectionDialog : Form
         MaximizeBox = false;
         ShowInTaskbar = false;
         AutoScaleMode = AutoScaleMode.Dpi;
-        ClientSize = new Size(590, 500);
-        MinimumSize = new Size(520, 430);
-        Padding = new Padding(24);
+        ClientSize = new Size(620, 590);
+        MinimumSize = new Size(540, 500);
+        Padding = new Padding(28);
         Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
 
         TableLayoutPanel root = new()
@@ -40,9 +40,9 @@ public sealed class LayoutSelectionDialog : Form
         Label heading = new()
         {
             AutoSize = true,
-            Font = new Font(Font, FontStyle.Bold),
-            Text = "Selecciona la distribución para este teclado",
-            Margin = new Padding(0, 0, 0, 10)
+            Font = new Font(Font.FontFamily, Font.Size + 3, FontStyle.Bold),
+            Text = "Configura este teclado",
+            Margin = new Padding(0, 0, 0, 16)
         };
 
         TableLayoutPanel devicePanel = new()
@@ -51,54 +51,60 @@ public sealed class LayoutSelectionDialog : Form
             Dock = DockStyle.Fill,
             ColumnCount = 1,
             Margin = new Padding(0, 0, 0, 18),
-            Padding = new Padding(14),
+            Padding = new Padding(16),
             BackColor = SystemColors.Window,
             ForeColor = SystemColors.WindowText
         };
         devicePanel.Controls.Add(new Label
         {
             AutoSize = true,
-            Font = new Font(Font.FontFamily, Font.Size + 1, FontStyle.Bold),
-            Text = device.DisplayName,
-            AccessibleName = "Nombre del dispositivo"
+            Font = new Font(Font, FontStyle.Bold),
+            Text = "Nombre para este teclado",
+            Margin = new Padding(0, 0, 0, 6)
         });
+        customNameTextBox = new TextBox
+        {
+            Dock = DockStyle.Top,
+            Text = suggestedName,
+            PlaceholderText = $"Teclado {device.TechnicalId.Split(' ').LastOrDefault()}",
+            Margin = new Padding(0, 0, 0, 8),
+            AccessibleName = "Nombre para este teclado"
+        };
+        devicePanel.Controls.Add(customNameTextBox);
         devicePanel.Controls.Add(new Label
         {
             AutoSize = true,
             ForeColor = SystemColors.GrayText,
-            Text = device.TechnicalId,
-            Margin = new Padding(0, 5, 0, 0),
-            AccessibleName = "Identificador técnico del dispositivo"
+            Text = $"Detectado: {device.DisplayName}  ·  {device.TechnicalId}",
+            AccessibleName = "Información detectada del dispositivo"
         });
 
-        layoutTree = new TreeView
+        Panel listContainer = new()
         {
             Dock = DockStyle.Fill,
-            HideSelection = false,
-            FullRowSelect = true,
-            ShowLines = true,
-            ShowPlusMinus = true,
-            ShowRootLines = false,
-            ItemHeight = 26,
-            BorderStyle = BorderStyle.FixedSingle,
-            AccessibleName = "Idiomas y distribuciones de teclado",
+            Padding = new Padding(1),
+            BackColor = SystemColors.ControlLight,
             Margin = new Padding(0)
         };
-        layoutTree.AfterSelect += (_, _) => UpdateAcceptButton();
-        layoutTree.NodeMouseDoubleClick += (_, args) =>
+        layoutList = new FlowLayoutPanel
         {
-            if (args.Node?.Tag is RightKeyboard.Layout)
-            {
-                AcceptSelection();
-            }
+            Dock = DockStyle.Fill,
+            AutoScroll = true,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            Padding = new Padding(12),
+            BackColor = SystemColors.Window,
+            AccessibleName = "Idiomas y distribuciones de teclado"
         };
+        layoutList.SizeChanged += (_, _) => ResizeLayoutRows();
+        listContainer.Controls.Add(layoutList);
 
         Label help = new()
         {
             AutoSize = true,
             ForeColor = SystemColors.GrayText,
-            Text = "Selecciona una distribución dentro de un idioma. Si no es un teclado, puedes ignorar el dispositivo.",
-            MaximumSize = new Size(540, 0),
+            Text = "Elige una distribución. Si el dispositivo no es un teclado, puedes ignorarlo y recuperarlo después desde Configuración.",
+            MaximumSize = new Size(560, 0),
             Margin = new Padding(0, 14, 0, 14)
         };
 
@@ -110,94 +116,107 @@ public sealed class LayoutSelectionDialog : Form
             WrapContents = false,
             Margin = new Padding(0)
         };
-
-        acceptButton = new Button
-        {
-            Text = "Aceptar",
-            AutoSize = true,
-            Enabled = false,
-            Margin = new Padding(8, 0, 0, 0),
-            Padding = new Padding(12, 4, 12, 4)
-        };
+        acceptButton = ActionButton("Aceptar");
+        acceptButton.Enabled = false;
         acceptButton.Click += (_, _) => AcceptSelection();
-
-        cancelButton = new Button
-        {
-            Text = "Cancelar",
-            AutoSize = true,
-            DialogResult = DialogResult.Cancel,
-            Margin = new Padding(8, 0, 0, 0),
-            Padding = new Padding(12, 4, 12, 4)
-        };
-
-        ignoreButton = new Button
-        {
-            Text = "Ignorar este dispositivo",
-            AutoSize = true,
-            Margin = new Padding(0),
-            Padding = new Padding(12, 4, 12, 4)
-        };
+        Button cancelButton = ActionButton("Cancelar");
+        cancelButton.DialogResult = DialogResult.Cancel;
+        Button ignoreButton = ActionButton("Ignorar este dispositivo");
+        ignoreButton.Margin = new Padding(0);
         ignoreButton.Click += (_, _) => IgnoreDevice();
-
         actions.Controls.Add(acceptButton);
         actions.Controls.Add(cancelButton);
         actions.Controls.Add(ignoreButton);
 
         root.Controls.Add(heading, 0, 0);
         root.Controls.Add(devicePanel, 0, 1);
-        root.Controls.Add(layoutTree, 0, 2);
+        root.Controls.Add(listContainer, 0, 2);
         root.Controls.Add(help, 0, 3);
         root.Controls.Add(actions, 0, 4);
         Controls.Add(root);
-
         AcceptButton = acceptButton;
         CancelButton = cancelButton;
+
         LoadLayouts();
+        Shown += (_, _) => customNameTextBox.SelectAll();
     }
 
-    public RightKeyboard.Layout? SelectedLayout { get; private set; }
+    public Layout? SelectedLayout { get; private set; }
+
+    public string CustomName => customNameTextBox.Text.Trim();
 
     private void LoadLayouts()
     {
-        layoutTree.BeginUpdate();
-        try
+        foreach (IGrouping<string, RightKeyboard.Layout> language in RightKeyboard.Layout.EnumerateLayouts()
+                     .OrderBy(layout => layout.LanguageName, StringComparer.CurrentCultureIgnoreCase)
+                     .ThenBy(layout => layout.LayoutName, StringComparer.CurrentCultureIgnoreCase)
+                     .GroupBy(layout => layout.LanguageName))
         {
-            foreach (IGrouping<string, RightKeyboard.Layout> language in RightKeyboard.Layout.EnumerateLayouts()
-                         .OrderBy(layout => layout.LanguageName, StringComparer.CurrentCultureIgnoreCase)
-                         .ThenBy(layout => layout.LayoutName, StringComparer.CurrentCultureIgnoreCase)
-                         .GroupBy(layout => layout.LanguageName))
+            layoutList.Controls.Add(new Label
             {
-                TreeNode languageNode = new(language.Key)
+                AutoSize = false,
+                Height = 34,
+                Text = language.Key,
+                Font = new Font(Font, FontStyle.Bold),
+                TextAlign = ContentAlignment.BottomLeft,
+                Padding = new Padding(4, 0, 0, 4),
+                Margin = new Padding(0, 4, 0, 2)
+            });
+
+            foreach (Layout layout in language)
+            {
+                RadioButton row = new()
                 {
-                    NodeFont = new Font(layoutTree.Font, FontStyle.Bold)
+                    Appearance = Appearance.Button,
+                    AutoSize = false,
+                    Height = 42,
+                    FlatStyle = FlatStyle.Flat,
+                    Text = layout.LayoutName,
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    Padding = new Padding(16, 0, 12, 0),
+                    Margin = new Padding(0, 0, 0, 4),
+                    Tag = layout,
+                    AccessibleName = $"{language.Key}, {layout.LayoutName}"
                 };
-
-                foreach (RightKeyboard.Layout layout in language)
+                row.FlatAppearance.BorderColor = SystemColors.ControlLight;
+                row.FlatAppearance.CheckedBackColor = SystemColors.GradientActiveCaption;
+                row.CheckedChanged += (_, _) =>
                 {
-                    languageNode.Nodes.Add(new TreeNode(layout.LayoutName) { Tag = layout });
-                }
-
-                layoutTree.Nodes.Add(languageNode);
-                languageNode.Expand();
+                    if (row.Checked)
+                    {
+                        selectedLayoutButton = row;
+                        acceptButton.Enabled = true;
+                    }
+                };
+                row.DoubleClick += (_, _) =>
+                {
+                    row.Checked = true;
+                    AcceptSelection();
+                };
+                layoutList.Controls.Add(row);
             }
-
-            TreeNode? firstLayout = layoutTree.Nodes.Cast<TreeNode>()
-                .SelectMany(node => node.Nodes.Cast<TreeNode>())
-                .FirstOrDefault();
-            layoutTree.SelectedNode = firstLayout;
-            firstLayout?.EnsureVisible();
         }
-        finally
+
+        ResizeLayoutRows();
+        RadioButton? first = layoutList.Controls.OfType<RadioButton>().FirstOrDefault();
+        if (first is not null)
         {
-            layoutTree.EndUpdate();
+            first.Checked = true;
         }
     }
 
-    private void UpdateAcceptButton() => acceptButton.Enabled = layoutTree.SelectedNode?.Tag is RightKeyboard.Layout;
+    private void ResizeLayoutRows()
+    {
+        int width = Math.Max(280, layoutList.ClientSize.Width - layoutList.Padding.Horizontal - 20);
+        foreach (Control control in layoutList.Controls)
+        {
+            control.Width = width;
+        }
+    }
 
     private void AcceptSelection()
     {
-        if (layoutTree.SelectedNode?.Tag is not RightKeyboard.Layout layout)
+        if (selectedLayoutButton?.Tag is not Layout layout)
         {
             return;
         }
@@ -209,18 +228,26 @@ public sealed class LayoutSelectionDialog : Form
 
     private void IgnoreDevice()
     {
-        DialogResult confirmation = MessageBox.Show(
-            $"RightKeyboard dejará de reaccionar a \"{device.DisplayName}\".\n\n" +
-            "Puedes recuperar el dispositivo usando Limpiar preferencias.",
-            "Ignorar dispositivo",
-            MessageBoxButtons.OKCancel,
-            MessageBoxIcon.Information,
-            MessageBoxDefaultButton.Button2);
-
-        if (confirmation == DialogResult.OK)
+        if (MessageBox.Show(
+                $"RightKeyboard dejará de reaccionar a \"{CustomName}\".\n\n" +
+                "Puedes recuperarlo desde Configuración o usando Limpiar preferencias.",
+                "Ignorar dispositivo",
+                MessageBoxButtons.OKCancel,
+                MessageBoxIcon.Information,
+                MessageBoxDefaultButton.Button2) != DialogResult.OK)
         {
-            DialogResult = DialogResult.Ignore;
-            Close();
+            return;
         }
+
+        DialogResult = DialogResult.Ignore;
+        Close();
     }
+
+    private static Button ActionButton(string text) => new()
+    {
+        Text = text,
+        AutoSize = true,
+        Margin = new Padding(8, 0, 0, 0),
+        Padding = new Padding(12, 4, 12, 4)
+    };
 }

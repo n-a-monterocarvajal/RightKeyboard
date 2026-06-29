@@ -4,6 +4,18 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [1.5.0] - En desarrollo
 
+### Alpha 2
+
+- Nuevo esquema 3 de `preferences.json` con alias, nombre detectado, identificador técnico y última detección.
+- Migración automática desde el esquema 2 de la primera alpha.
+- Ventana **Configuración** para editar dispositivos conectados y desconectados.
+- Cambio selectivo de alias, distribución y estado ignorado, además de olvidar dispositivos individuales.
+- Exportación e importación JSON con modos combinar/reemplazar y respaldo automático.
+- Control del inicio con Windows desde la configuración.
+- Selector rediseñado con grupos y filas seleccionables en lugar del `TreeView` clásico.
+- Campo de nombre para identificar teclados que Windows reporta sin nombre.
+- Menú de bandeja ampliado con **Configuración** y un renderer visual propio.
+
 ### Añadido
 
 - Identificación visible del dispositivo mediante propiedades Plug and Play.
