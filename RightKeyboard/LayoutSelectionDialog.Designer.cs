@@ -74,7 +74,7 @@ namespace RightKeyboard {
 			this.label1.Name = "label1";
 			this.label1.Size = new System.Drawing.Size(232, 13);
 			this.label1.TabIndex = 0;
-			this.label1.Text = "Please select the layout of the current keyboard";
+			this.label1.Text = "Selecciona la distribución de este teclado";
 			// 
 			// lbLayouts
 			// 
@@ -97,7 +97,7 @@ namespace RightKeyboard {
 			this.btOk.Name = "btOk";
 			this.btOk.Size = new System.Drawing.Size(75, 23);
 			this.btOk.TabIndex = 2;
-			this.btOk.Text = "OK";
+			this.btOk.Text = "Aceptar";
 			this.btOk.UseVisualStyleBackColor = true;
 			this.btOk.Click += new System.EventHandler(this.btOk_Click);
 			// 
@@ -107,7 +107,7 @@ namespace RightKeyboard {
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(359, 214);
-			this.ControlBox = false;
+			this.ControlBox = true;
 			this.Controls.Add(this.btOk);
 			this.Controls.Add(this.lbLayouts);
 			this.Controls.Add(this.panel1);
@@ -119,7 +119,7 @@ namespace RightKeyboard {
 			this.ShowIcon = false;
 			this.ShowInTaskbar = false;
 			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-			this.Text = "Keyboard Layout Selection";
+			this.Text = "Seleccionar distribución del teclado";
 			this.TopMost = true;
 			this.panel1.ResumeLayout(false);
 			this.panel1.PerformLayout();

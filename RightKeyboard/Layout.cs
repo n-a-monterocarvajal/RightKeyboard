@@ -1,44 +1,23 @@
-using System;
 using RightKeyboard.Win32;
-using System.Linq;
-using System.Collections.Generic;
 
-namespace RightKeyboard {
-	/// <summary>
-	/// Represents a keyboard layout
-	/// </summary>
-	public class Layout {
+namespace RightKeyboard;
 
-		/// <summary>
-		/// Gets the layout's identifier
-		/// </summary>
-		public IntPtr Identifier { get; }
+public sealed class Layout
+{
+    public Layout(nint identifier, string name)
+    {
+        Identifier = identifier;
+        Name = name;
+    }
 
-		/// <summary>
-		/// Gets the layout's name
-		/// </summary>
-		public string Name { get; }
+    public nint Identifier { get; }
 
-		/// <summary>
-		/// Initializes a new instance of Layout
-		/// </summary>
-		/// <param name="identifier"></param>
-		/// <param name="name"></param>
-		public Layout(IntPtr identifier, string name) {
-			this.Identifier = identifier;
-			this.Name = name;
-		}
+    public string Name { get; }
 
-		public override string ToString() {
-			return Name;
-		}
+    public override string ToString() => Name;
 
-		/// <summary>
-		/// Gets the installed keyboard layouts
-		/// </summary>
-		public static IEnumerable<Layout> EnumerateLayouts() {
-			return API.GetKeyboardLayoutList()
-				.Select(p => new Layout(p, API.GetKeyboardLayoutName(p)));
-		}
-	}
+    public static IEnumerable<Layout> EnumerateLayouts() =>
+        API.GetKeyboardLayouts()
+            .Distinct()
+            .Select(identifier => new Layout(identifier, API.GetKeyboardLayoutName(identifier)));
 }

@@ -1,17 +1,3 @@
-﻿using System;
+namespace RightKeyboard;
 
-namespace RightKeyboard
-{
-    public struct KeyboardDevice
-    {
-        public string Name { get; }
-
-        public IntPtr Handle { get; }
-
-        public KeyboardDevice(string name, IntPtr handle)
-        {
-            Name = name;
-            Handle = handle;
-        }
-    }
-}
+public readonly record struct KeyboardDevice(string Name, nint Handle, string Identity);

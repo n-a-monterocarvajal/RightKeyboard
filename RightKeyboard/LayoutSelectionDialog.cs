@@ -1,56 +1,51 @@
-using System;
-using System.ComponentModel;
-using System.Windows.Forms;
+namespace RightKeyboard;
 
-namespace RightKeyboard {
-	public partial class LayoutSelectionDialog : Form {
-		public LayoutSelectionDialog() {
-			InitializeComponent();
+public partial class LayoutSelectionDialog : Form
+{
+    public LayoutSelectionDialog()
+    {
+        InitializeComponent();
+        LoadLanguageList();
+    }
 
-			LoadLanguageList();
-		}
+    public Layout? SelectedLayout { get; private set; }
 
-		private void LoadLanguageList() {
-			lbLayouts.Items.Clear();
-			recentLayoutsCount = 0;
+    private void LoadLanguageList()
+    {
+        lbLayouts.Items.Clear();
+        foreach (RightKeyboard.Layout layout in RightKeyboard.Layout.EnumerateLayouts())
+        {
+            lbLayouts.Items.Add(layout);
+        }
 
-			foreach(Layout layout in Layout.EnumerateLayouts()) {
-				lbLayouts.Items.Add(layout);
-			}
+        if (lbLayouts.Items.Count > 0)
+        {
+            lbLayouts.SelectedIndex = 0;
+        }
 
-			lbLayouts.SelectedIndex = 0;
-		}
+        btOk.Enabled = lbLayouts.SelectedItem is not null;
+    }
 
-		private int recentLayoutsCount = 0;
-		private Layout selectedLayout;
-		private bool okPressed = false;
+    private void btOk_Click(object sender, EventArgs e)
+    {
+        if (lbLayouts.SelectedItem is not RightKeyboard.Layout layout)
+        {
+            return;
+        }
 
-		public new Layout Layout {
-			get {
-				return selectedLayout;
-			}
-		}
+        SelectedLayout = layout;
+        DialogResult = DialogResult.OK;
+        Close();
+    }
 
-		private void btOk_Click(object sender, EventArgs e) {
-			selectedLayout = (Layout)lbLayouts.SelectedItem;
-			okPressed = true;
-			Close();
-		}
+    private void lbLayouts_SelectedIndexChanged(object sender, EventArgs e) =>
+        btOk.Enabled = lbLayouts.SelectedItem is not null;
 
-		private void lbLayouts_SelectedIndexChanged(object sender, EventArgs e) {
-			btOk.Enabled = lbLayouts.SelectedIndex != recentLayoutsCount || recentLayoutsCount == 0;
-		}
-
-		private void lbLayouts_DoubleClick(object sender, EventArgs e) {
-			if(btOk.Enabled) {
-				btOk_Click(this, EventArgs.Empty);
-			}
-		}
-
-		protected override void OnClosing(CancelEventArgs e) {
-			e.Cancel = !okPressed;
-			okPressed = false;
-			base.OnClosing(e);
-		}
-	}
+    private void lbLayouts_DoubleClick(object sender, EventArgs e)
+    {
+        if (btOk.Enabled)
+        {
+            btOk.PerformClick();
+        }
+    }
 }

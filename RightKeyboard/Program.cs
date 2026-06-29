@@ -1,17 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.Windows.Forms;
+namespace RightKeyboard;
 
-namespace RightKeyboard {
-	static class Program {
-		/// <summary>
-		/// The main entry point for the application.
-		/// </summary>
-		[STAThread]
-		static void Main() {
-			Application.EnableVisualStyles();
-			Application.SetCompatibleTextRenderingDefault(false);
-			Application.Run(new MainForm());
-		}
-	}
+internal static class Program
+{
+    [STAThread]
+    private static void Main()
+    {
+        ApplicationConfiguration.Initialize();
+        Application.Run(new TrayApplicationContext());
+    }
 }

@@ -1,244 +1,239 @@
-using System;
-using System.Runtime.InteropServices;
-using System.Diagnostics;
-using System.Text;
-using System.Linq;
+using System.ComponentModel;
 using System.Globalization;
+using System.Runtime.InteropServices;
+using System.Text;
+using Microsoft.Win32;
 
-namespace RightKeyboard.Win32 {
-	/// <summary>
-	/// Exposes the Win32 API functions
-	/// </summary>
-	public static class API {
-		#region Constants
-		public const uint RIDEV_REMOVE = 0x00000001;
-		public const uint RIDEV_EXCLUDE = 0x00000010;
-		public const uint RIDEV_PAGEONLY = 0x00000020;
-		public const uint RIDEV_NOLEGACY = 0x00000030;
-		public const uint RIDEV_INPUTSINK = 0x00000100;
-		public const uint RIDEV_CAPTUREMOUSE = 0x00000200;  // effective when mouse nolegacy is specified, otherwise it would be an error
-		public const uint RIDEV_NOHOTKEYS = 0x00000200;  // effective for keyboard.
-		public const uint RIDEV_APPKEYS = 0x00000400;  // effective for keyboard.
+namespace RightKeyboard.Win32;
 
-		public const int WM_INPUT = 0x00FF;
+internal static class API
+{
+    internal const int WmInput = 0x00FF;
+    private const uint RidInput = 0x10000003;
+    private const uint RidiDeviceName = 0x20000007;
+    private const uint RimTypeKeyboard = 1;
+    private const uint RidevInputSink = 0x00000100;
+    private const uint WmInputLanguageChangeRequest = 0x0050;
+    private const int KlNameLength = 9;
 
-		public const int RID_INPUT = 0x10000003;
-		public const int RID_HEADER = 0x10000005;
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct RawInputDeviceList
+    {
+        public nint Device;
+        public uint Type;
+    }
 
-		public const int WM_POWERBROADCAST = 0x0218;
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool RegisterRawInputDevices(
+        [In] RAWINPUTDEVICE[] devices,
+        uint deviceCount,
+        uint structureSize);
 
-		public const int PBT_APMQUERYSUSPEND = 0x0000;
-		public const int PBT_APMQUERYSTANDBY = 0x0001;
-		public const int PBT_APMQUERYSUSPENDFAILED = 0x0002;
-		public const int PBT_APMQUERYSTANDBYFAILED = 0x0003;
-		public const int PBT_APMSUSPEND = 0x0004;
-		public const int PBT_APMSTANDBY = 0x0005;
-		public const int PBT_APMRESUMECRITICAL = 0x0006;
-		public const int PBT_APMRESUMESUSPEND = 0x0007;
-		public const int PBT_APMRESUMESTANDBY = 0x0008;
-		public const int PBTF_APMRESUMEFROMFAILURE = 0x00000001;
-		public const int PBT_APMBATTERYLOW = 0x0009;
-		public const int PBT_APMPOWERSTATUSCHANGE = 0x000A;
-		public const int PBT_APMOEMEVENT = 0x000B;
-		public const int PBT_APMRESUMEAUTOMATIC = 0x0012;
-		#endregion
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern uint GetRawInputData(
+        nint rawInput,
+        uint command,
+        nint data,
+        ref uint size,
+        uint headerSize);
 
-		[DllImport("user32.dll", SetLastError = true)]
-		private static extern bool RegisterRawInputDevices(
-			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)] RAWINPUTDEVICE[] pRawInputDevices,
-			int uiNumDevices,
-			int cbSize
-		);
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern uint GetRawInputDeviceList(
+        [Out] RawInputDeviceList[]? devices,
+        ref uint deviceCount,
+        uint structureSize);
 
-		public static bool RegisterRawInputDevices(params RAWINPUTDEVICE[] rawInputDevices) {
-			return RegisterRawInputDevices(
-				rawInputDevices,
-				rawInputDevices.Length,
-				Marshal.SizeOf(typeof(RAWINPUTDEVICE))
-			);
-		}
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern uint GetRawInputDeviceInfoW(
+        nint device,
+        uint command,
+        StringBuilder? data,
+        ref uint dataSize);
 
-		[StructLayout(LayoutKind.Sequential)]
-		public struct RAWINPUTDEVICELIST {
-			public IntPtr hDevice;
-			public int dwType;
-		}
+    [DllImport("user32.dll")]
+    private static extern nint ActivateKeyboardLayout(nint layout, uint flags);
 
-		[DllImport("user32.dll")]
-		private static extern int GetRawInputDeviceList([Out] RAWINPUTDEVICELIST[] pRawInputDeviceList, ref uint puiNumDevices, int cbSize);
+    [DllImport("user32.dll")]
+    private static extern uint GetKeyboardLayoutList(int count, [Out] nint[]? layouts);
 
-		public static RAWINPUTDEVICELIST[] GetRawInputDeviceList() {
-			uint nDevices = 0;
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern bool GetKeyboardLayoutNameW(StringBuilder name);
 
-			int res = GetRawInputDeviceList(null, ref nDevices, Marshal.SizeOf(typeof(RAWINPUTDEVICELIST)));
-			Debug.Assert(res == 0);
+    [DllImport("user32.dll")]
+    private static extern nint GetForegroundWindow();
 
-			RAWINPUTDEVICELIST[] deviceList = new RAWINPUTDEVICELIST[nDevices];
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(nint window, nint processId);
 
-			uint size = nDevices * (uint)Marshal.SizeOf(typeof(RAWINPUTDEVICELIST));
-			res = GetRawInputDeviceList(deviceList, ref size, Marshal.SizeOf(typeof(RAWINPUTDEVICELIST)));
-			Debug.Assert(res == nDevices);
-			return deviceList;
-		}
+    [DllImport("user32.dll")]
+    private static extern nint GetKeyboardLayout(uint threadId);
 
-		public const int RIM_TYPEKEYBOARD = 1;
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool PostMessageW(nint window, uint message, nint wParam, nint lParam);
 
-		[DllImport("user32.dll")]
-		private static extern int GetRawInputDeviceInfo(IntPtr deviceHandle, uint command, [Out] StringBuilder data, ref uint dataSize);
+    internal static void RegisterKeyboardInput(nint target)
+    {
+        RAWINPUTDEVICE[] devices = [new(0x01, 0x06, RidevInputSink, target)];
+        if (!RegisterRawInputDevices(devices, 1, (uint)Marshal.SizeOf<RAWINPUTDEVICE>()))
+        {
+            throw new Win32Exception(Marshal.GetLastPInvokeError(), "No se pudo registrar la entrada de teclado.");
+        }
+    }
 
-		public static string GetRawInputDeviceName(IntPtr deviceHandle) {
-			uint dataSize = 0;
-			int res = GetRawInputDeviceInfo(deviceHandle, RIDI_DEVICENAME, null, ref dataSize);
-			Debug.Assert(res == 0);
-			Debug.Assert(dataSize > 0);
+    internal static bool TryReadKeyboardEvent(nint rawInputHandle, out RawKeyboardEvent keyboardEvent)
+    {
+        keyboardEvent = default;
+        uint size = 0;
+        uint headerSize = (uint)Marshal.SizeOf<RAWINPUTHEADER>();
 
-			StringBuilder buffer = new StringBuilder((int)dataSize);
-			res = GetRawInputDeviceInfo(deviceHandle, RIDI_DEVICENAME, buffer, ref dataSize);
-			Debug.Assert(res > 0);
+        if (GetRawInputData(rawInputHandle, RidInput, 0, ref size, headerSize) == uint.MaxValue || size == 0)
+        {
+            return false;
+        }
 
-			return buffer.ToString();
-		}
+        nint buffer = Marshal.AllocHGlobal(checked((int)size));
+        try
+        {
+            uint bytesRead = GetRawInputData(rawInputHandle, RidInput, buffer, ref size, headerSize);
+            if (bytesRead == uint.MaxValue || bytesRead < headerSize)
+            {
+                return false;
+            }
 
-		public const uint RIDI_PREPARSEDDATA = 0x20000005;
-		public const uint RIDI_DEVICENAME = 0x20000007;
-		public const uint RIDI_DEVICEINFO = 0x2000000b;
+            RAWINPUT input = Marshal.PtrToStructure<RAWINPUT>(buffer);
+            if (input.Header.Type != RimTypeKeyboard || input.Header.Device == 0)
+            {
+                return false;
+            }
 
-		[DllImport("user32.dll", SetLastError = false)]
-		private static extern uint GetRawInputData(
-			IntPtr hRawInput,
-			uint uiCommand,
-			IntPtr pData,
-			ref int pcbSize,
-			int cbSizeHeader
-		);
+            keyboardEvent = new RawKeyboardEvent(
+                input.Header.Device,
+                input.Keyboard.VirtualKey,
+                input.Keyboard.MakeCode,
+                input.Keyboard.Flags,
+                input.Keyboard.Message);
+            return true;
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(buffer);
+        }
+    }
 
-		public static uint GetRawInputData(IntPtr hRawInput, uint uiCommand, out RAWINPUTHEADER data) {
-			int size = Marshal.SizeOf(typeof(RAWINPUTHEADER));
-			IntPtr buffer = Marshal.AllocHGlobal(size);
-			try {
-				uint result = GetRawInputData(
-					hRawInput,
-					uiCommand,
-					buffer,
-					ref size,
-					size
-				);
+    internal static IReadOnlyList<RawInputDeviceList> GetKeyboardDevices()
+    {
+        uint count = 0;
+        uint structureSize = (uint)Marshal.SizeOf<RawInputDeviceList>();
+        if (GetRawInputDeviceList(null, ref count, structureSize) == uint.MaxValue)
+        {
+            throw new Win32Exception(Marshal.GetLastPInvokeError());
+        }
 
-				data = new RAWINPUTHEADER();
-				Marshal.PtrToStructure(buffer, data);
-				return result;
-			}
-			finally {
-				Marshal.FreeHGlobal(buffer);
-			}
-		}
+        if (count == 0)
+        {
+            return [];
+        }
 
-		public const uint BSM_ALLCOMPONENTS = 0x00000000;
-		public const uint BSM_VXDS = 0x00000001;
-		public const uint BSM_NETDRIVER = 0x00000002;
-		public const uint BSM_INSTALLABLEDRIVERS = 0x00000004;
-		public const uint BSM_APPLICATIONS = 0x00000008;
-		public const uint BSM_ALLDESKTOPS = 0x00000010;
+        RawInputDeviceList[] devices = new RawInputDeviceList[count];
+        uint actualCount = count;
+        if (GetRawInputDeviceList(devices, ref actualCount, structureSize) == uint.MaxValue)
+        {
+            throw new Win32Exception(Marshal.GetLastPInvokeError());
+        }
 
-		public const uint BSF_QUERY = 0x00000001;
-		public const uint BSF_IGNORECURRENTTASK = 0x00000002;
-		public const uint BSF_FLUSHDISK = 0x00000004;
-		public const uint BSF_NOHANG = 0x00000008;
-		public const uint BSF_POSTMESSAGE = 0x00000010;
-		public const uint BSF_FORCEIFHUNG = 0x00000020;
-		public const uint BSF_NOTIMEOUTIFNOTHUNG = 0x00000040;
-		public const uint BSF_ALLOWSFW = 0x00000080;
-		public const uint BSF_SENDNOTIFYMESSAGE = 0x00000100;
-		public const uint BSF_RETURNHDESK = 0x00000200;
-		public const uint BSF_LUID = 0x00000400;
+        return devices.Take(checked((int)actualCount)).Where(device => device.Type == RimTypeKeyboard).ToArray();
+    }
 
-		public const uint WM_INPUTLANGCHANGEREQUEST = 0x0050;
+    internal static string GetRawInputDeviceName(nint device)
+    {
+        uint characterCount = 0;
+        if (GetRawInputDeviceInfoW(device, RidiDeviceName, null, ref characterCount) == uint.MaxValue)
+        {
+            throw new Win32Exception(Marshal.GetLastPInvokeError());
+        }
 
-		[DllImport("user32", SetLastError = true)]
-		public static extern int BroadcastSystemMessage(uint dwFlags, ref uint lpdwRecipients, uint uiMessage, IntPtr wParam, IntPtr lParam);
+        StringBuilder name = new(checked((int)characterCount));
+        if (GetRawInputDeviceInfoW(device, RidiDeviceName, name, ref characterCount) == uint.MaxValue)
+        {
+            throw new Win32Exception(Marshal.GetLastPInvokeError());
+        }
 
-		[DllImport("user32.dll")]
-		private static extern IntPtr ActivateKeyboardLayout(IntPtr hkl, uint flags);
+        return name.ToString();
+    }
 
-		[DllImport("user32.dll")]
-		private static extern uint GetKeyboardLayoutList(int nBuff, IntPtr[] lpList);
+    internal static nint[] GetKeyboardLayouts()
+    {
+        int count = checked((int)GetKeyboardLayoutList(0, null));
+        if (count == 0)
+        {
+            return [];
+        }
 
-		[DllImport("user32.dll")]
-		private static extern bool GetKeyboardLayoutNameW([MarshalAs(UnmanagedType.LPWStr)]StringBuilder buffer);
+        nint[] layouts = new nint[count];
+        int actualCount = checked((int)GetKeyboardLayoutList(count, layouts));
+        return layouts.Take(actualCount).ToArray();
+    }
 
-		[DllImport("user32.dll")]
-		private static extern IntPtr GetForegroundWindow();
+    internal static string GetKeyboardLayoutName(nint keyboardLayout)
+    {
+        ushort languageId = unchecked((ushort)keyboardLayout.ToInt64());
+        string languageName;
+        try
+        {
+            languageName = CultureInfo.GetCultureInfo(languageId).DisplayName;
+        }
+        catch (CultureNotFoundException)
+        {
+            languageName = $"Idioma 0x{languageId:X4}";
+        }
 
-		[DllImport("user32.dll")]
-		private static extern IntPtr GetWindowThreadProcessId(IntPtr hWnd, uint lpdwProcessId);
+        nint currentLayout = GetKeyboardLayout(0);
+        try
+        {
+            if (currentLayout != keyboardLayout)
+            {
+                ActivateKeyboardLayout(keyboardLayout, 0);
+            }
 
-		[DllImport("user32.dll")]
-		private static extern IntPtr GetKeyboardLayout(uint thread);
+            StringBuilder identifier = new(KlNameLength);
+            string layoutName = GetKeyboardLayoutNameW(identifier)
+                ? ReadLayoutDisplayName(identifier.ToString())
+                : $"Distribución 0x{keyboardLayout.ToInt64():X}";
 
-		public static IntPtr[] GetKeyboardLayoutList() {
-			int count = (int)GetKeyboardLayoutList(0, null);
-			Debug.Assert(count > 0);
+            return $"{languageName} / {layoutName}";
+        }
+        finally
+        {
+            if (currentLayout != 0 && currentLayout != keyboardLayout)
+            {
+                ActivateKeyboardLayout(currentLayout, 0);
+            }
+        }
+    }
 
-			IntPtr[] localeHandles = new IntPtr[count];
-			int realCount = (int)GetKeyboardLayoutList(count, localeHandles);
-			Debug.Assert(realCount == count);
-			return localeHandles;
-		}
+    internal static bool IsForegroundLayout(nint desiredLayout)
+    {
+        nint foreground = GetForegroundWindow();
+        if (foreground == 0)
+        {
+            return false;
+        }
 
-		public static string GetKeyboardLayoutName(IntPtr keyboardLayout)
-		{
-			return $"{GetLanguageName(keyboardLayout)} / {GetKeyboardName(keyboardLayout)}";
-		}
+        uint threadId = GetWindowThreadProcessId(foreground, 0);
+        return GetKeyboardLayout(threadId) == desiredLayout;
+    }
 
-		private static string GetLanguageName(IntPtr keyboardLayout)
-		{
-			var langId = (ushort)keyboardLayout.ToInt32();
+    internal static bool RequestForegroundLayout(nint desiredLayout)
+    {
+        nint foreground = GetForegroundWindow();
+        return foreground != 0 && PostMessageW(foreground, WmInputLanguageChangeRequest, 0, desiredLayout);
+    }
 
-			var langName = CultureInfo.GetCultureInfo(langId).DisplayName;
+    private static string ReadLayoutDisplayName(string identifier)
+    {
+        using RegistryKey? key = Registry.LocalMachine.OpenSubKey(
+            $@"SYSTEM\CurrentControlSet\Control\Keyboard Layouts\{identifier}");
 
-			return langName;
-		}
-
-		private static string GetKeyboardName(IntPtr keyboardLayout)
-		{
-			var currentKL = GetKeyboardLayout();
-			if (currentKL != keyboardLayout)
-			{
-				ActivateKeyboardLayout(keyboardLayout, 0);
-			}
-
-			var buffer = new StringBuilder();
-			GetKeyboardLayoutNameW(buffer);
-
-			if (currentKL != keyboardLayout)
-			{
-				ActivateKeyboardLayout(currentKL, 0);
-			}
-
-			var nameId = buffer.ToString().ToLowerInvariant();
-			var regKey = Microsoft.Win32.Registry.LocalMachine.OpenSubKey($@"SYSTEM\ControlSet001\Control\Keyboard Layouts\{nameId}");
-			var name = regKey.GetValue("Layout Text");
-
-			return name as string;
-		}
-
-		public static IntPtr GetKeyboardLayout()
-		{
-			IntPtr WinThreadProcId = GetWindowThreadProcessId(GetForegroundWindow(),0);
-			return GetKeyboardLayout((ushort)WinThreadProcId);
-		}
-
-		public const int SPI_SETDEFAULTINPUTLANG = 90;
-		public const int SPIF_SENDCHANGE = 2;
-
-		[DllImport("user32.dll", SetLastError = true)]
-		private static extern IntPtr LoadKeyboardLayout([MarshalAs(UnmanagedType.LPTStr)] string pwszKLID, uint flags);
-
-		public static IntPtr LoadKeyboardLayout(ushort layout, uint flags) {
-			return LoadKeyboardLayout(string.Format("{0:X04}{0:X04}", layout), flags);
-		}
-
-		[DllImport("user32.dll")]
-		public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, IntPtr[] pvParam, uint fWinIni);
-	}
+        return key?.GetValue("Layout Text") as string ?? $"Distribución {identifier}";
+    }
 }
