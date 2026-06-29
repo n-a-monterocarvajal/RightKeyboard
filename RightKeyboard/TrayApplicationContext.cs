@@ -10,7 +10,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private readonly ContextMenuStrip menu;
     private readonly NotifyIcon notifyIcon;
     private readonly SynchronizationContext uiContext;
-    private string? pendingIdentity;
+    private KeyboardDevice? pendingDevice;
     private bool selectingLayout;
 
     public TrayApplicationContext()
@@ -33,6 +33,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
         inputWindow = new RawInputWindow();
         inputWindow.KeyboardInput += OnKeyboardInput;
+        inputWindow.DevicesChanged += OnDevicesChanged;
     }
 
     private Configuration LoadConfiguration()
@@ -59,36 +60,59 @@ internal sealed class TrayApplicationContext : ApplicationContext
             return;
         }
 
-        string identity;
+        KeyboardDevice device;
         try
         {
-            identity = devices.GetIdentity(keyboardEvent.DeviceHandle);
+            device = devices.GetDevice(keyboardEvent.DeviceHandle);
         }
         catch
         {
             return;
         }
 
-        if (configuration.LayoutMappings.TryGetValue(identity, out Layout? layout))
+        int matchingDevices = devices.CountConnectedWithFingerprint(device.Fingerprint);
+        if (configuration.IsIgnored(device, matchingDevices, out bool learnedIgnoredIdentity))
         {
-            ApplyLayout(layout);
+            if (learnedIgnoredIdentity)
+            {
+                SaveConfiguration();
+            }
+
             return;
         }
 
-        if (!keyboardEvent.CanStartMapping || pendingIdentity is not null)
+        if (device.IsClearlyNonKeyboard)
+        {
+            configuration.Ignore(device);
+            SaveConfiguration();
+            return;
+        }
+
+        if (configuration.TryGetLayout(device, matchingDevices, out Layout? layout, out bool learnedLayoutIdentity))
+        {
+            if (learnedLayoutIdentity)
+            {
+                SaveConfiguration();
+            }
+
+            ApplyLayout(layout!);
+            return;
+        }
+
+        if (!keyboardEvent.CanStartMapping || pendingDevice is not null)
         {
             return;
         }
 
-        pendingIdentity = identity;
+        pendingDevice = device;
         uiContext.Post(_ => SelectLayoutForPendingDevice(), null);
     }
 
     private void SelectLayoutForPendingDevice()
     {
-        string? identity = pendingIdentity;
-        pendingIdentity = null;
-        if (identity is null || selectingLayout)
+        KeyboardDevice? queuedDevice = pendingDevice;
+        pendingDevice = null;
+        if (queuedDevice is not KeyboardDevice device || selectingLayout)
         {
             return;
         }
@@ -96,13 +120,21 @@ internal sealed class TrayApplicationContext : ApplicationContext
         selectingLayout = true;
         try
         {
-            using LayoutSelectionDialog dialog = new();
-            if (dialog.ShowDialog() != DialogResult.OK || dialog.SelectedLayout is null)
+            using LayoutSelectionDialog dialog = new(device);
+            DialogResult result = dialog.ShowDialog();
+            if (result == DialogResult.Ignore)
+            {
+                configuration.Ignore(device);
+                SaveConfiguration();
+                return;
+            }
+
+            if (result != DialogResult.OK || dialog.SelectedLayout is null)
             {
                 return;
             }
 
-            configuration.LayoutMappings[identity] = dialog.SelectedLayout;
+            configuration.SetLayout(device, dialog.SelectedLayout);
             SaveConfiguration();
             ApplyLayout(dialog.SelectedLayout);
         }
@@ -111,6 +143,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
             selectingLayout = false;
         }
     }
+
+    private void OnDevicesChanged() => devices.Refresh();
 
     private static void ApplyLayout(Layout layout)
     {
@@ -154,6 +188,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
     {
         notifyIcon.Visible = false;
         inputWindow.KeyboardInput -= OnKeyboardInput;
+        inputWindow.DevicesChanged -= OnDevicesChanged;
         inputWindow.Dispose();
         notifyIcon.Dispose();
         menu.Dispose();

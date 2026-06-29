@@ -9,10 +9,12 @@ namespace RightKeyboard.Win32;
 internal static class API
 {
     internal const int WmInput = 0x00FF;
+    internal const int WmInputDeviceChange = 0x00FE;
     private const uint RidInput = 0x10000003;
     private const uint RidiDeviceName = 0x20000007;
     private const uint RimTypeKeyboard = 1;
     private const uint RidevInputSink = 0x00000100;
+    private const uint RidevDeviceNotify = 0x00002000;
     private const uint WmInputLanguageChangeRequest = 0x0050;
     private const int KlNameLength = 9;
 
@@ -73,7 +75,7 @@ internal static class API
 
     internal static void RegisterKeyboardInput(nint target)
     {
-        RAWINPUTDEVICE[] devices = [new(0x01, 0x06, RidevInputSink, target)];
+        RAWINPUTDEVICE[] devices = [new(0x01, 0x06, RidevInputSink | RidevDeviceNotify, target)];
         if (!RegisterRawInputDevices(devices, 1, (uint)Marshal.SizeOf<RAWINPUTDEVICE>()))
         {
             throw new Win32Exception(Marshal.GetLastPInvokeError(), "No se pudo registrar la entrada de teclado.");
@@ -174,7 +176,7 @@ internal static class API
         return layouts.Take(actualCount).ToArray();
     }
 
-    internal static string GetKeyboardLayoutName(nint keyboardLayout)
+    internal static (string LanguageName, string LayoutName) GetKeyboardLayoutDescription(nint keyboardLayout)
     {
         ushort languageId = unchecked((ushort)keyboardLayout.ToInt64());
         string languageName;
@@ -200,7 +202,7 @@ internal static class API
                 ? ReadLayoutDisplayName(identifier.ToString())
                 : $"Distribución 0x{keyboardLayout.ToInt64():X}";
 
-            return $"{languageName} / {layoutName}";
+            return (languageName, layoutName);
         }
         finally
         {

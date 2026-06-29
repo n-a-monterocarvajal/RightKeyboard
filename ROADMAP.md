@@ -1,6 +1,6 @@
 # Hoja de ruta
 
-## Versión 1.5.0
+## Versión 1.5.0 — en desarrollo
 
 La versión 1.5 se concentrará en identificar mejor cada teclado, conservar sus preferencias tras una reconexión y mejorar el selector sin aumentar innecesariamente el consumo del proceso en segundo plano.
 

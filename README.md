@@ -22,17 +22,17 @@ Las distribuciones que se quieran utilizar deben estar instaladas previamente en
 3. Selecciona la distribución correspondiente y pulsa **Aceptar**.
 4. Repite el proceso para los demás teclados.
 
-Las preferencias se guardan en `%LOCALAPPDATA%\RightKeyboard\config.txt` y sobreviven al reinicio de la aplicación. En una instalación habitual, la ruta completa tiene esta forma:
+Desde la versión 1.5, las preferencias se guardan en `%LOCALAPPDATA%\RightKeyboard\preferences.json` y sobreviven al reinicio de la aplicación. En una instalación habitual, la ruta completa tiene esta forma:
 
 ```text
-C:\Users\<usuario>\AppData\Local\RightKeyboard\config.txt
+C:\Users\<usuario>\AppData\Local\RightKeyboard\preferences.json
 ```
 
-La opción **Limpiar preferencias** vacía las asociaciones y deja ese archivo sin entradas. No modifica las distribuciones instaladas en Windows.
+La opción **Limpiar preferencias** vacía las asociaciones y la lista de dispositivos ignorados. No modifica las distribuciones instaladas en Windows. Si existe un `config.txt` creado por la versión 1.4, RightKeyboard lo migra automáticamente al nuevo formato.
 
 Para iniciar RightKeyboard con la sesión de Windows, abre `shell:startup` desde **Ejecutar** y coloca allí un acceso directo al ejecutable.
 
-Cerrar el selector sin aceptar no crea una asociación. Las pulsaciones de modificadores, las liberaciones de tecla y los eventos de teclado sintéticos no abren el selector.
+Cerrar el selector sin aceptar no crea una asociación. Las pulsaciones de modificadores, las liberaciones de tecla y los eventos de teclado sintéticos no abren el selector. El selector identifica el dispositivo, agrupa las distribuciones por idioma y permite ignorar periféricos que publican entradas de teclado sin ser teclados, como ciertos mouse con botones avanzados.
 
 ## Compilación y pruebas
 
@@ -49,6 +49,9 @@ La aplicación se genera en `RightKeyboard\bin\Release\net10.0-windows\`.
 - Usa Raw Input (`WM_INPUT`) para distinguir el dispositivo físico sin instalar servicios, controladores ni hooks globales.
 - Lee la estructura completa `RAWKEYBOARD` y actúa solo en eventos de pulsación.
 - Agrupa las distintas funciones HID de un teclado mediante el `ContainerId` de Plug and Play. Esto evita pedir otra distribución cuando una combinación `Fn` se presenta como otra colección del mismo dispositivo.
+- Conserva una huella de modelo como respaldo para recuperar asociaciones cuando Windows cambia el identificador de un dispositivo al reconectarlo.
+- Actualiza el inventario al recibir notificaciones de conexión o desconexión de Raw Input.
+- Clasifica de forma conservadora periféricos claramente no-teclado y permite ignorar manualmente los casos ambiguos.
 - Solicita el cambio con `WM_INPUTLANGCHANGEREQUEST` únicamente a la ventana activa. No cambia el idioma predeterminado global ni difunde mensajes a todas las aplicaciones.
 - No mantiene un formulario principal oculto: utiliza una ventana exclusiva para mensajes y un icono de notificación.
 

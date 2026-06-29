@@ -19,11 +19,17 @@ internal sealed class RawInputWindow : NativeWindow, IDisposable
 
     public event Action<RawKeyboardEvent>? KeyboardInput;
 
+    public event Action? DevicesChanged;
+
     protected override void WndProc(ref Message message)
     {
         if (message.Msg == API.WmInput && API.TryReadKeyboardEvent(message.LParam, out RawKeyboardEvent keyboardEvent))
         {
             KeyboardInput?.Invoke(keyboardEvent);
+        }
+        else if (message.Msg == API.WmInputDeviceChange)
+        {
+            DevicesChanged?.Invoke();
         }
 
         // DefWindowProc debe recibir WM_INPUT para que Windows libere sus recursos internos.
@@ -33,6 +39,7 @@ internal sealed class RawInputWindow : NativeWindow, IDisposable
     public void Dispose()
     {
         KeyboardInput = null;
+        DevicesChanged = null;
         DestroyHandle();
     }
 }

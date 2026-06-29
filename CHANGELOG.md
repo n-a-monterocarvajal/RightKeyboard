@@ -2,6 +2,23 @@
 
 Todos los cambios relevantes del proyecto se documentan en este archivo y se describen en español.
 
+## [1.5.0] - En desarrollo
+
+### Añadido
+
+- Identificación visible del dispositivo mediante propiedades Plug and Play.
+- Selector jerárquico que agrupa las distribuciones debajo de cada idioma.
+- Acción **Ignorar este dispositivo** para periféricos compuestos que emiten eventos de teclado.
+- Clasificación automática conservadora de mouse, trackballs y touchpads claramente identificables.
+- Persistencia de dispositivos ignorados y huellas de modelo en `preferences.json`.
+- Notificaciones de conexión y desconexión mediante Raw Input.
+
+### Cambiado
+
+- Recuperación de preferencias tras una reconexión cuando la identidad exacta cambia y la huella coincide sin ambigüedad.
+- Migración automática del archivo `config.txt` de la versión 1.4.
+- Selector rediseñado con espaciado, accesibilidad, escalado y controles acordes con Windows 11.
+
 ## [1.4.0] - 2026-06-29
 
 ### Cambios
