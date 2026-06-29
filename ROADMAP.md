@@ -6,6 +6,8 @@ La versión 1.5 se concentrará en identificar mejor cada teclado, conservar sus
 
 La primera prueba host de `1.5.0-alpha.1` confirmó el funcionamiento y aportó observaciones visuales y de administración. La especificación detallada para continuar está en [docs/continuacion-1.5.md](docs/continuacion-1.5.md).
 
+El alcance incluye además un [instalador por usuario](docs/distribucion-1.5.md) sin elevación, inicio automático activado por defecto, una única raíz de archivos administrados por RightKeyboard y exportación/importación de preferencias.
+
 ### Identificación visible del teclado
 
 El selector debe indicar qué teclado generó la pulsación. La información se obtendrá de propiedades Plug and Play compatibles con Windows, priorizando:

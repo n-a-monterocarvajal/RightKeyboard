@@ -113,15 +113,23 @@ El siguiente esquema deberá agregar como mínimo:
 
 La migración desde el esquema actual de 1.5 debe ser automática y conservar asociaciones e ignorados.
 
+## Instalación, inicio automático y portabilidad
+
+La versión 1.5 se publicará mediante un instalador por usuario sin elevación, con inicio automático activado por defecto y herramientas para exportar e importar preferencias. La especificación completa está en [distribucion-1.5.md](distribucion-1.5.md).
+
 ## Orden recomendado para reanudar
 
 1. Ampliar el esquema de preferencias y sus pruebas con alias y metadatos editables.
 2. Crear el modelo y la ventana **Configuración**.
 3. Conectar la nueva opción al menú de bandeja.
-4. Reemplazar el `TreeView` por el selector visual moderno y responsivo.
-5. Aplicar el alias tanto al selector como a la configuración.
-6. Evaluar y modernizar el flyout de bandeja.
-7. Probar con teclado sin nombre, dos teclados iguales, un dispositivo ignorado y un periférico compuesto como MX Master 3S.
+4. Implementar inicio automático por usuario, activado por defecto y editable.
+5. Añadir exportación, importación y copias de seguridad.
+6. Reemplazar el `TreeView` por el selector visual moderno y responsivo.
+7. Aplicar el alias tanto al selector como a la configuración.
+8. Evaluar y modernizar el flyout de bandeja.
+9. Crear el instalador por usuario y automatizar su compilación.
+10. Probar instalación, actualización, desinstalación e inicio con Windows sin elevación.
+11. Probar con teclado sin nombre, dos teclados iguales, un dispositivo ignorado y un periférico compuesto como MX Master 3S.
 
 ## Estado al pausar
 
