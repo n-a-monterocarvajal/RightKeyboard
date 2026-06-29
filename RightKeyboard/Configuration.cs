@@ -5,7 +5,7 @@ namespace RightKeyboard;
 
 public sealed class Configuration
 {
-    private const int CurrentSchemaVersion = 3;
+    public const int CurrentSchemaVersion = 3;
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -29,7 +29,7 @@ public sealed class Configuration
 
         if (File.Exists(path))
         {
-            return LoadJson(path, layouts);
+            return LoadJson(path, layouts, warnings: null);
         }
 
         if (configurationFile is null && File.Exists(GetLegacyConfigFilePath()))
@@ -40,6 +40,17 @@ public sealed class Configuration
         }
 
         return new Configuration();
+    }
+
+    public static ConfigurationImportResult LoadImport(
+        string path,
+        IEnumerable<Layout>? availableLayouts = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        Layout[] layouts = (availableLayouts ?? Layout.EnumerateLayouts()).ToArray();
+        List<string> warnings = [];
+        Configuration configuration = LoadJson(path, layouts, warnings);
+        return new ConfigurationImportResult(configuration, warnings);
     }
 
     public DevicePreference TouchDevice(KeyboardDevice device, string? customName = null)
@@ -187,6 +198,9 @@ public sealed class Configuration
 
     public void MergeFrom(Configuration imported, bool replace)
     {
+        ArgumentNullException.ThrowIfNull(imported);
+        imported.ValidateState();
+
         if (replace)
         {
             Devices.Clear();
@@ -197,6 +211,8 @@ public sealed class Configuration
         foreach ((string identity, DevicePreference preference) in imported.Devices)
         {
             Devices[identity] = preference.Clone();
+            LayoutMappings.Remove(identity);
+            IgnoredDevices.Remove(identity);
         }
 
         foreach ((string identity, Layout layout) in imported.LayoutMappings)
@@ -217,20 +233,42 @@ public sealed class Configuration
 
     public void Export(string path) => SaveToPath(path);
 
-    public string CreateBackup()
+    public string ApplyImport(
+        Configuration imported,
+        bool replace,
+        string? configurationFile = null,
+        string? backupDirectory = null)
     {
-        Directory.CreateDirectory(GetExportDirectory());
-        string path = Path.Combine(GetExportDirectory(), $"RightKeyboard-respaldo-{DateTime.Now:yyyy-MM-dd-HHmmss}.json");
+        ArgumentNullException.ThrowIfNull(imported);
+        Configuration candidate = Clone();
+        candidate.MergeFrom(imported, replace);
+
+        string backupPath = CreateBackup(backupDirectory);
+        candidate.Save(configurationFile);
+        ReplaceState(candidate);
+        return backupPath;
+    }
+
+    public string CreateBackup(string? backupDirectory = null)
+    {
+        string directory = backupDirectory ?? GetExportDirectory();
+        Directory.CreateDirectory(directory);
+        string timestamp = DateTime.Now.ToString("yyyy-MM-dd-HHmmss-fff", CultureInfo.InvariantCulture);
+        string path = Path.Combine(directory, $"RightKeyboard-respaldo-{timestamp}.json");
+        for (int suffix = 2; File.Exists(path); suffix++)
+        {
+            path = Path.Combine(directory, $"RightKeyboard-respaldo-{timestamp}-{suffix}.json");
+        }
+
         Export(path);
         return path;
     }
 
     public void Clear(string? configurationFile = null)
     {
-        Devices.Clear();
-        LayoutMappings.Clear();
-        IgnoredDevices.Clear();
-        Save(configurationFile);
+        Configuration empty = new();
+        empty.Save(configurationFile);
+        ReplaceState(empty);
     }
 
     public static string GetConfigFilePath() => Path.Combine(
@@ -250,6 +288,8 @@ public sealed class Configuration
 
     private void SaveToPath(string path)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        ValidateState();
         string fullPath = Path.GetFullPath(path);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         StoredConfigurationV3 stored = new()
@@ -266,82 +306,212 @@ public sealed class Configuration
             IgnoredDeviceIds = IgnoredDevices.Order(StringComparer.OrdinalIgnoreCase).ToList()
         };
 
-        string temporaryPath = fullPath + ".tmp";
-        File.WriteAllText(temporaryPath, JsonSerializer.Serialize(stored, JsonOptions));
-        File.Move(temporaryPath, fullPath, true);
+        string temporaryPath = fullPath + $".{Guid.NewGuid():N}.tmp";
+        try
+        {
+            File.WriteAllText(temporaryPath, JsonSerializer.Serialize(stored, JsonOptions));
+            File.Move(temporaryPath, fullPath, true);
+        }
+        finally
+        {
+            if (File.Exists(temporaryPath))
+            {
+                File.Delete(temporaryPath);
+            }
+        }
     }
 
-    private static Configuration LoadJson(string path, IReadOnlyList<Layout> layouts)
+    private static Configuration LoadJson(
+        string path,
+        IReadOnlyList<Layout> layouts,
+        List<string>? warnings)
     {
         string json = File.ReadAllText(path);
         using JsonDocument document = JsonDocument.Parse(json);
-        int version = document.RootElement.TryGetProperty("version", out JsonElement versionElement)
-            ? versionElement.GetInt32()
-            : 2;
-        return version >= 3 ? LoadV3(json, layouts) : LoadV2(json, layouts);
-    }
-
-    private static Configuration LoadV3(string json, IReadOnlyList<Layout> layouts)
-    {
-        StoredConfigurationV3 stored = JsonSerializer.Deserialize<StoredConfigurationV3>(json, JsonOptions)
-            ?? new StoredConfigurationV3();
-        Configuration configuration = new();
-        foreach (StoredDevice device in stored.Devices.Where(device => !string.IsNullOrWhiteSpace(device.Identity)))
+        if (document.RootElement.ValueKind != JsonValueKind.Object)
         {
-            configuration.Devices[device.Identity] = device.ToPreference();
+            throw InvalidData("La raíz debe ser un objeto JSON.");
         }
 
-        foreach (StoredMappingV3 mapping in stored.Mappings)
+        ValidateNoDuplicateProperties(document.RootElement, "$");
+
+        JsonElement? versionElement = null;
+        foreach (JsonProperty property in document.RootElement.EnumerateObject()
+                     .Where(property => string.Equals(property.Name, "version", StringComparison.OrdinalIgnoreCase)))
         {
-            if (TryReadLayout(mapping.Layout, mapping.LanguageName, mapping.LayoutName, layouts, out Layout? layout) &&
-                configuration.Devices.ContainsKey(mapping.Identity))
+            if (versionElement is not null)
             {
-                configuration.LayoutMappings[mapping.Identity] = layout!;
+                throw InvalidData("La propiedad 'version' está duplicada.");
+            }
+
+            versionElement = property.Value;
+        }
+
+        if (versionElement is null &&
+            document.RootElement.EnumerateObject().Any(property =>
+                string.Equals(property.Name, "devices", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(property.Name, "ignoredDeviceIds", StringComparison.OrdinalIgnoreCase)))
+        {
+            throw InvalidData("Falta la propiedad 'version' para un documento con estructura de esquema 3.");
+        }
+
+        int version = versionElement is JsonElement value ? ReadVersion(value) : 2;
+        return version switch
+        {
+            2 => LoadV2(json, layouts, warnings),
+            CurrentSchemaVersion => LoadV3(json, layouts, warnings),
+            > CurrentSchemaVersion => throw InvalidData(
+                $"El esquema {version} fue creado por una versión más reciente de RightKeyboard. " +
+                $"Esta versión admite hasta el esquema {CurrentSchemaVersion}."),
+            _ => throw InvalidData($"El esquema {version} no es compatible.")
+        };
+    }
+
+    private static Configuration LoadV3(
+        string json,
+        IReadOnlyList<Layout> layouts,
+        List<string>? warnings)
+    {
+        StoredConfigurationV3 stored = JsonSerializer.Deserialize<StoredConfigurationV3>(json, JsonOptions)
+            ?? throw InvalidData("El documento JSON no contiene preferencias.");
+        stored.Devices ??= [];
+        stored.Mappings ??= [];
+        stored.IgnoredDeviceIds ??= [];
+        Configuration configuration = new();
+        HashSet<string> deviceIds = new(StringComparer.OrdinalIgnoreCase);
+        foreach (StoredDevice? device in stored.Devices)
+        {
+            if (device is null)
+            {
+                throw InvalidData("La colección 'devices' contiene un elemento nulo.");
+            }
+
+            string identity = RequireIdentity(device.Identity, "devices");
+            if (!deviceIds.Add(identity))
+            {
+                throw InvalidData($"El dispositivo '{identity}' está duplicado.");
+            }
+
+            configuration.Devices[identity] = device.ToPreference(identity);
+        }
+
+        HashSet<string> mappingIds = new(StringComparer.OrdinalIgnoreCase);
+        foreach (StoredMappingV3? mapping in stored.Mappings)
+        {
+            if (mapping is null)
+            {
+                throw InvalidData("La colección 'mappings' contiene un elemento nulo.");
+            }
+
+            string identity = RequireIdentity(mapping.Identity, "mappings");
+            if (!mappingIds.Add(identity))
+            {
+                throw InvalidData($"La asociación de '{identity}' está duplicada.");
+            }
+
+            if (!configuration.Devices.ContainsKey(identity))
+            {
+                throw InvalidData($"La asociación de '{identity}' no corresponde a ningún dispositivo.");
+            }
+
+            if (TryReadLayout(mapping.Layout, mapping.LanguageName, mapping.LayoutName, layouts, out Layout? layout))
+            {
+                configuration.LayoutMappings[identity] = layout!;
+            }
+            else
+            {
+                warnings?.Add($"No se encontró la distribución de '{identity}'; el dispositivo se importará sin asociación.");
             }
         }
 
-        foreach (string identity in stored.IgnoredDeviceIds.Where(configuration.Devices.ContainsKey))
+        HashSet<string> ignoredIds = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string storedIdentity in stored.IgnoredDeviceIds)
         {
+            string identity = RequireIdentity(storedIdentity, "ignoredDeviceIds");
+            if (!ignoredIds.Add(identity))
+            {
+                throw InvalidData($"El dispositivo ignorado '{identity}' está duplicado.");
+            }
+
+            if (!configuration.Devices.ContainsKey(identity))
+            {
+                throw InvalidData($"El dispositivo ignorado '{identity}' no existe en devices.");
+            }
+
+            if (configuration.LayoutMappings.ContainsKey(identity))
+            {
+                throw InvalidData($"El dispositivo '{identity}' no puede tener distribución y estar ignorado a la vez.");
+            }
+
             configuration.IgnoredDevices.Add(identity);
-            configuration.LayoutMappings.Remove(identity);
         }
 
         return configuration;
     }
 
-    private static Configuration LoadV2(string json, IReadOnlyList<Layout> layouts)
+    private static Configuration LoadV2(
+        string json,
+        IReadOnlyList<Layout> layouts,
+        List<string>? warnings)
     {
         StoredConfigurationV2 stored = JsonSerializer.Deserialize<StoredConfigurationV2>(json, JsonOptions)
-            ?? new StoredConfigurationV2();
+            ?? throw InvalidData("El documento JSON no contiene preferencias.");
+        stored.Mappings ??= [];
+        stored.IgnoredDevices ??= [];
         Configuration configuration = new();
+        HashSet<string> identities = new(StringComparer.OrdinalIgnoreCase);
 
-        foreach (StoredMappingV2 mapping in stored.Mappings)
+        foreach (StoredMappingV2? mapping in stored.Mappings)
         {
-            if (!TryReadLayout(mapping.Layout, null, null, layouts, out Layout? layout) || string.IsNullOrWhiteSpace(mapping.Identity))
+            if (mapping is null)
             {
-                continue;
+                throw InvalidData("La colección 'mappings' contiene un elemento nulo.");
             }
 
-            configuration.Devices[mapping.Identity] = new DevicePreference
+            string identity = RequireIdentity(mapping.Identity, "mappings");
+            if (!identities.Add(identity))
             {
-                Identity = mapping.Identity,
+                throw InvalidData($"El dispositivo '{identity}' está duplicado en el esquema 2.");
+            }
+
+            configuration.Devices[identity] = new DevicePreference
+            {
+                Identity = identity,
                 Fingerprint = mapping.Fingerprint ?? string.Empty,
                 DetectedName = mapping.DisplayName ?? "Teclado",
                 LastSeenUtc = DateTimeOffset.UtcNow
             };
-            configuration.LayoutMappings[mapping.Identity] = layout!;
+            if (TryReadLayout(mapping.Layout, null, null, layouts, out Layout? layout))
+            {
+                configuration.LayoutMappings[identity] = layout!;
+            }
+            else
+            {
+                warnings?.Add($"No se encontró la distribución de '{identity}'; el dispositivo se importará sin asociación.");
+            }
         }
 
-        foreach (StoredIgnoredDeviceV2 ignored in stored.IgnoredDevices.Where(item => !string.IsNullOrWhiteSpace(item.Identity)))
+        foreach (StoredIgnoredDeviceV2? ignored in stored.IgnoredDevices)
         {
-            configuration.Devices[ignored.Identity] = new DevicePreference
+            if (ignored is null)
             {
-                Identity = ignored.Identity,
+                throw InvalidData("La colección 'ignoredDevices' contiene un elemento nulo.");
+            }
+
+            string identity = RequireIdentity(ignored.Identity, "ignoredDevices");
+            if (!identities.Add(identity))
+            {
+                throw InvalidData($"El dispositivo '{identity}' está duplicado en el esquema 2.");
+            }
+
+            configuration.Devices[identity] = new DevicePreference
+            {
+                Identity = identity,
                 Fingerprint = ignored.Fingerprint ?? string.Empty,
                 DetectedName = ignored.DisplayName ?? "Dispositivo ignorado",
                 LastSeenUtc = DateTimeOffset.UtcNow
             };
-            configuration.IgnoredDevices.Add(ignored.Identity);
+            configuration.IgnoredDevices.Add(identity);
         }
 
         return configuration;
@@ -385,6 +555,119 @@ public sealed class Configuration
 
         return configuration;
     }
+
+    private Configuration Clone()
+    {
+        Configuration clone = new();
+        clone.ReplaceState(this);
+        return clone;
+    }
+
+    private void ReplaceState(Configuration source)
+    {
+        Devices.Clear();
+        LayoutMappings.Clear();
+        IgnoredDevices.Clear();
+
+        foreach ((string identity, DevicePreference preference) in source.Devices)
+        {
+            Devices[identity] = preference.Clone();
+        }
+
+        foreach ((string identity, Layout layout) in source.LayoutMappings)
+        {
+            LayoutMappings[identity] = layout;
+        }
+
+        IgnoredDevices.UnionWith(source.IgnoredDevices);
+    }
+
+    private void ValidateState()
+    {
+        foreach ((string identity, DevicePreference preference) in Devices)
+        {
+            RequireIdentity(identity, "devices");
+            if (!string.Equals(identity, preference.Identity, StringComparison.OrdinalIgnoreCase))
+            {
+                throw InvalidData($"La clave '{identity}' no coincide con la identidad del dispositivo.");
+            }
+        }
+
+        foreach (string identity in LayoutMappings.Keys)
+        {
+            if (!Devices.ContainsKey(identity))
+            {
+                throw InvalidData($"La asociación de '{identity}' no corresponde a ningún dispositivo.");
+            }
+
+            if (IgnoredDevices.Contains(identity))
+            {
+                throw InvalidData($"El dispositivo '{identity}' no puede tener distribución y estar ignorado a la vez.");
+            }
+        }
+
+        foreach (string identity in IgnoredDevices)
+        {
+            if (!Devices.ContainsKey(identity))
+            {
+                throw InvalidData($"El dispositivo ignorado '{identity}' no existe en devices.");
+            }
+        }
+    }
+
+    private static int ReadVersion(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Number || !element.TryGetInt32(out int version))
+        {
+            throw InvalidData("La propiedad 'version' debe ser un número entero.");
+        }
+
+        return version;
+    }
+
+    private static void ValidateNoDuplicateProperties(JsonElement element, string path)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            HashSet<string> names = new(StringComparer.OrdinalIgnoreCase);
+            foreach (JsonProperty property in element.EnumerateObject())
+            {
+                if (!names.Add(property.Name))
+                {
+                    throw InvalidData($"La propiedad '{property.Name}' está duplicada en {path}.");
+                }
+
+                ValidateNoDuplicateProperties(property.Value, $"{path}.{property.Name}");
+            }
+        }
+        else if (element.ValueKind == JsonValueKind.Array)
+        {
+            int index = 0;
+            foreach (JsonElement item in element.EnumerateArray())
+            {
+                ValidateNoDuplicateProperties(item, $"{path}[{index++}]");
+            }
+        }
+    }
+
+    private static string RequireIdentity(string? value, string collection)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw InvalidData($"La colección '{collection}' contiene una identidad vacía.");
+        }
+
+        string identity = value.Trim();
+        if (!string.Equals(identity, value, StringComparison.Ordinal))
+        {
+            throw InvalidData($"La identidad '{value}' contiene espacios al principio o al final.");
+        }
+
+        return identity;
+    }
+
+    private static InvalidDataException InvalidData(string message) =>
+        new($"preferences.json no es válido: {message}");
 
     private static bool TryReadLayout(
         string? identifierValue,
@@ -443,15 +726,19 @@ public sealed class Configuration
             LastSeenUtc = preference.LastSeenUtc
         };
 
-        public DevicePreference ToPreference() => new()
+        public DevicePreference ToPreference(string identity)
         {
-            Identity = Identity,
-            Fingerprint = Fingerprint,
-            DetectedName = DetectedName,
-            CustomName = CustomName,
-            TechnicalId = TechnicalId,
-            LastSeenUtc = LastSeenUtc
-        };
+            string detectedName = string.IsNullOrWhiteSpace(DetectedName) ? "Teclado" : DetectedName.Trim();
+            return new DevicePreference
+            {
+                Identity = identity,
+                Fingerprint = Fingerprint ?? string.Empty,
+                DetectedName = detectedName,
+                CustomName = NormalizeCustomName(CustomName, detectedName),
+                TechnicalId = TechnicalId ?? string.Empty,
+                LastSeenUtc = LastSeenUtc
+            };
+        }
     }
 
     private sealed class StoredMappingV3
@@ -512,3 +799,7 @@ public sealed class DevicePreference
         LastSeenUtc = LastSeenUtc
     };
 }
+
+public sealed record ConfigurationImportResult(
+    Configuration Configuration,
+    IReadOnlyList<string> Warnings);

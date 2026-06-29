@@ -31,6 +31,7 @@ public sealed class ConfigurationTests
         KeyboardDevice mouse = Device("container:mouse", "MODEL-M", "MX Master 3S", nonKeyboard: true);
         configuration.SetLayout(keyboard, spanish, "Teclado oficina");
         configuration.Ignore(mouse, "Mouse principal");
+        DateTimeOffset keyboardLastSeen = configuration.Devices[keyboard.Identity].LastSeenUtc;
 
         configuration.Save(path);
         Configuration loaded = Configuration.LoadConfiguration(new KeyboardDevicesCollection(), path, [spanish]);
@@ -40,6 +41,9 @@ public sealed class ConfigurationTests
             Assert.That(loaded.LayoutMappings[keyboard.Identity].Identifier, Is.EqualTo(spanish.Identifier));
             Assert.That(loaded.Devices[keyboard.Identity].CustomName, Is.EqualTo("Teclado oficina"));
             Assert.That(loaded.Devices[keyboard.Identity].DetectedName, Is.EqualTo("Teclado sin nombre"));
+            Assert.That(loaded.Devices[keyboard.Identity].Fingerprint, Is.EqualTo("MODEL-A"));
+            Assert.That(loaded.Devices[keyboard.Identity].TechnicalId, Is.EqualTo("ID DE PRUEBA"));
+            Assert.That(loaded.Devices[keyboard.Identity].LastSeenUtc, Is.EqualTo(keyboardLastSeen));
             Assert.That(loaded.IgnoredDevices.Contains(mouse.Identity), Is.True);
             Assert.That(loaded.Devices[mouse.Identity].CustomName, Is.EqualTo("Mouse principal"));
             Assert.That(File.ReadAllText(path), Does.Contain("\"version\": 3"));
@@ -116,12 +120,16 @@ public sealed class ConfigurationTests
         Configuration configuration = new();
         KeyboardDevice keyboard = Device("device:keyboard", "MODEL-A", "Teclado");
         configuration.SetLayout(keyboard, spanish);
+        DevicePreference original = configuration.Devices[keyboard.Identity];
 
         configuration.UpdatePreference(keyboard.Identity, "Teclado viaje", null, ignored: true);
 
         Assert.Multiple(() =>
         {
+            Assert.That(configuration.Devices[keyboard.Identity], Is.SameAs(original));
             Assert.That(configuration.Devices[keyboard.Identity].CustomName, Is.EqualTo("Teclado viaje"));
+            Assert.That(configuration.Devices[keyboard.Identity].Fingerprint, Is.EqualTo("MODEL-A"));
+            Assert.That(configuration.Devices[keyboard.Identity].TechnicalId, Is.EqualTo("ID DE PRUEBA"));
             Assert.That(configuration.IgnoredDevices.Contains(keyboard.Identity), Is.True);
             Assert.That(configuration.LayoutMappings.ContainsKey(keyboard.Identity), Is.False);
         });
@@ -147,6 +155,181 @@ public sealed class ConfigurationTests
     }
 
     [Test]
+    public void MergeFrom_ImportedDeviceWithoutModeClearsPreviousMode()
+    {
+        Configuration current = new();
+        KeyboardDevice keyboard = Device("device:a", "MODEL-A", "A");
+        current.SetLayout(keyboard, spanish, "Alias local");
+        Configuration imported = new();
+        imported.TouchDevice(keyboard, "Alias importado");
+
+        current.MergeFrom(imported, replace: false);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(current.Devices[keyboard.Identity].CustomName, Is.EqualTo("Alias importado"));
+            Assert.That(current.LayoutMappings.ContainsKey(keyboard.Identity), Is.False);
+            Assert.That(current.IgnoredDevices.Contains(keyboard.Identity), Is.False);
+        });
+    }
+
+    [Test]
+    public void LoadImport_RejectsFutureSchemaWithoutReadingItAsVersion3()
+    {
+        string path = WriteJson("future.json", """
+        { "version": 4, "devices": [], "mappings": [], "ignoredDeviceIds": [] }
+        """);
+
+        InvalidDataException error = Assert.Throws<InvalidDataException>(
+            () => Configuration.LoadImport(path, [spanish]))!;
+
+        Assert.That(error.Message, Does.Contain("versión más reciente"));
+    }
+
+    [Test]
+    public void LoadImport_RejectsDuplicateIdentitiesIgnoringCase()
+    {
+        string path = WriteJson("duplicates.json", """
+        {
+          "version": 3,
+          "devices": [
+            { "identity": "device:A", "detectedName": "A" },
+            { "identity": "DEVICE:a", "detectedName": "A duplicado" }
+          ],
+          "mappings": [],
+          "ignoredDeviceIds": []
+        }
+        """);
+
+        InvalidDataException error = Assert.Throws<InvalidDataException>(
+            () => Configuration.LoadImport(path, [spanish]))!;
+
+        Assert.That(error.Message, Does.Contain("duplicado"));
+    }
+
+    [Test]
+    public void LoadImport_RejectsDuplicateJsonPropertiesIgnoringCase()
+    {
+        string path = WriteJson("duplicate-properties.json", """
+        { "version": 3, "devices": [], "Devices": [], "mappings": [], "ignoredDeviceIds": [] }
+        """);
+
+        InvalidDataException error = Assert.Throws<InvalidDataException>(
+            () => Configuration.LoadImport(path, [spanish]))!;
+
+        Assert.That(error.Message, Does.Contain("propiedad 'Devices' está duplicada"));
+    }
+
+    [Test]
+    public void LoadImport_RejectsDanglingOrContradictoryReferences()
+    {
+        string dangling = WriteJson("dangling.json", """
+        {
+          "version": 3,
+          "devices": [],
+          "mappings": [{ "identity": "device:missing", "layout": "000000000000040A" }],
+          "ignoredDeviceIds": []
+        }
+        """);
+        string contradictory = WriteJson("contradictory.json", """
+        {
+          "version": 3,
+          "devices": [{ "identity": "device:a", "detectedName": "A" }],
+          "mappings": [{ "identity": "device:a", "layout": "000000000000040A" }],
+          "ignoredDeviceIds": ["device:a"]
+        }
+        """);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                Assert.Throws<InvalidDataException>(() => Configuration.LoadImport(dangling, [spanish]))!.Message,
+                Does.Contain("ningún dispositivo"));
+            Assert.That(
+                Assert.Throws<InvalidDataException>(() => Configuration.LoadImport(contradictory, [spanish]))!.Message,
+                Does.Contain("distribución y estar ignorado"));
+        });
+    }
+
+    [Test]
+    public void LoadImport_PreservesDeviceAndReportsUnavailableLayout()
+    {
+        string path = WriteJson("unavailable-layout.json", """
+        {
+          "version": 3,
+          "devices": [{ "identity": "device:a", "detectedName": "A", "customName": "Alias" }],
+          "mappings": [{ "identity": "device:a", "layout": "0000000000000409", "languageName": "inglés", "layoutName": "US" }],
+          "ignoredDeviceIds": []
+        }
+        """);
+
+        ConfigurationImportResult result = Configuration.LoadImport(path, [spanish]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Configuration.Devices["device:a"].CustomName, Is.EqualTo("Alias"));
+            Assert.That(result.Configuration.LayoutMappings, Is.Empty);
+            Assert.That(result.Warnings, Has.Count.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void LoadConfiguration_AcceptsNullCollectionsAsEmpty()
+    {
+        string path = WriteJson("null-collections.json", """
+        { "version": 3, "devices": null, "mappings": null, "ignoredDeviceIds": null }
+        """);
+
+        Configuration loaded = Configuration.LoadConfiguration(new KeyboardDevicesCollection(), path, [spanish]);
+
+        Assert.That(loaded.Devices, Is.Empty);
+    }
+
+    [Test]
+    public void ApplyImport_CreatesUniqueBackupsAndPersistsAtomically()
+    {
+        string path = Path.Combine(temporaryDirectory, "preferences.json");
+        string backups = Path.Combine(temporaryDirectory, "exports");
+        Configuration current = new();
+        current.SetLayout(Device("device:a", "MODEL-A", "A"), spanish);
+        current.Save(path);
+        Configuration imported = new();
+        imported.Ignore(Device("device:b", "MODEL-B", "B"));
+
+        string firstBackup = current.ApplyImport(imported, replace: true, path, backups);
+        string secondBackup = current.CreateBackup(backups);
+        Configuration persisted = Configuration.LoadConfiguration(new KeyboardDevicesCollection(), path, [spanish]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(firstBackup, Is.Not.EqualTo(secondBackup));
+            Assert.That(File.Exists(firstBackup), Is.True);
+            Assert.That(File.Exists(secondBackup), Is.True);
+            Assert.That(current.Devices.Keys, Is.EquivalentTo(new[] { "device:b" }));
+            Assert.That(persisted.IgnoredDevices.Contains("device:b"), Is.True);
+        });
+    }
+
+    [Test]
+    public void ApplyImport_WhenSaveFails_DoesNotMutateCurrentConfiguration()
+    {
+        string backups = Path.Combine(temporaryDirectory, "exports");
+        Configuration current = new();
+        current.SetLayout(Device("device:a", "MODEL-A", "A"), spanish);
+        Configuration imported = new();
+        imported.Ignore(Device("device:b", "MODEL-B", "B"));
+
+        Assert.Catch<Exception>(() =>
+            current.ApplyImport(imported, replace: true, temporaryDirectory, backups));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(current.Devices.Keys, Is.EquivalentTo(new[] { "device:a" }));
+            Assert.That(current.LayoutMappings.ContainsKey("device:a"), Is.True);
+        });
+    }
+
+    [Test]
     public void Clear_RemovesAllDeviceData()
     {
         string path = Path.Combine(temporaryDirectory, "preferences.json");
@@ -165,10 +348,28 @@ public sealed class ConfigurationTests
         });
     }
 
+    [Test]
+    public void Clear_WhenSaveFails_DoesNotMutateCurrentConfiguration()
+    {
+        Configuration configuration = new();
+        configuration.SetLayout(Device("device:keyboard", "MODEL-A", "Teclado"), spanish);
+
+        Assert.Catch<Exception>(() => configuration.Clear(temporaryDirectory));
+
+        Assert.That(configuration.Devices.ContainsKey("device:keyboard"), Is.True);
+    }
+
     private static KeyboardDevice Device(
         string identity,
         string fingerprint,
         string displayName,
         bool nonKeyboard = false) =>
         new("test-path", 1, identity, fingerprint, displayName, "ID DE PRUEBA", nonKeyboard);
+
+    private string WriteJson(string fileName, string json)
+    {
+        string path = Path.Combine(temporaryDirectory, fileName);
+        File.WriteAllText(path, json);
+        return path;
+    }
 }

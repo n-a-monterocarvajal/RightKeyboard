@@ -378,10 +378,10 @@ internal sealed class SettingsDialog : Form
             return;
         }
 
-        Configuration imported;
+        ConfigurationImportResult import;
         try
         {
-            imported = Configuration.LoadConfiguration(devices, dialog.FileName, layouts);
+            import = Configuration.LoadImport(dialog.FileName, layouts);
         }
         catch (Exception error)
         {
@@ -391,7 +391,10 @@ internal sealed class SettingsDialog : Form
 
         DialogResult mode = MessageBox.Show(
             this,
-            $"Se encontraron {imported.Devices.Count} dispositivos.\n\n" +
+            $"Se encontraron {import.Configuration.Devices.Count} dispositivos.\n" +
+            (import.Warnings.Count == 0
+                ? "\n"
+                : $"\nAdvertencias:\n- {string.Join("\n- ", import.Warnings)}\n\n") +
             "Sí: reemplazar la configuración actual.\nNo: combinar con la configuración actual.",
             "Importar preferencias",
             MessageBoxButtons.YesNoCancel,
@@ -402,9 +405,21 @@ internal sealed class SettingsDialog : Form
             return;
         }
 
-        configuration.CreateBackup();
-        configuration.MergeFrom(imported, replace: mode == DialogResult.Yes);
-        saveConfiguration();
+        try
+        {
+            configuration.ApplyImport(import.Configuration, replace: mode == DialogResult.Yes);
+        }
+        catch (Exception error)
+        {
+            MessageBox.Show(
+                this,
+                $"No se pudo aplicar la importación. Las preferencias actuales no se modificaron.\n\n{error.Message}",
+                "Importar",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+            return;
+        }
+
         RefreshDeviceList();
     }
 

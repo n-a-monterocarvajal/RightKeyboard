@@ -37,6 +37,8 @@ Cerrar el selector sin aceptar no crea una asociación. Las pulsaciones de modif
 
 Desde **Configuración** se pueden editar preferencias sin repetir el flujo de detección. La exportación genera un JSON portable; al importar se puede combinar o reemplazar la configuración actual y RightKeyboard crea primero un respaldo en `%LOCALAPPDATA%\RightKeyboard\exports`.
 
+El contrato del esquema, las validaciones, las rutas y el alcance exacto de **Limpiar preferencias** se documentan en [Preferencias y portabilidad de RightKeyboard 1.5](docs/preferencias-1.5.md).
+
 ## Compilación y pruebas
 
 ```powershell

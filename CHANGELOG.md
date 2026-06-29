@@ -11,6 +11,7 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 - Ventana **Configuración** para editar dispositivos conectados y desconectados.
 - Cambio selectivo de alias, distribución y estado ignorado, además de olvidar dispositivos individuales.
 - Exportación e importación JSON con modos combinar/reemplazar y respaldo automático.
+- Validación estricta del esquema 3, rechazo de versiones incompatibles e importación transaccional con advertencias de distribuciones ausentes.
 - Control del inicio con Windows desde la configuración.
 - Selector rediseñado con grupos y filas seleccionables en lugar del `TreeView` clásico.
 - Campo de nombre para identificar teclados que Windows reporta sin nombre.
