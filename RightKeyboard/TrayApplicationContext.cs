@@ -67,6 +67,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
         inputWindow.DevicesChanged += OnDevicesChanged;
     }
 
+    public void RequestExit() => uiContext.Post(_ => ExitThread(), null);
+
     private Configuration LoadConfiguration()
     {
         try

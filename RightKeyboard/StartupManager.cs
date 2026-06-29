@@ -5,6 +5,8 @@ namespace RightKeyboard;
 internal static class StartupManager
 {
     private const string RunKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
+    private const string StartupApprovedKeyPath =
+        @"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run";
     private const string ValueName = "RightKeyboard";
 
     public static bool IsEnabled
@@ -13,7 +15,13 @@ internal static class StartupManager
         {
             using RegistryKey? key = Registry.CurrentUser.OpenSubKey(RunKeyPath);
             string? command = key?.GetValue(ValueName) as string;
-            return string.Equals(command, BuildCommand(), StringComparison.OrdinalIgnoreCase);
+            if (!string.Equals(command, BuildCommand(), StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            using RegistryKey? approvalKey = Registry.CurrentUser.OpenSubKey(StartupApprovedKeyPath);
+            return approvalKey?.GetValue(ValueName) is not byte[] approval || IsApproved(approval);
         }
     }
 
@@ -22,6 +30,8 @@ internal static class StartupManager
         using RegistryKey key = Registry.CurrentUser.CreateSubKey(RunKeyPath, true);
         if (enabled)
         {
+            using RegistryKey? approvalKey = Registry.CurrentUser.OpenSubKey(StartupApprovedKeyPath, true);
+            approvalKey?.DeleteValue(ValueName, false);
             key.SetValue(ValueName, BuildCommand(), RegistryValueKind.String);
         }
         else
@@ -29,6 +39,8 @@ internal static class StartupManager
             key.DeleteValue(ValueName, false);
         }
     }
+
+    private static bool IsApproved(byte[] approval) => approval.Length == 0 || approval[0] != 3;
 
     private static string BuildCommand()
     {

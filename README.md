@@ -11,7 +11,7 @@ La aplicación se ejecuta en segundo plano y su única interfaz permanente es el
 ## Requisitos
 
 - Windows 10 o Windows 11 de 64 bits.
-- [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/es-es/download/dotnet/10.0) para ejecutar una compilación dependiente del framework.
+- El instalador oficial incluye .NET 10 y no requiere un runtime global.
 - .NET 10 SDK para compilar el proyecto.
 
 Las distribuciones que se quieran utilizar deben estar instaladas previamente en **Configuración > Hora e idioma > Idioma y región > Opciones de idioma > Teclados**. RightKeyboard no instala ni modifica la lista de distribuciones de Windows.
@@ -31,7 +31,7 @@ C:\Users\<usuario>\AppData\Local\RightKeyboard\preferences.json
 
 La opción **Limpiar preferencias** vacía las asociaciones y la lista de dispositivos ignorados. No modifica las distribuciones instaladas en Windows. Si existe un `config.txt` creado por la versión 1.4, RightKeyboard lo migra automáticamente al nuevo formato.
 
-Para iniciar RightKeyboard con la sesión de Windows, abre `shell:startup` desde **Ejecutar** y coloca allí un acceso directo al ejecutable.
+El instalador activa de forma predeterminada el inicio con Windows. Se puede cambiar posteriormente desde **Configuración** o desde las aplicaciones de inicio de Windows.
 
 Cerrar el selector sin aceptar no crea una asociación. Las pulsaciones de modificadores, las liberaciones de tecla y los eventos de teclado sintéticos no abren el selector. El selector permite asignar un nombre al dispositivo, agrupa las distribuciones por idioma y permite ignorar periféricos que publican entradas de teclado sin ser teclados, como ciertos mouse con botones avanzados.
 
@@ -45,9 +45,11 @@ El contrato del esquema, las validaciones, las rutas y el alcance exacto de **Li
 dotnet restore RightKeyboard.sln
 dotnet build RightKeyboard.sln --configuration Release
 dotnet test RightKeyboard.sln --configuration Release
+scripts\build-installer.ps1
 ```
 
 La aplicación se genera en `RightKeyboard\bin\Release\net10.0-windows\`.
+El último comando publica para `win-x64`, compila el instalador con Inno Setup 6.3 o posterior y genera su archivo SHA-256 bajo `artifacts\installer`. Si `ISCC.exe` no está en una ubicación conocida, se puede indicar mediante `ISCC_PATH` o el parámetro `-IsccPath`.
 
 ## Implementación
 
