@@ -50,6 +50,9 @@ Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
 [Registry]
 Root: HKCU; Subkey: "{#RunKey}"; ValueType: string; ValueName: "RightKeyboard"; ValueData: """{app}\RightKeyboard.exe"""; Tasks: startup; Check: ShouldCreateStartupEntry
 
+[Icons]
+Name: "{autoprograms}\RightKeyboard"; Filename: "{app}\RightKeyboard.exe"; WorkingDir: "{app}"
+
 [Run]
 Filename: "{app}\RightKeyboard.exe"; Description: "Iniciar RightKeyboard"; Flags: nowait postinstall skipifsilent
 

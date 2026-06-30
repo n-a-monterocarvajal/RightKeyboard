@@ -7,6 +7,7 @@ La compilación de `1.5.0-alpha.3` fue verificada con Inno Setup 6.7.3. El scrip
 | Caso | Preparación y acción | Resultado esperado | Tipo |
 |---|---|---|---|
 | Instalación nueva | Sin instalación ni datos previos; ejecutar el instalador | No aparece UAC; se instala en `%LOCALAPPDATA%\RightKeyboard\app`; la aplicación figura en Aplicaciones instaladas y se inicia | Manual |
+| Acceso del menú Inicio | Completar una instalación nueva o una actualización | Aparece **RightKeyboard** en el menú Inicio y abre la aplicación instalada; no se crea un acceso en el escritorio | Manual |
 | Equipo sin .NET | Máquina sin .NET Desktop Runtime; instalar y ejecutar | RightKeyboard abre normalmente porque la publicación es autocontenida | Manual |
 | Inicio predeterminado | Instalación nueva con opciones predeterminadas | Se crea `HKCU\...\Run\RightKeyboard` y apunta al ejecutable instalado | Manual |
 | Inicio desactivado al instalar | Ejecutar con `/MERGETASKS="!startup"` | No se crea la entrada de inicio | Manual |
