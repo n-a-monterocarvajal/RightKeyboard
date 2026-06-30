@@ -2,6 +2,8 @@
 
 El instalador se compila con `scripts\build-installer.ps1`. Los casos marcados como manuales deben ejecutarse en una cuenta estándar de Windows 10 y Windows 11 x64, idealmente también en una máquina limpia sin .NET Desktop Runtime.
 
+La compilación de `1.5.0-alpha.3` fue verificada con Inno Setup 6.7.3. El script produjo el instalador autocontenido y su archivo SHA-256; los casos restantes de esta matriz requieren instalación real.
+
 | Caso | Preparación y acción | Resultado esperado | Tipo |
 |---|---|---|---|
 | Instalación nueva | Sin instalación ni datos previos; ejecutar el instalador | No aparece UAC; se instala en `%LOCALAPPDATA%\RightKeyboard\app`; la aplicación figura en Aplicaciones instaladas y se inicia | Manual |

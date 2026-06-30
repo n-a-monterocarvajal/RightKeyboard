@@ -5,7 +5,7 @@
   #define OutputDir "..\artifacts\installer"
 #endif
 #ifndef AppVersion
-  #define AppVersion "1.5.0-alpha.2"
+  #define AppVersion "1.5.0-alpha.3"
 #endif
 
 #define AppId "{{D7EC931A-AB1D-4F36-9F95-674B202CF334}"
@@ -29,7 +29,6 @@ MinVersion=10.0
 ArchitecturesAllowed=x64compatible
 CloseApplications=yes
 CloseApplicationsFilter=RightKeyboard.exe
-ForceCloseApplications=no
 RestartApplications=no
 UninstallDisplayIcon={app}\RightKeyboard.exe
 OutputDir={#OutputDir}
@@ -77,12 +76,12 @@ end;
 
 function IsStartupExternallyDisabled: Boolean;
 var
-  Approval: TArrayOfByte;
+  Approval: AnsiString;
 begin
   Result := False;
   if RegQueryBinaryValue(HKCU, '{#StartupApprovedKey}', 'RightKeyboard', Approval) then
-    if GetArrayLength(Approval) > 0 then
-      Result := Approval[0] = 3;
+    if Length(Approval) > 0 then
+      Result := Ord(Approval[1]) = 3;
 end;
 
 function ShouldCreateStartupEntry: Boolean;

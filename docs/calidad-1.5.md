@@ -2,20 +2,20 @@
 
 Este documento es la fuente de verdad para certificar `1.5.0-rc.1` y `1.5.0`. Se actualiza con evidencia reproducible y no sustituye las especificaciones funcionales de [continuación](continuacion-1.5.md) ni de [distribución](distribucion-1.5.md).
 
-## Estado del primer pase
+## Estado integrado de alpha 3
 
-Base auditada el 29 de junio de 2026: commit `8e4f1c1`, versión `1.5.0-alpha.2`.
+Integración auditada el 29 de junio de 2026 sobre la rama `codex/version-1.5`, versión `1.5.0-alpha.3`. Los cinco frentes de trabajo están combinados y la certificación física continúa pendiente.
 
 | Área | Resultado | Evidencia o brecha |
 |---|---|---|
 | Restauración | Correcta | `dotnet restore RightKeyboard.sln` con SDK 10.0.301. |
 | Compilación Release | Correcta | 0 errores y 0 advertencias. |
-| Pruebas automatizadas | Correcta | 25 de 25 pruebas NUnit. |
-| Versionado | Coherente para alpha | Proyecto `1.5.0-alpha.2`; manifiesto `1.5.0.0`. Debe cambiarse solo al preparar la candidata. |
+| Pruebas automatizadas | Correcta | 60 de 60 pruebas NUnit sobre el código integrado. |
+| Versionado | Coherente para alpha | Proyecto e instalador `1.5.0-alpha.3`; manifiesto `1.5.0.0`. Debe cambiarse solo al preparar la candidata. |
 | Elevación de la aplicación | Correcta en código | El manifiesto declara `asInvoker`; falta comprobar el instalador. |
 | Documentación | Revisada | README, CHANGELOG y ROADMAP enlazan este estado. `continuacion-1.5.md` conserva el registro histórico de alpha 1. |
 | Notas de versión | Borrador | Existe un borrador para `1.5.0-rc.1`; no debe presentarse como publicación. |
-| Instalación y artefactos | Bloqueante | Todavía no existen script Inno Setup, script reproducible de publicación ni archivo SHA-256. |
+| Instalación y artefactos | Correcta en compilación | Inno Setup 6.7.3 generó `RightKeyboard-1.5.0-alpha.3-Setup.exe` y su SHA-256. Falta probar instalación, actualización y desinstalación reales. |
 | Certificación física | Pendiente | Requiere hardware, cambio de sesión y pruebas en cuenta estándar. |
 
 ## Matriz automatizada
@@ -26,13 +26,13 @@ Base auditada el 29 de junio de 2026: commit `8e4f1c1`, versión `1.5.0-alpha.2`
 | AUT-02 | Unidad | Clasificación conservadora de mouse, touchpad, trackball y teclado ambiguo | Cubierto | El no-teclado inequívoco se excluye; lo ambiguo no. |
 | AUT-03 | Unidad | Logitech MX Master 3S por nombre detectado | Cubierto parcialmente | Se clasifica como no-teclado; falta validar el dispositivo real y sus colecciones HID. |
 | AUT-04 | Unidad | Guardar/cargar alias, asociación e ignorados en esquema 3 | Cubierto | Los datos sobreviven una recarga. |
-| AUT-05 | Unidad | Migración de esquema 2 a esquema 3 | Cubierto parcialmente | Se conserva la asociación; falta verificar persistencia posterior y archivos malformados. |
+| AUT-05 | Unidad | Migración de esquema 2 a esquema 3 | Cubierto | Se conserva la asociación y se rechazan archivos incompatibles, duplicados o contradictorios. |
 | AUT-06 | Unidad | Migración desde `config.txt` de 1.4 | Pendiente | Se conservan todas las asociaciones resolubles y se escribe un JSON válido. |
 | AUT-07 | Unidad | Reconexión con huella única | Cubierto | Recupera distribución y alias y aprende la identidad nueva. |
 | AUT-08 | Unidad | Dos dispositivos con huella igual | Cubierto parcialmente | No adivina una asociación; falta probar asociaciones distintas ya conocidas. |
 | AUT-09 | Unidad | Ignorado tras reconexión/cambio de identidad | Pendiente | Recupera el estado solo cuando la coincidencia es inequívoca. |
 | AUT-10 | Unidad | Editar, olvidar y limpiar preferencias | Cubierto | Las colecciones quedan coherentes y el borrado persiste. |
-| AUT-11 | Unidad | Exportar, combinar, reemplazar y respaldar | Cubierto parcialmente | Falta verificar respaldo previo, fallo de escritura e integridad del archivo. |
+| AUT-11 | Unidad | Exportar, combinar, reemplazar y respaldar | Cubierto | La aplicación transaccional crea respaldos únicos y conserva la memoria ante fallos de escritura. |
 | AUT-12 | Integración | Importar en otro equipo por huella, con distribuciones ausentes | Pendiente | Resuelve lo posible, conserva pendientes e informa lo no resuelto. |
 | AUT-13 | Integración | Clave de inicio por usuario | Pendiente | Crear, leer y quitar `HKCU\\...\\Run` es idempotente y conserva rutas con espacios. |
 | AUT-14 | Integración | Cambio de inventario por `WM_INPUT_DEVICE_CHANGE` | Pendiente | Refresca dispositivos sin perder estado ni bloquear entrada. |
@@ -98,13 +98,12 @@ Registrar para cada ejecución: fecha, commit, Windows, arquitectura, escala/DPI
 
 ## Riesgos y vacíos abiertos
 
-1. **Bloqueante — distribución:** no existe todavía el instalador ni el flujo reproducible de publicación.
+1. **Bloqueante — distribución:** el instalador se compila de forma reproducible, pero todavía no se ha probado en una cuenta estándar ni se han validado actualización y desinstalación.
 2. **Alto — portabilidad:** la importación combina identidades almacenadas; falta demostrar resolución entre equipos por huella y manejo visible de distribuciones no disponibles.
 3. **Alto — hardware:** las pruebas unitarias del MX Master 3S usan su nombre, no sus colecciones HID reales.
-4. **Alto — inicio:** no hay pruebas de registro, inicio de sesión, instancia única ni activación predeterminada por el instalador.
-5. **Medio — compatibilidad futura:** un archivo con versión de esquema mayor que 3 se intenta leer como versión 3; debe decidirse y probarse el rechazo o la compatibilidad.
-6. **Medio — automatización:** no hay configuración de integración continua ni política que convierta advertencias en errores.
-7. **Medio — evidencia:** faltan resultados físicos trazables para DPI, accesibilidad, suspensión y consumo.
+4. **Alto — inicio:** la instancia única y el cierre coordinado están implementados; faltan pruebas de registro, inicio de sesión y activación predeterminada por el instalador.
+5. **Medio — automatización:** no hay configuración de integración continua ni política que convierta advertencias en errores.
+6. **Medio — evidencia:** faltan resultados físicos trazables para DPI, accesibilidad, suspensión y consumo.
 
 ## Registro de certificación
 

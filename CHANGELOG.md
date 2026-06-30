@@ -4,6 +4,21 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [1.5.0] - En desarrollo
 
+### Alpha 3
+
+- Integración de los frentes de identidad, preferencias, interfaz, instalación y calidad sobre una sola rama.
+- Lectura de Raw Input sin asignaciones nativas por pulsación y actualización agrupada del inventario de dispositivos.
+- Validación estricta e importación transaccional de preferencias, con advertencias para distribuciones ausentes.
+- Mejoras de DPI, temas, accesibilidad, foco y navegación por teclado en las interfaces de Windows.
+- Instancia única, cierre ordenado para actualizaciones y scripts de instalación por usuario con publicación autocontenida.
+- Compilación Release sin errores ni advertencias y sesenta pruebas automatizadas correctas en Windows x64.
+
+### Validación en curso
+
+- La publicación autocontenida, el cierre coordinado y la compilación con Inno Setup 6.7.3 están verificados.
+- El instalador `RightKeyboard-1.5.0-alpha.3-Setup.exe` y su archivo SHA-256 se generan correctamente.
+- Continúan pendientes las pruebas físicas de hardware, cambio de sesión, actualización y desinstalación.
+
 ### Alpha 2
 
 - Nuevo esquema 3 de `preferences.json` con alias, nombre detectado, identificador técnico y última detección.
@@ -16,12 +31,6 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 - Selector rediseñado con grupos y filas seleccionables en lugar del `TreeView` clásico.
 - Campo de nombre para identificar teclados que Windows reporta sin nombre.
 - Menú de bandeja ampliado con **Configuración** y un renderer visual propio.
-
-### Validación en curso
-
-- Compilación Release con .NET SDK 10.0.301 sin errores ni advertencias.
-- Veinticinco pruebas automatizadas correctas en Windows x64.
-- La certificación física, el instalador por usuario y los artefactos de publicación siguen pendientes; este estado no corresponde todavía a una candidata de lanzamiento.
 
 ### Añadido
 
