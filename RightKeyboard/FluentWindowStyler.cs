@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using System.Drawing.Drawing2D;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Microsoft.Win32;
 
 namespace RightKeyboard;
 
@@ -28,6 +30,7 @@ internal static class FluentWindowStyler
     private const int WindowCornerPreference = 33;
     private const int SystemBackdropType = 38;
     private const int RoundCornerPreference = 2;
+    private const int NoSystemBackdrop = 1;
 
     public static bool Apply(nint handle, FluentBackdropKind backdrop, bool darkMode)
     {
@@ -44,10 +47,13 @@ internal static class FluentWindowStyler
 
         if (!FluentBackdropPolicy.CanUseSystemBackdrop(version, SystemInformation.HighContrast))
         {
+            TrySetAttribute(handle, SystemBackdropType, NoSystemBackdrop);
+            ExtendFrame(handle, enabled: false);
             return false;
         }
 
-        return TrySetAttribute(handle, SystemBackdropType, (int)backdrop);
+        return TrySetAttribute(handle, SystemBackdropType, (int)backdrop) &&
+            ExtendFrame(handle, enabled: true);
     }
 
     private static bool TrySetAttribute(nint handle, int attribute, int value)
@@ -66,14 +72,217 @@ internal static class FluentWindowStyler
         }
     }
 
+    private static bool ExtendFrame(nint handle, bool enabled)
+    {
+        Margins margins = enabled ? new Margins(-1) : new Margins(0);
+        try
+        {
+            return DwmExtendFrameIntoClientArea(handle, ref margins) >= 0;
+        }
+        catch (DllNotFoundException)
+        {
+            return false;
+        }
+        catch (EntryPointNotFoundException)
+        {
+            return false;
+        }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private readonly struct Margins(int value)
+    {
+        public readonly int Left = value;
+        public readonly int Right = value;
+        public readonly int Top = value;
+        public readonly int Bottom = value;
+    }
+
     [DllImport("dwmapi.dll", PreserveSig = true)]
     private static extern int DwmSetWindowAttribute(nint window, int attribute, ref int value, int valueSize);
+
+    [DllImport("dwmapi.dll", PreserveSig = true)]
+    private static extern int DwmExtendFrameIntoClientArea(nint window, ref Margins margins);
+}
+
+internal enum FluentThemeRole
+{
+    SecondaryText,
+    PrimaryButton,
+    Surface,
+    Border
+}
+
+internal readonly record struct FluentPalette(
+    Color Window,
+    Color Surface,
+    Color Card,
+    Color Field,
+    Color Text,
+    Color SecondaryText,
+    Color Border,
+    Color Hover,
+    Color Selected,
+    Color Primary,
+    Color PrimaryText)
+{
+    public static FluentPalette Create(bool darkMode) => darkMode
+        ? new(
+            Color.FromArgb(32, 32, 32),
+            Color.FromArgb(39, 39, 39),
+            Color.FromArgb(47, 47, 47),
+            Color.FromArgb(36, 36, 36),
+            Color.FromArgb(255, 255, 255),
+            Color.FromArgb(176, 176, 176),
+            Color.FromArgb(69, 69, 69),
+            Color.FromArgb(58, 58, 58),
+            Color.FromArgb(46, 76, 106),
+            Color.FromArgb(96, 160, 220),
+            Color.FromArgb(0, 0, 0))
+        : new(
+            Color.FromArgb(243, 243, 243),
+            Color.FromArgb(249, 249, 249),
+            Color.FromArgb(255, 255, 255),
+            Color.FromArgb(255, 255, 255),
+            Color.FromArgb(27, 27, 27),
+            Color.FromArgb(96, 96, 96),
+            Color.FromArgb(209, 209, 209),
+            Color.FromArgb(232, 232, 232),
+            Color.FromArgb(218, 235, 250),
+            Color.FromArgb(0, 95, 184),
+            Color.FromArgb(255, 255, 255));
+}
+
+internal static class FluentTheme
+{
+    private const string PersonalizeKey = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
+    private const string AppsUseLightTheme = "AppsUseLightTheme";
+
+    private sealed class RoleHolder(FluentThemeRole role)
+    {
+        public FluentThemeRole Role { get; } = role;
+    }
+
+    private static readonly ConditionalWeakTable<Control, RoleHolder> Roles = new();
+
+    public static bool IsDarkMode
+    {
+        get
+        {
+            try
+            {
+                using RegistryKey? key = Registry.CurrentUser.OpenSubKey(PersonalizeKey);
+                return ResolveDarkMode(key?.GetValue(AppsUseLightTheme), Application.IsDarkModeEnabled);
+            }
+            catch
+            {
+                return Application.IsDarkModeEnabled;
+            }
+        }
+    }
+
+    public static FluentPalette Current => FluentPalette.Create(IsDarkMode);
+
+    internal static bool ResolveDarkMode(object? appsUseLightTheme, bool fallback) =>
+        appsUseLightTheme is int value ? value == 0 : fallback;
+
+    public static void Mark(Control control, FluentThemeRole role)
+    {
+        Roles.Remove(control);
+        Roles.Add(control, new RoleHolder(role));
+    }
+
+    public static void Apply(Control root)
+    {
+        FluentPalette palette = Current;
+        Apply(root, palette);
+        root.Invalidate(true);
+    }
+
+    private static void Apply(Control control, FluentPalette palette)
+    {
+        Roles.TryGetValue(control, out RoleHolder? holder);
+        FluentThemeRole? role = holder?.Role;
+        control.ForeColor = role == FluentThemeRole.SecondaryText ? palette.SecondaryText : palette.Text;
+
+        switch (control)
+        {
+            case Form:
+                control.BackColor = palette.Window;
+                break;
+            case FluentTableLayoutPanel:
+                control.BackColor = palette.Card;
+                break;
+            case FluentPanel:
+                control.BackColor = palette.Border;
+                break;
+            case TextBoxBase:
+            case ComboBox:
+                control.BackColor = palette.Field;
+                break;
+            case Button button:
+                bool primary = role == FluentThemeRole.PrimaryButton;
+                button.UseVisualStyleBackColor = false;
+                button.FlatStyle = FlatStyle.Flat;
+                button.BackColor = primary ? palette.Primary : palette.Surface;
+                button.ForeColor = primary ? palette.PrimaryText : palette.Text;
+                button.FlatAppearance.BorderColor = primary ? palette.Primary : palette.Border;
+                button.FlatAppearance.BorderSize = primary ? 0 : 1;
+                break;
+            case RadioButton radioButton when radioButton.Appearance == Appearance.Button:
+                radioButton.UseVisualStyleBackColor = false;
+                radioButton.BackColor = palette.Surface;
+                radioButton.FlatAppearance.BorderColor = palette.Border;
+                radioButton.FlatAppearance.CheckedBackColor = palette.Selected;
+                radioButton.FlatAppearance.MouseOverBackColor = palette.Hover;
+                break;
+            case CheckBox:
+            case Label:
+                SetTransparent(control, palette.Window);
+                break;
+            case ToolStrip toolStrip:
+                toolStrip.BackColor = palette.Surface;
+                toolStrip.ForeColor = palette.Text;
+                break;
+            case Panel:
+                control.BackColor = role switch
+                {
+                    FluentThemeRole.Surface => palette.Surface,
+                    FluentThemeRole.Border => palette.Border,
+                    _ => palette.Window
+                };
+                break;
+        }
+
+        foreach (Control child in control.Controls)
+        {
+            Apply(child, palette);
+        }
+    }
+
+    private static void SetTransparent(Control control, Color fallback)
+    {
+        try
+        {
+            control.BackColor = Color.Transparent;
+        }
+        catch (ArgumentException)
+        {
+            control.BackColor = fallback;
+        }
+    }
 }
 
 internal abstract class FluentForm : Form
 {
+    private const int SystemColorChange = 0x0015;
+    private const int SettingChange = 0x001A;
+    private const int ThemeChanged = 0x031A;
+    private const int DwmColorizationColorChanged = 0x0320;
+
     private readonly FluentBackdropKind backdrop;
     private bool backdropApplied;
+    private bool themeRefreshPending;
 
     protected FluentForm(FluentBackdropKind backdrop)
     {
@@ -85,14 +294,19 @@ internal abstract class FluentForm : Form
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
-        ApplyBackdrop();
+        RefreshTheme();
+    }
+
+    protected override void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
+        RefreshTheme();
     }
 
     protected override void OnSystemColorsChanged(EventArgs e)
     {
         base.OnSystemColorsChanged(e);
-        ApplyBackdrop();
-        Invalidate(true);
+        QueueThemeRefresh();
     }
 
     protected override void OnPaintBackground(PaintEventArgs e)
@@ -103,48 +317,62 @@ internal abstract class FluentForm : Form
         }
     }
 
-    private void ApplyBackdrop()
+    protected override void WndProc(ref Message message)
+    {
+        int id = message.Msg;
+        base.WndProc(ref message);
+        if (id is SystemColorChange or SettingChange or ThemeChanged or DwmColorizationColorChanged)
+        {
+            QueueThemeRefresh();
+        }
+    }
+
+    private void QueueThemeRefresh()
+    {
+        if (themeRefreshPending || !IsHandleCreated || IsDisposed)
+        {
+            return;
+        }
+
+        themeRefreshPending = true;
+        try
+        {
+            BeginInvoke(() =>
+            {
+                themeRefreshPending = false;
+                if (!IsDisposed)
+                {
+                    RefreshTheme();
+                }
+            });
+        }
+        catch (InvalidOperationException)
+        {
+            themeRefreshPending = false;
+        }
+    }
+
+    private void RefreshTheme()
     {
         if (!IsHandleCreated)
         {
             return;
         }
 
-        backdropApplied = FluentWindowStyler.Apply(Handle, backdrop, BackColor.GetBrightness() < 0.5f);
+        FluentTheme.Apply(this);
+        backdropApplied = FluentWindowStyler.Apply(Handle, backdrop, FluentTheme.IsDarkMode);
+        Invalidate(true);
     }
 }
 
 internal sealed class FluentContextMenuStrip : ContextMenuStrip
 {
-    private bool backdropApplied;
-
-    public bool BackdropApplied => backdropApplied;
-
-    protected override void OnHandleCreated(EventArgs e)
+    protected override void OnOpening(CancelEventArgs e)
     {
-        base.OnHandleCreated(e);
-        ApplyBackdrop();
-    }
-
-    protected override void OnSystemColorsChanged(EventArgs e)
-    {
-        base.OnSystemColorsChanged(e);
-        ApplyBackdrop();
-    }
-
-    protected override void OnPaintBackground(PaintEventArgs e)
-    {
-        if (!backdropApplied)
+        base.OnOpening(e);
+        if (!e.Cancel)
         {
-            base.OnPaintBackground(e);
-        }
-    }
-
-    private void ApplyBackdrop()
-    {
-        if (IsHandleCreated)
-        {
-            backdropApplied = FluentWindowStyler.Apply(Handle, FluentBackdropKind.Transient, BackColor.GetBrightness() < 0.5f);
+            FluentTheme.Apply(this);
         }
     }
 }

@@ -77,12 +77,12 @@ internal sealed class LayoutSelectionDialog : FluentForm
         Label detectedDeviceLabel = new()
         {
             AutoSize = true,
-            ForeColor = SystemColors.GrayText,
             Text = $"Detectado: {device.DisplayName}  ·  {device.TechnicalId}",
             MaximumSize = new Size(420, 0),
             AccessibleName = "Información detectada del dispositivo",
             AccessibleDescription = $"Nombre detectado: {device.DisplayName}. Identificador técnico: {device.TechnicalId}."
         };
+        FluentTheme.Mark(detectedDeviceLabel, FluentThemeRole.SecondaryText);
         devicePanel.Controls.Add(detectedDeviceLabel);
 
         FluentPanel listContainer = new()
@@ -103,17 +103,18 @@ internal sealed class LayoutSelectionDialog : FluentForm
             AccessibleName = "Idiomas y distribuciones de teclado",
             AccessibleDescription = "Usa Tab para entrar en la lista y las flechas para cambiar la selección."
         };
+        FluentTheme.Mark(layoutList, FluentThemeRole.Surface);
         layoutList.SizeChanged += (_, _) => ResizeLayoutRows();
         listContainer.Controls.Add(layoutList);
 
         Label help = new()
         {
             AutoSize = true,
-            ForeColor = SystemColors.GrayText,
             Text = "Elige una distribución. Si el dispositivo no es un teclado, puedes ignorarlo y recuperarlo después desde Configuración.",
             MaximumSize = new Size(460, 0),
             Margin = new Padding(0, 14, 0, 14)
         };
+        FluentTheme.Mark(help, FluentThemeRole.SecondaryText);
 
         FlowLayoutPanel actions = new()
         {
@@ -256,22 +257,23 @@ internal sealed class LayoutSelectionDialog : FluentForm
         Close();
     }
 
-    private static Button ActionButton(string text, bool primary = false) => new()
+    private static Button ActionButton(string text, bool primary = false)
     {
-        Text = text,
-        AutoSize = true,
-        AutoSizeMode = AutoSizeMode.GrowAndShrink,
-        MinimumSize = new Size(88, 36),
-        Margin = new Padding(8, 0, 0, 0),
-        Padding = new Padding(12, 4, 12, 4),
-        UseVisualStyleBackColor = !primary,
-        FlatStyle = FlatStyle.Flat,
-        BackColor = primary ? SystemColors.Highlight : SystemColors.Control,
-        ForeColor = primary ? SystemColors.HighlightText : SystemColors.ControlText,
-        FlatAppearance =
+        Button button = new()
         {
-            BorderSize = primary ? 0 : 1,
-            BorderColor = SystemColors.ControlDark
+            Text = text,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            MinimumSize = new Size(88, 36),
+            Margin = new Padding(8, 0, 0, 0),
+            Padding = new Padding(12, 4, 12, 4),
+            FlatStyle = FlatStyle.Flat
+        };
+        if (primary)
+        {
+            FluentTheme.Mark(button, FluentThemeRole.PrimaryButton);
         }
-    };
+
+        return button;
+    }
 }

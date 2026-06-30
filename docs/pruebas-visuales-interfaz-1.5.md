@@ -6,11 +6,12 @@ Ejecutar esta lista en un host Windows 11 con al menos un teclado sin preferenci
 
 - Probar al 100 %, 150 % y 200 %; mover cada diálogo entre monitores con DPI distinto y confirmar que texto, botones y bordes se reescalan sin recortes.
 - Repetir en tema claro, oscuro y contraste alto; comprobar texto legible, foco visible y selección distinguible.
+- Cambiar el tema del sistema mientras Configuración permanece abierta; fondo, tarjetas, campos, textos, botones y menú deben actualizarse sin reiniciar RightKeyboard.
 
 ## Materiales en host físico
 
 - Usar Windows 11 22H2 o posterior, fuera de una VM: Configuración debe mostrar Mica y el selector Mica Alt; al desactivar transparencia ambos deben conservar un fondo sólido legible.
-- Abrir el menú de bandeja sobre fondos claros y oscuros: debe mostrar Desktop Acrylic mientras está abierto y un color sólido equivalente si Windows desactiva el efecto.
+- Abrir repetidamente el menú de bandeja sobre fondos claros y oscuros: debe usar un fondo Fluent sólido, centrar verticalmente el texto y mantener un único resaltado sin acumular color al recorrer las opciones.
 - Activar y desactivar cada ventana; Mica debe reflejar el estado activo sin parpadeos ni zonas transparentes sin pintar.
 - Comprobar esquinas sin maximizar ni acoplar la ventana. Repetir maximizada y acoplada, donde Windows puede retirar el redondeo por diseño.
 - Repetir con ahorro de batería y contraste alto; no debe forzarse transparencia y todos los textos, bordes y focos deben conservar contraste.

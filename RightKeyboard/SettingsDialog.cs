@@ -109,6 +109,7 @@ internal sealed class SettingsDialog : FluentForm
             ForeColor = SystemColors.GrayText,
             Padding = new Padding(8)
         };
+        FluentTheme.Mark(emptyLabel, FluentThemeRole.SecondaryText);
         leftPanel.Controls.Add(deviceList, 0, 1);
 
         FluentTableLayoutPanel editor = new()
@@ -505,30 +506,35 @@ internal sealed class SettingsDialog : FluentForm
         Margin = new Padding(0, 0, 0, 2)
     };
 
-    private static Label DetailLabel() => new()
+    private static Label DetailLabel()
     {
-        AutoSize = true,
-        ForeColor = SystemColors.GrayText,
-        Margin = new Padding(0, 0, 0, 6),
-        MaximumSize = new Size(520, 0)
-    };
-
-    private static Button ActionButton(string text, bool primary = false) => new()
-    {
-        AutoSize = true,
-        AutoSizeMode = AutoSizeMode.GrowAndShrink,
-        MinimumSize = new Size(88, 36),
-        Text = text,
-        Padding = new Padding(12, 4, 12, 4),
-        Margin = new Padding(0, 0, 8, 0),
-        UseVisualStyleBackColor = !primary,
-        FlatStyle = FlatStyle.Flat,
-        BackColor = primary ? SystemColors.Highlight : SystemColors.Control,
-        ForeColor = primary ? SystemColors.HighlightText : SystemColors.ControlText,
-        FlatAppearance =
+        Label label = new()
         {
-            BorderSize = primary ? 0 : 1,
-            BorderColor = SystemColors.ControlDark
+            AutoSize = true,
+            Margin = new Padding(0, 0, 0, 6),
+            MaximumSize = new Size(520, 0)
+        };
+        FluentTheme.Mark(label, FluentThemeRole.SecondaryText);
+        return label;
+    }
+
+    private static Button ActionButton(string text, bool primary = false)
+    {
+        Button button = new()
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            MinimumSize = new Size(88, 36),
+            Text = text,
+            Padding = new Padding(12, 4, 12, 4),
+            Margin = new Padding(0, 0, 8, 0),
+            FlatStyle = FlatStyle.Flat
+        };
+        if (primary)
+        {
+            FluentTheme.Mark(button, FluentThemeRole.PrimaryButton);
         }
-    };
+
+        return button;
+    }
 }

@@ -21,39 +21,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         configuration = LoadConfiguration();
         preferenceReset = new PreferenceResetService(configuration);
 
-        menu = new FluentContextMenuStrip
-        {
-            Renderer = new ModernMenuRenderer(),
-            ShowImageMargin = false,
-            ShowCheckMargin = false,
-            Padding = new Padding(4),
-            Font = SystemFonts.MessageBoxFont,
-            AccessibleName = "Menú de RightKeyboard"
-        };
-        ToolStripMenuItem settingsItem = new("&Configuración", null, (_, _) => ShowSettings())
-        {
-            AccessibleName = "Configuración",
-            AccessibleDescription = "Abre la edición de dispositivos y preferencias."
-        };
-        ToolStripMenuItem clearItem = new("&Limpiar preferencias", null, (_, _) => ClearPreferences())
-        {
-            AccessibleName = "Limpiar preferencias",
-            AccessibleDescription = "Elimina las preferencias guardadas después de pedir confirmación."
-        };
-        ToolStripMenuItem exitItem = new("&Salir", null, (_, _) => ExitThread())
-        {
-            AccessibleName = "Salir",
-            AccessibleDescription = "Cierra RightKeyboard."
-        };
-        menu.Items.Add(settingsItem);
-        menu.Items.Add(clearItem);
-        menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add(exitItem);
-        foreach (ToolStripMenuItem item in menu.Items.OfType<ToolStripMenuItem>())
-        {
-            item.Padding = new Padding(8, 5, 18, 5);
-            item.AutoToolTip = false;
-        }
+        menu = TrayMenuFactory.Create(ShowSettings, ClearPreferences, ExitThread);
 
         notifyIcon = new NotifyIcon
         {

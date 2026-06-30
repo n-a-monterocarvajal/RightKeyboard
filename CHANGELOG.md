@@ -4,10 +4,18 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [1.5.0] - En desarrollo
 
+### Alpha 5
+
+- Corrección del repintado acumulativo y de la alineación vertical del menú de bandeja.
+- Sustitución de la transparencia GDI inestable del menú por una paleta Fluent sólida y completamente opaca.
+- Extensión correcta del marco DWM al área cliente para que Mica y Mica Alt puedan mostrarse alrededor de las tarjetas.
+- Actualización inmediata de ventanas, controles, tarjetas y menú al cambiar entre tema claro y oscuro.
+- Incorporación de la prueba física de alpha 4 como regresión documentada.
+
 ### Alpha 4
 
 - Adopción incremental de Fluent Design sin cargar Windows App SDK en el proceso residente.
-- Mica para Configuración, Mica Alt para el selector y Desktop Acrylic para el menú de bandeja mediante APIs DWM documentadas.
+- Mica para Configuración, Mica Alt para el selector y primera evaluación de Desktop Acrylic para el menú de bandeja mediante APIs DWM documentadas.
 - Fallback sólido en Windows 10, contraste alto, transparencia desactivada, ahorro de batería y entornos virtualizados.
 - Tipografía Segoe UI Variable con fallback, esquinas redondeadas, tarjetas y acciones principales con jerarquía coherente con Windows 11.
 - Acción **Limpiar preferencias** dentro de Configuración, compartiendo confirmación, persistencia y errores con la bandeja.
@@ -24,7 +32,7 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 ### Validación en curso
 
 - La publicación autocontenida, el cierre coordinado y la compilación con Inno Setup 6.7.3 están verificados.
-- El instalador `RightKeyboard-1.5.0-alpha.3-Setup.exe` y su archivo SHA-256 se generan correctamente.
+- Los instaladores de las alfas se generan junto con su archivo SHA-256.
 - Continúan pendientes las pruebas físicas de hardware, cambio de sesión, actualización y desinstalación.
 
 ### Alpha 2

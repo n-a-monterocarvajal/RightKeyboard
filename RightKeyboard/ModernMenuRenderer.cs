@@ -11,9 +11,14 @@ internal sealed class ModernMenuRenderer : ToolStripProfessionalRenderer
 
     protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
     {
+        FluentPalette palette = FluentTheme.Current;
+        using (SolidBrush background = new(palette.Surface))
+        {
+            e.Graphics.FillRectangle(background, new Rectangle(Point.Empty, e.Item.Size));
+        }
+
         if (!e.Item.Selected)
         {
-            base.OnRenderMenuItemBackground(e);
             return;
         }
 
@@ -23,7 +28,7 @@ internal sealed class ModernMenuRenderer : ToolStripProfessionalRenderer
         int radius = Math.Max(3, (int)Math.Round(6 * scale));
         Color selectionColor = SystemInformation.HighContrast
             ? SystemColors.Highlight
-            : Color.FromArgb(42, SystemColors.Highlight);
+            : palette.Hover;
 
         SmoothingMode previousMode = e.Graphics.SmoothingMode;
         e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
@@ -35,20 +40,41 @@ internal sealed class ModernMenuRenderer : ToolStripProfessionalRenderer
 
     protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e)
     {
-        if (e.ToolStrip is not FluentContextMenuStrip { BackdropApplied: true })
-        {
-            base.OnRenderToolStripBackground(e);
-        }
+        using SolidBrush brush = new(FluentTheme.Current.Surface);
+        e.Graphics.FillRectangle(brush, e.AffectedBounds);
     }
 
     protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
     {
-        if (e.Item.Selected && SystemInformation.HighContrast)
-        {
-            e.TextColor = SystemColors.HighlightText;
-        }
+        FluentPalette palette = FluentTheme.Current;
+        Color textColor = e.Item.Selected && SystemInformation.HighContrast
+            ? SystemColors.HighlightText
+            : palette.Text;
+        Rectangle textBounds = new(
+            12,
+            0,
+            Math.Max(1, e.Item.Width - 24),
+            e.Item.Height);
+        TextRenderer.DrawText(
+            e.Graphics,
+            e.Text,
+            e.TextFont,
+            textBounds,
+            textColor,
+            TextFormatFlags.Left |
+            TextFormatFlags.VerticalCenter |
+            TextFormatFlags.SingleLine |
+            TextFormatFlags.NoPadding);
+    }
 
-        base.OnRenderItemText(e);
+    protected override void OnRenderSeparator(ToolStripSeparatorRenderEventArgs e)
+    {
+        FluentPalette palette = FluentTheme.Current;
+        using SolidBrush background = new(palette.Surface);
+        e.Graphics.FillRectangle(background, e.Item.ContentRectangle);
+        int y = e.Item.Height / 2;
+        using Pen separator = new(palette.Border);
+        e.Graphics.DrawLine(separator, 8, y, e.Item.Width - 8, y);
     }
 
     private static GraphicsPath CreateRoundedRectangle(Rectangle bounds, int radius)
@@ -69,14 +95,14 @@ internal sealed class ModernMenuRenderer : ToolStripProfessionalRenderer
 
     private sealed class ModernColorTable : ProfessionalColorTable
     {
-        public override Color ToolStripDropDownBackground => SystemColors.Window;
-        public override Color ImageMarginGradientBegin => SystemColors.Window;
-        public override Color ImageMarginGradientMiddle => SystemColors.Window;
-        public override Color ImageMarginGradientEnd => SystemColors.Window;
-        public override Color MenuBorder => SystemInformation.HighContrast ? SystemColors.WindowText : SystemColors.ControlDark;
+        public override Color ToolStripDropDownBackground => FluentTheme.Current.Surface;
+        public override Color ImageMarginGradientBegin => FluentTheme.Current.Surface;
+        public override Color ImageMarginGradientMiddle => FluentTheme.Current.Surface;
+        public override Color ImageMarginGradientEnd => FluentTheme.Current.Surface;
+        public override Color MenuBorder => SystemInformation.HighContrast ? SystemColors.WindowText : FluentTheme.Current.Border;
         public override Color MenuItemBorder => Color.Transparent;
         public override Color MenuItemSelected => Color.Transparent;
-        public override Color SeparatorDark => SystemColors.ControlLight;
-        public override Color SeparatorLight => SystemColors.ControlLightLight;
+        public override Color SeparatorDark => FluentTheme.Current.Border;
+        public override Color SeparatorLight => FluentTheme.Current.Border;
     }
 }

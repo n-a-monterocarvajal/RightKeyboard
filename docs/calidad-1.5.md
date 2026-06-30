@@ -2,20 +2,20 @@
 
 Este documento es la fuente de verdad para certificar `1.5.0-rc.1` y `1.5.0`. Se actualiza con evidencia reproducible y no sustituye las especificaciones funcionales de [continuación](continuacion-1.5.md) ni de [distribución](distribucion-1.5.md).
 
-## Estado integrado de alpha 3
+## Estado integrado de alpha 5
 
-Integración auditada el 29 de junio de 2026 sobre la rama `codex/version-1.5`, versión `1.5.0-alpha.3`. Los cinco frentes de trabajo están combinados y la certificación física continúa pendiente.
+Integración auditada el 30 de junio de 2026 sobre la rama `codex/version-1.5`, versión `1.5.0-alpha.5`. Los frentes de trabajo están combinados y la certificación física continúa.
 
 | Área | Resultado | Evidencia o brecha |
 |---|---|---|
 | Restauración | Correcta | `dotnet restore RightKeyboard.sln` con SDK 10.0.301. |
 | Compilación Release | Correcta | 0 errores y 0 advertencias. |
-| Pruebas automatizadas | Correcta | 60 de 60 pruebas NUnit sobre el código integrado. |
-| Versionado | Coherente para alpha | Proyecto e instalador `1.5.0-alpha.3`; manifiesto `1.5.0.0`. Debe cambiarse solo al preparar la candidata. |
+| Pruebas automatizadas | Correcta | 79 pruebas NUnit sobre el código integrado. |
+| Versionado | Coherente para alpha | Proyecto e instalador `1.5.0-alpha.5`; manifiesto `1.5.0.0`. Debe cambiarse solo al preparar la candidata. |
 | Elevación de la aplicación | Correcta en código | El manifiesto declara `asInvoker`; falta comprobar el instalador. |
 | Documentación | Revisada | README, CHANGELOG y ROADMAP enlazan este estado. `continuacion-1.5.md` conserva el registro histórico de alpha 1. |
 | Notas de versión | Borrador | Existe un borrador para `1.5.0-rc.1`; no debe presentarse como publicación. |
-| Instalación y artefactos | Correcta en compilación | Inno Setup 6.7.3 generó `RightKeyboard-1.5.0-alpha.3-Setup.exe` y su SHA-256. Falta probar instalación, actualización y desinstalación reales. |
+| Instalación y artefactos | Correcta | Inno Setup genera el instalador y su SHA-256. Instalación, desinstalación e inicio automático fueron validados en host; el acceso del menú Inicio se añadió después de la primera prueba. |
 | Certificación física | Pendiente | Requiere hardware, cambio de sesión y pruebas en cuenta estándar. |
 
 ## Matriz automatizada
