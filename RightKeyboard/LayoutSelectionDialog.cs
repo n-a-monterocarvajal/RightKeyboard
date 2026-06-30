@@ -1,6 +1,6 @@
 namespace RightKeyboard;
 
-public sealed class LayoutSelectionDialog : Form
+internal sealed class LayoutSelectionDialog : FluentForm
 {
     private readonly FlowLayoutPanel layoutList;
     private readonly Button acceptButton;
@@ -9,6 +9,7 @@ public sealed class LayoutSelectionDialog : Form
     private RadioButton? selectedLayoutButton;
 
     public LayoutSelectionDialog(KeyboardDevice device, string suggestedName)
+        : base(FluentBackdropKind.Tabbed)
     {
         this.device = device;
         SetStyle(ControlStyles.ApplyThemingImplicitly, true);
@@ -21,7 +22,6 @@ public sealed class LayoutSelectionDialog : Form
         MaximizeBox = false;
         ShowInTaskbar = false;
         AutoScaleMode = AutoScaleMode.Dpi;
-        Font = SystemFonts.MessageBoxFont;
         ClientSize = new Size(620, 590);
         MinimumSize = new Size(540, 500);
         Padding = new Padding(28);
@@ -42,12 +42,12 @@ public sealed class LayoutSelectionDialog : Form
         Label heading = new()
         {
             AutoSize = true,
-            Font = new Font(Font.FontFamily, Font.Size + 3, FontStyle.Bold),
+            Font = FluentTypography.CreateTitleFont(15f),
             Text = "Configura este teclado",
             Margin = new Padding(0, 0, 0, 16)
         };
 
-        TableLayoutPanel devicePanel = new()
+        FluentTableLayoutPanel devicePanel = new()
         {
             AutoSize = true,
             Dock = DockStyle.Fill,
@@ -60,7 +60,7 @@ public sealed class LayoutSelectionDialog : Form
         devicePanel.Controls.Add(new Label
         {
             AutoSize = true,
-            Font = new Font(Font, FontStyle.Bold),
+            Font = FluentTypography.CreateSemiboldFont(Font.Size),
             Text = "Nombre para este teclado",
             Margin = new Padding(0, 0, 0, 6)
         });
@@ -85,7 +85,7 @@ public sealed class LayoutSelectionDialog : Form
         };
         devicePanel.Controls.Add(detectedDeviceLabel);
 
-        Panel listContainer = new()
+        FluentPanel listContainer = new()
         {
             Dock = DockStyle.Fill,
             Padding = new Padding(1),
@@ -123,7 +123,7 @@ public sealed class LayoutSelectionDialog : Form
             WrapContents = false,
             Margin = new Padding(0)
         };
-        acceptButton = ActionButton("&Aceptar");
+        acceptButton = ActionButton("&Aceptar", primary: true);
         acceptButton.Enabled = false;
         acceptButton.Click += (_, _) => AcceptSelection();
         Button cancelButton = ActionButton("&Cancelar");
@@ -169,7 +169,7 @@ public sealed class LayoutSelectionDialog : Form
                 AutoSize = false,
                 Height = 34,
                 Text = language.Key,
-                Font = new Font(Font, FontStyle.Bold),
+                Font = FluentTypography.CreateSemiboldFont(Font.Size),
                 TextAlign = ContentAlignment.BottomLeft,
                 Padding = new Padding(4, 0, 0, 4),
                 Margin = new Padding(0, 4, 0, 2)
@@ -256,7 +256,7 @@ public sealed class LayoutSelectionDialog : Form
         Close();
     }
 
-    private static Button ActionButton(string text) => new()
+    private static Button ActionButton(string text, bool primary = false) => new()
     {
         Text = text,
         AutoSize = true,
@@ -264,6 +264,14 @@ public sealed class LayoutSelectionDialog : Form
         MinimumSize = new Size(88, 36),
         Margin = new Padding(8, 0, 0, 0),
         Padding = new Padding(12, 4, 12, 4),
-        UseVisualStyleBackColor = true
+        UseVisualStyleBackColor = !primary,
+        FlatStyle = FlatStyle.Flat,
+        BackColor = primary ? SystemColors.Highlight : SystemColors.Control,
+        ForeColor = primary ? SystemColors.HighlightText : SystemColors.ControlText,
+        FlatAppearance =
+        {
+            BorderSize = primary ? 0 : 1,
+            BorderColor = SystemColors.ControlDark
+        }
     };
 }

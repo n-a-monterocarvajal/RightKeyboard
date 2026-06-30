@@ -4,6 +4,14 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [1.5.0] - En desarrollo
 
+### Alpha 4
+
+- Adopción incremental de Fluent Design sin cargar Windows App SDK en el proceso residente.
+- Mica para Configuración, Mica Alt para el selector y Desktop Acrylic para el menú de bandeja mediante APIs DWM documentadas.
+- Fallback sólido en Windows 10, contraste alto, transparencia desactivada, ahorro de batería y entornos virtualizados.
+- Tipografía Segoe UI Variable con fallback, esquinas redondeadas, tarjetas y acciones principales con jerarquía coherente con Windows 11.
+- Acción **Limpiar preferencias** dentro de Configuración, compartiendo confirmación, persistencia y errores con la bandeja.
+
 ### Alpha 3
 
 - Integración de los frentes de identidad, preferencias, interfaz, instalación y calidad sobre una sola rama.

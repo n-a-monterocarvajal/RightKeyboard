@@ -10,6 +10,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private readonly ContextMenuStrip menu;
     private readonly NotifyIcon notifyIcon;
     private readonly SynchronizationContext uiContext;
+    private readonly PreferenceResetService preferenceReset;
     private KeyboardDevice? pendingDevice;
     private bool selectingLayout;
 
@@ -18,8 +19,9 @@ internal sealed class TrayApplicationContext : ApplicationContext
         uiContext = SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext();
         devices = new KeyboardDevicesCollection();
         configuration = LoadConfiguration();
+        preferenceReset = new PreferenceResetService(configuration);
 
-        menu = new ContextMenuStrip
+        menu = new FluentContextMenuStrip
         {
             Renderer = new ModernMenuRenderer(),
             ShowImageMargin = false,
@@ -208,24 +210,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     private void ClearPreferences()
     {
-        if (MessageBox.Show(
-                "Se eliminarán todos los alias, distribuciones y dispositivos ignorados.\n\nEsta acción no se puede deshacer.",
-                "Limpiar preferencias",
-                MessageBoxButtons.OKCancel,
-                MessageBoxIcon.Warning,
-                MessageBoxDefaultButton.Button2) != DialogResult.OK)
-        {
-            return;
-        }
-
-        try
-        {
-            configuration.Clear();
-        }
-        catch (Exception error)
-        {
-            ShowSaveError(error);
-        }
+        preferenceReset.TryClear();
     }
 
     private void SaveConfiguration()

@@ -2,7 +2,7 @@
 
 El instalador se compila con `scripts\build-installer.ps1`. Los casos marcados como manuales deben ejecutarse en una cuenta estándar de Windows 10 y Windows 11 x64, idealmente también en una máquina limpia sin .NET Desktop Runtime.
 
-La compilación de `1.5.0-alpha.3` fue verificada con Inno Setup 6.7.3. El script produjo el instalador autocontenido y su archivo SHA-256; los casos restantes de esta matriz requieren instalación real.
+La compilación de `1.5.0-alpha.3` fue verificada con Inno Setup 6.7.3. `1.5.0-alpha.4` no añade runtimes ni paquetes: la publicación sigue siendo la misma aplicación .NET autocontenida. Los casos restantes de esta matriz requieren instalación real.
 
 | Caso | Preparación y acción | Resultado esperado | Tipo |
 |---|---|---|---|

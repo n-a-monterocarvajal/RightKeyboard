@@ -33,6 +33,14 @@ internal sealed class ModernMenuRenderer : ToolStripProfessionalRenderer
         e.Graphics.SmoothingMode = previousMode;
     }
 
+    protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e)
+    {
+        if (e.ToolStrip is not FluentContextMenuStrip { BackdropApplied: true })
+        {
+            base.OnRenderToolStripBackground(e);
+        }
+    }
+
     protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
     {
         if (e.Item.Selected && SystemInformation.HighContrast)

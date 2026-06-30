@@ -1,6 +1,6 @@
 namespace RightKeyboard;
 
-internal sealed class SettingsDialog : Form
+internal sealed class SettingsDialog : FluentForm
 {
     private readonly Configuration configuration;
     private readonly KeyboardDevicesCollection devices;
@@ -17,16 +17,19 @@ internal sealed class SettingsDialog : Form
     private readonly CheckBox startupCheckBox;
     private readonly Button saveButton;
     private readonly Button forgetButton;
+    private readonly PreferenceResetService preferenceReset;
     private string? selectedIdentity;
 
     public SettingsDialog(
         Configuration configuration,
         KeyboardDevicesCollection devices,
         Action saveConfiguration)
+        : base(FluentBackdropKind.Main)
     {
         this.configuration = configuration;
         this.devices = devices;
         this.saveConfiguration = saveConfiguration;
+        preferenceReset = new PreferenceResetService(configuration);
         layouts = RightKeyboard.Layout.EnumerateLayouts()
             .OrderBy(layout => layout.LanguageName, StringComparer.CurrentCultureIgnoreCase)
             .ThenBy(layout => layout.LayoutName, StringComparer.CurrentCultureIgnoreCase)
@@ -39,7 +42,6 @@ internal sealed class SettingsDialog : Form
         MinimumSize = new Size(800, 540);
         ClientSize = new Size(920, 620);
         AutoScaleMode = AutoScaleMode.Dpi;
-        Font = SystemFonts.MessageBoxFont;
         KeyPreview = true;
         Padding = new Padding(24);
         Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
@@ -58,7 +60,7 @@ internal sealed class SettingsDialog : Form
         {
             AutoSize = true,
             Text = "Teclados y preferencias",
-            Font = new Font(Font.FontFamily, Font.Size + 4, FontStyle.Bold),
+            Font = FluentTypography.CreateTitleFont(16f),
             Margin = new Padding(0, 0, 0, 20)
         };
 
@@ -85,7 +87,7 @@ internal sealed class SettingsDialog : Form
         {
             AutoSize = true,
             Text = "Dispositivos conocidos",
-            Font = new Font(Font, FontStyle.Bold),
+            Font = FluentTypography.CreateSemiboldFont(Font.Size),
             Margin = new Padding(0, 0, 0, 10)
         }, 0, 0);
         deviceList = new FlowLayoutPanel
@@ -109,7 +111,7 @@ internal sealed class SettingsDialog : Form
         };
         leftPanel.Controls.Add(deviceList, 0, 1);
 
-        TableLayoutPanel editor = new()
+        FluentTableLayoutPanel editor = new()
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
@@ -181,7 +183,7 @@ internal sealed class SettingsDialog : Form
             WrapContents = false,
             Margin = new Padding(0)
         };
-        saveButton = ActionButton("&Guardar cambios");
+        saveButton = ActionButton("&Guardar cambios", primary: true);
         saveButton.AccessibleDescription = "Guarda el alias, la distribución y el estado ignorado. Atajo: Control más S.";
         saveButton.Click += (_, _) => SaveSelectedPreference();
         forgetButton = ActionButton("&Olvidar dispositivo");
@@ -221,6 +223,9 @@ internal sealed class SettingsDialog : Form
         exportButton.Click += (_, _) => ExportConfiguration();
         Button importButton = ActionButton("&Importar");
         importButton.Click += (_, _) => ImportConfiguration();
+        Button clearButton = ActionButton("&Limpiar preferencias");
+        clearButton.AccessibleDescription = "Elimina todos los alias, distribuciones y dispositivos ignorados después de pedir confirmación.";
+        clearButton.Click += (_, _) => ClearPreferences();
         startupCheckBox = new CheckBox
         {
             AutoSize = true,
@@ -233,6 +238,7 @@ internal sealed class SettingsDialog : Form
         closeButton.Margin = new Padding(16, 0, 0, 0);
         secondaryActions.Controls.Add(exportButton);
         secondaryActions.Controls.Add(importButton);
+        secondaryActions.Controls.Add(clearButton);
         secondaryActions.Controls.Add(startupCheckBox);
         footer.Controls.Add(secondaryActions, 0, 0);
         footer.Controls.Add(closeButton, 1, 0);
@@ -397,6 +403,25 @@ internal sealed class SettingsDialog : Form
         RefreshDeviceList();
     }
 
+    private void ClearPreferences()
+    {
+        if (!preferenceReset.TryClear(this))
+        {
+            return;
+        }
+
+        selectedIdentity = null;
+        deviceList.Controls.Clear();
+        deviceList.Controls.Add(emptyLabel);
+        customNameTextBox.Clear();
+        detectedNameLabel.Text = string.Empty;
+        technicalIdLabel.Text = string.Empty;
+        statusLabel.Text = "Las preferencias se limpiaron correctamente.";
+        ignoredCheckBox.Checked = false;
+        layoutComboBox.SelectedIndex = 0;
+        SetEditorEnabled(false);
+    }
+
     private void ExportConfiguration()
     {
         using SaveFileDialog dialog = new()
@@ -476,7 +501,7 @@ internal sealed class SettingsDialog : Form
     {
         AutoSize = true,
         Text = text,
-        Font = new Font(SystemFonts.MessageBoxFont ?? SystemFonts.DefaultFont, FontStyle.Bold),
+        Font = FluentTypography.CreateSemiboldFont(SystemFonts.MessageBoxFont?.Size ?? SystemFonts.DefaultFont.Size),
         Margin = new Padding(0, 0, 0, 2)
     };
 
@@ -488,7 +513,7 @@ internal sealed class SettingsDialog : Form
         MaximumSize = new Size(520, 0)
     };
 
-    private static Button ActionButton(string text) => new()
+    private static Button ActionButton(string text, bool primary = false) => new()
     {
         AutoSize = true,
         AutoSizeMode = AutoSizeMode.GrowAndShrink,
@@ -496,6 +521,14 @@ internal sealed class SettingsDialog : Form
         Text = text,
         Padding = new Padding(12, 4, 12, 4),
         Margin = new Padding(0, 0, 8, 0),
-        UseVisualStyleBackColor = true
+        UseVisualStyleBackColor = !primary,
+        FlatStyle = FlatStyle.Flat,
+        BackColor = primary ? SystemColors.Highlight : SystemColors.Control,
+        ForeColor = primary ? SystemColors.HighlightText : SystemColors.ControlText,
+        FlatAppearance =
+        {
+            BorderSize = primary ? 0 : 1,
+            BorderColor = SystemColors.ControlDark
+        }
     };
 }
