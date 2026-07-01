@@ -17,7 +17,7 @@ La aplicación usa:
 
 Microsoft indica que Windows App SDK puede modernizar WinForms y que XAML Islands permite incrustar WinUI, pero una aplicación no empaquetada debe inicializar y desplegar el runtime. La distribución autocontenida evita esa dependencia a costa de más tamaño, un arranque más lento y más memoria sin páginas compartidas. Para dos ventanas es un coste permanente o de instalación que no aporta suficiente valor en esta alfa.
 
-Las APIs `DwmSetWindowAttribute`, `DwmExtendFrameIntoClientArea`, `DWM_SYSTEMBACKDROP_TYPE`, `DWMWA_WINDOW_CORNER_PREFERENCE` y `DWMWA_USE_IMMERSIVE_DARK_MODE` están documentadas. `DWMSBT_MAINWINDOW` corresponde a Mica y `DWMSBT_TABBEDWINDOW` a Mica Alt en Windows 11. Esta vía no carga componentes nuevos en reposo y conserva una futura migración por ventana.
+Las APIs `DwmSetWindowAttribute`, `DWM_SYSTEMBACKDROP_TYPE`, `DWMWA_WINDOW_CORNER_PREFERENCE` y `DWMWA_USE_IMMERSIVE_DARK_MODE` están documentadas. La beta conserva únicamente marco, esquinas y fondos sólidos sobre WinForms; no extiende DWM sobre controles GDI.
 
 Fuentes oficiales:
 
@@ -44,7 +44,7 @@ La validación local posterior confirmó además que la transparencia entre supe
 
 ## Evolución posterior
 
-La capa `FluentForm`/`FluentContextMenuStrip` concentra materiales y fallbacks. Si una futura versión requiere controles WinUI genuinos, se podrá sustituir una ventana completa o alojar una isla sin acoplar Windows App SDK al procesamiento Raw Input. Esa decisión deberá incluir mediciones del runtime, arranque y memoria en hardware físico.
+La migración real continúa como frontend WinUI 3 separado y activado bajo demanda. La decisión y sus fases están en [arquitectura-winui-1.5.md](arquitectura-winui-1.5.md).
 
 ## Medición de alpha.4
 

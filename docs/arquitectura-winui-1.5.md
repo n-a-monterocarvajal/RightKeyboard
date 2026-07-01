@@ -1,0 +1,49 @@
+# Arquitectura de migración a WinUI 3
+
+Fecha: 30 de junio de 2026. Base: `v1.5.0-beta.1` (`dfb1556`).
+
+## Decisión
+
+Configuración y, en la fase siguiente, el selector serán ventanas WinUI 3 de un frontend separado que se inicia bajo demanda. El proceso `RightKeyboard.exe` conserva WinForms únicamente para `NotifyIcon`, Raw Input, coordinación de instancia y fallback estable.
+
+No se alojará una isla XAML dentro del residente. Cargar WinUI, Windows App SDK, el dispatcher XAML y sus recursos dentro de `RightKeyboard.exe` aumentaría el consumo durante toda la sesión y no ofrece una frontera práctica para descargar el framework después de cerrar la ventana. Un proceso separado permite terminar y liberar todo ese coste al cerrar la experiencia visual.
+
+## Primera fase
+
+- `RightKeyboard.exe` sigue siendo el producto funcional y no cambia su flujo predeterminado.
+- `RightKeyboard.WinUI.exe` es un prototipo no empaquetado de Configuración.
+- El prototipo usa controles WinUI 3, tema del sistema, `MicaBackdrop`, escalado y automatización de interfaz nativos.
+- El prototipo lee y guarda el mismo modelo `Configuration`; mientras no exista IPC, no debe abrirse a la vez que la Configuración productiva.
+- La interfaz WinForms sólida permanece como fallback y no vuelve a extender DWM sobre controles GDI.
+
+## Despliegue del prototipo
+
+Se usa Windows App SDK 2.2 estable, compatible desde Windows 10 1809. El proyecto es no empaquetado (`WindowsPackageType=None`) y autocontenido respecto de Windows App SDK para medir una copia reproducible sin instalar runtime global. Esta elección es provisional: Microsoft advierte que el modo autocontenido aumenta tamaño, arranque y memoria al no compartir páginas de código. Antes de integrar el frontend en el instalador se comparará con el modo dependiente del framework y su instalador de runtime.
+
+Fuentes oficiales:
+
+- [Versiones y compatibilidad de Windows App SDK](https://learn.microsoft.com/windows/apps/get-started/versioning-overview)
+- [Desempaquetar una aplicación WinUI](https://learn.microsoft.com/windows/apps/package-and-deploy/unpackage-winui-app)
+- [Despliegue framework-dependent y autocontenido](https://learn.microsoft.com/windows/apps/package-and-deploy/deploy-overview)
+- [Despliegue autocontenido](https://learn.microsoft.com/windows/apps/package-and-deploy/self-contained-deploy/deploy-self-contained-apps)
+- [Materiales Mica y Acrylic](https://learn.microsoft.com/windows/apps/develop/ui/system-backdrops)
+
+## Propiedad del estado
+
+El núcleo seguirá siendo la autoridad cuando el frontend se integre. La siguiente fase introducirá un protocolo local versionado:
+
+1. el núcleo entrega un snapshot de dispositivos, distribuciones y preferencias;
+2. WinUI devuelve comandos explícitos (guardar dispositivo, limpiar, importar o cambiar inicio automático);
+3. el núcleo valida, persiste y responde con el estado resultante;
+4. si el frontend no arranca o termina inesperadamente, se abre la Configuración WinForms.
+
+No se escribirá `preferences.json` desde dos procesos simultáneamente. El acceso directo del prototipo existe solo para validar la interfaz antes de implementar IPC.
+
+## Riesgos abiertos
+
+- tamaño de Windows App SDK autocontenido y tiempo de arranque en frío;
+- consumo del proceso WinUI con Mica activo e inactivo;
+- firma y composición del instalador Inno Setup con dos aplicaciones;
+- foco/activación entre `NotifyIcon` y el proceso frontend;
+- serialización de identificadores y distribuciones sin exponer detalles de Raw Input;
+- comportamiento de Mica y esquinas en Windows 10, VM, contraste alto y transparencia desactivada.

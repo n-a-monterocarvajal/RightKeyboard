@@ -48,7 +48,6 @@ internal static class FluentWindowStyler
         if (!FluentBackdropPolicy.CanUseSystemBackdrop(version, SystemInformation.HighContrast))
         {
             TrySetAttribute(handle, SystemBackdropType, NoSystemBackdrop);
-            ExtendFrame(handle, enabled: false);
             return false;
         }
 
@@ -57,7 +56,6 @@ internal static class FluentWindowStyler
         // esto puede convertir textos y controles en superficies casi transparentes.
         // Se mantiene un fondo sólido hasta migrar estas ventanas a WinUI 3.
         TrySetAttribute(handle, SystemBackdropType, NoSystemBackdrop);
-        ExtendFrame(handle, enabled: false);
         return false;
     }
 
@@ -77,37 +75,9 @@ internal static class FluentWindowStyler
         }
     }
 
-    private static bool ExtendFrame(nint handle, bool enabled)
-    {
-        Margins margins = enabled ? new Margins(-1) : new Margins(0);
-        try
-        {
-            return DwmExtendFrameIntoClientArea(handle, ref margins) >= 0;
-        }
-        catch (DllNotFoundException)
-        {
-            return false;
-        }
-        catch (EntryPointNotFoundException)
-        {
-            return false;
-        }
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private readonly struct Margins(int value)
-    {
-        public readonly int Left = value;
-        public readonly int Right = value;
-        public readonly int Top = value;
-        public readonly int Bottom = value;
-    }
-
     [DllImport("dwmapi.dll", PreserveSig = true)]
     private static extern int DwmSetWindowAttribute(nint window, int attribute, ref int value, int valueSize);
 
-    [DllImport("dwmapi.dll", PreserveSig = true)]
-    private static extern int DwmExtendFrameIntoClientArea(nint window, ref Margins margins);
 }
 
 internal enum FluentThemeRole
