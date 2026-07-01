@@ -4,6 +4,13 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [1.5.0] - En desarrollo
 
+### Beta 1
+
+- Primera versión intermedia pública de la línea 1.5, con identidad persistente, Configuración, alias, dispositivos ignorados, importación/exportación, inicio automático e instalador por usuario.
+- Consolidación de las correcciones de Raw Input, combinaciones de teclas, arrastre y dispositivos compuestos desarrolladas durante las alfas.
+- Tema claro y oscuro estabilizado con superficies WinForms sólidas; la migración visual completa a WinUI 3 queda pendiente para una entrega posterior.
+- El asistente de actualización restaura **Finalizar** en su última página.
+
 ### Alpha 9
 
 - El tema de RightKeyboard sigue ahora el modo visible del sistema y de la barra de tareas (`SystemUsesLightTheme`) en configuraciones personalizadas de Windows.

@@ -5,7 +5,7 @@
   #define OutputDir "..\artifacts\installer"
 #endif
 #ifndef AppVersion
-  #define AppVersion "1.5.0-alpha.9"
+  #define AppVersion "1.5.0-beta.1"
 #endif
 
 #define AppId "{{D7EC931A-AB1D-4F36-9F95-674B202CF334}"
@@ -117,7 +117,10 @@ begin
     exit;
 
   WizardForm.Caption := 'Actualizar RightKeyboard';
-  WizardForm.NextButton.Caption := '&Actualizar';
+  if CurPageID = wpFinished then
+    WizardForm.NextButton.Caption := SetupMessage(msgButtonFinish)
+  else
+    WizardForm.NextButton.Caption := '&Actualizar';
 
   if CurPageID = wpReady then
   begin
