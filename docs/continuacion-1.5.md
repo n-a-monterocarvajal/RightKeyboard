@@ -131,6 +131,7 @@ La versión 1.5 se publicará mediante un instalador por usuario sin elevación,
 10. Probar instalación, actualización, desinstalación e inicio con Windows sin elevación.
 11. Admitir una pulsación aislada de Ctrl, Shift o Alt como identificación inicial solo después de recibir su liberación sin otra tecla intermedia; una combinación no debe abrir el selector.
 12. Probar con teclado sin nombre, dos teclados iguales, un dispositivo ignorado y un periférico compuesto como MX Master 3S.
+13. Incorporar el [diagnóstico circular para pruebas de host](diagnostico-host-1.5.md), cuidando que nunca registre el contenido de las teclas.
 
 ## Estado al pausar
 

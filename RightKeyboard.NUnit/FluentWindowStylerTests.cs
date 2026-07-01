@@ -75,23 +75,30 @@ public sealed class FluentWindowStylerTests
         });
     }
 
-    [TestCase(0, false, true)]
-    [TestCase(1, true, false)]
-    [TestCase(1, false, false)]
-    public void ResolveDarkMode_InterpretaLaPreferenciaDeAplicaciones(
+    [TestCase(0, 1, false, true)]
+    [TestCase(1, 0, true, false)]
+    [TestCase(1, 1, false, false)]
+    public void ResolveDarkMode_PriorizaElTemaVisibleDelSistema(
+        int systemUsesLightTheme,
         int appsUseLightTheme,
         bool fallback,
         bool expected)
     {
         Assert.That(
-            FluentTheme.ResolveDarkMode(appsUseLightTheme, fallback),
+            FluentTheme.ResolveDarkMode(systemUsesLightTheme, appsUseLightTheme, fallback),
             Is.EqualTo(expected));
     }
 
     [Test]
-    public void ResolveDarkMode_UsaFallbackCuandoNoHayPreferencia()
+    public void ResolveDarkMode_UsaPreferenciaDeAplicacionesSiFaltaLaDelSistema()
     {
-        Assert.That(FluentTheme.ResolveDarkMode(null, fallback: true), Is.True);
+        Assert.That(FluentTheme.ResolveDarkMode(null, 0, fallback: false), Is.True);
+    }
+
+    [Test]
+    public void ResolveDarkMode_UsaFallbackCuandoNoHayPreferencias()
+    {
+        Assert.That(FluentTheme.ResolveDarkMode(null, null, fallback: true), Is.True);
     }
 
     [Test]

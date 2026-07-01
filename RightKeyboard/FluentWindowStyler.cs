@@ -52,8 +52,13 @@ internal static class FluentWindowStyler
             return false;
         }
 
-        return TrySetAttribute(handle, SystemBackdropType, (int)backdrop) &&
-            ExtendFrame(handle, enabled: true);
+        // Las superficies GDI de WinForms no conservan de forma fiable el canal alfa
+        // cuando el marco DWM se extiende sobre toda el área cliente. En tema claro
+        // esto puede convertir textos y controles en superficies casi transparentes.
+        // Se mantiene un fondo sólido hasta migrar estas ventanas a WinUI 3.
+        TrySetAttribute(handle, SystemBackdropType, NoSystemBackdrop);
+        ExtendFrame(handle, enabled: false);
+        return false;
     }
 
     private static bool TrySetAttribute(nint handle, int attribute, int value)
@@ -157,6 +162,7 @@ internal static class FluentTheme
 {
     private const string PersonalizeKey = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
     private const string AppsUseLightTheme = "AppsUseLightTheme";
+    private const string SystemUsesLightTheme = "SystemUsesLightTheme";
 
     private sealed class RoleHolder(FluentThemeRole role)
     {
@@ -172,7 +178,10 @@ internal static class FluentTheme
             try
             {
                 using RegistryKey? key = Registry.CurrentUser.OpenSubKey(PersonalizeKey);
-                return ResolveDarkMode(key?.GetValue(AppsUseLightTheme), fallback: false);
+                return ResolveDarkMode(
+                    key?.GetValue(SystemUsesLightTheme),
+                    key?.GetValue(AppsUseLightTheme),
+                    fallback: false);
             }
             catch
             {
@@ -183,8 +192,18 @@ internal static class FluentTheme
 
     public static FluentPalette Current => FluentPalette.Create(IsDarkMode);
 
-    internal static bool ResolveDarkMode(object? appsUseLightTheme, bool fallback) =>
-        appsUseLightTheme is int value ? value == 0 : fallback;
+    internal static bool ResolveDarkMode(
+        object? systemUsesLightTheme,
+        object? appsUseLightTheme,
+        bool fallback)
+    {
+        if (systemUsesLightTheme is int systemValue)
+        {
+            return systemValue == 0;
+        }
+
+        return appsUseLightTheme is int appsValue ? appsValue == 0 : fallback;
+    }
 
     public static void Mark(Control control, FluentThemeRole role)
     {
@@ -268,14 +287,7 @@ internal static class FluentTheme
 
     private static void SetTransparent(Control control, Color fallback)
     {
-        try
-        {
-            control.BackColor = Color.Transparent;
-        }
-        catch (ArgumentException)
-        {
-            control.BackColor = fallback;
-        }
+        control.BackColor = control.Parent?.BackColor ?? fallback;
     }
 }
 

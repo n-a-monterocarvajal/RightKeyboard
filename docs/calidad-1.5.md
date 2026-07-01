@@ -4,14 +4,14 @@ Este documento es la fuente de verdad para certificar `1.5.0-rc.1` y `1.5.0`. Se
 
 ## Estado integrado de alpha 5
 
-Integración auditada el 30 de junio de 2026 sobre la rama `codex/version-1.5`, versión `1.5.0-alpha.8`. Los frentes de trabajo están combinados y la certificación física continúa.
+Integración auditada el 30 de junio de 2026 sobre la rama `codex/version-1.5`, versión `1.5.0-alpha.9`. Los frentes de trabajo están combinados y la certificación física continúa.
 
 | Área | Resultado | Evidencia o brecha |
 |---|---|---|
 | Restauración | Correcta | `dotnet restore RightKeyboard.sln` con SDK 10.0.301. |
 | Compilación Release | Correcta | 0 errores y 0 advertencias. |
-| Pruebas automatizadas | Correcta | 80 pruebas NUnit sobre el código integrado. |
-| Versionado | Coherente para alpha | Proyecto e instalador `1.5.0-alpha.8`; manifiesto `1.5.0.0`. Debe cambiarse solo al preparar la candidata. |
+| Pruebas automatizadas | Correcta | 81 pruebas NUnit sobre el código integrado. |
+| Versionado | Coherente para alpha | Proyecto e instalador `1.5.0-alpha.9`; manifiesto `1.5.0.0`. Debe cambiarse solo al preparar la candidata. |
 | Elevación de la aplicación | Correcta en código | El manifiesto declara `asInvoker`; falta comprobar el instalador. |
 | Documentación | Revisada | README, CHANGELOG y ROADMAP enlazan este estado. `continuacion-1.5.md` conserva el registro histórico de alpha 1. |
 | Notas de versión | Borrador | Existe un borrador para `1.5.0-rc.1`; no debe presentarse como publicación. |

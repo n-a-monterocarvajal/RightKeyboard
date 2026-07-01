@@ -4,6 +4,14 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [1.5.0] - En desarrollo
 
+### Alpha 9
+
+- El tema de RightKeyboard sigue ahora el modo visible del sistema y de la barra de tareas (`SystemUsesLightTheme`) en configuraciones personalizadas de Windows.
+- La preferencia de aplicaciones queda como fallback cuando Windows no informa el modo del sistema.
+- Se desactiva el backdrop DWM sobre ventanas WinForms: la composición GDI producía controles transparentes en modo claro. La interfaz usa fondos sólidos hasta su migración a WinUI 3.
+- Etiquetas y casillas usan el fondo opaco de su superficie contenedora para asegurar su repintado.
+- Se incorpora a la planificación un diagnóstico circular y opcional para pruebas físicas, sin registrar el contenido de las teclas.
+
 ### Alpha 8
 
 - Eliminación del segundo motor de tema que repintaba controles WinForms después de aplicar la paleta de RightKeyboard y producía texto blanco sobre superficies claras.
