@@ -2,7 +2,6 @@ using System.ComponentModel;
 using System.Drawing.Drawing2D;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Microsoft.Win32;
 
 namespace RightKeyboard;
 
@@ -155,9 +154,6 @@ internal readonly record struct FluentPalette(
 
 internal static class FluentTheme
 {
-    private const string PersonalizeKey = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
-    private const string AppsUseLightTheme = "AppsUseLightTheme";
-
     private sealed class RoleHolder(FluentThemeRole role)
     {
         public FluentThemeRole Role { get; } = role;
@@ -165,26 +161,9 @@ internal static class FluentTheme
 
     private static readonly ConditionalWeakTable<Control, RoleHolder> Roles = new();
 
-    public static bool IsDarkMode
-    {
-        get
-        {
-            try
-            {
-                using RegistryKey? key = Registry.CurrentUser.OpenSubKey(PersonalizeKey);
-                return ResolveDarkMode(key?.GetValue(AppsUseLightTheme), Application.IsDarkModeEnabled);
-            }
-            catch
-            {
-                return Application.IsDarkModeEnabled;
-            }
-        }
-    }
+    public static bool IsDarkMode => Application.IsDarkModeEnabled;
 
     public static FluentPalette Current => FluentPalette.Create(IsDarkMode);
-
-    internal static bool ResolveDarkMode(object? appsUseLightTheme, bool fallback) =>
-        appsUseLightTheme is int value ? value == 0 : fallback;
 
     public static void Mark(Control control, FluentThemeRole role)
     {

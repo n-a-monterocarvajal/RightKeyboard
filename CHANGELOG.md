@@ -4,6 +4,12 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [1.5.0] - En desarrollo
 
+### Alpha 7
+
+- Corrección del tema claro: la paleta propia usa ahora la misma fuente de tema que WinForms, evitando combinar superficies claras con texto oscuro heredado.
+- El flujo de actualización cambia también el título de la página, su explicación y el botón principal a **Actualizar**.
+- Se documenta que una tecla modificadora aislada todavía no inicia la configuración de un teclado nuevo; resolverlo exige distinguir su liberación de una combinación para no recuperar los disparos accidentales originales.
+
 ### Alpha 6
 
 - Corrección del contraste en tema claro y actualización en caliente de la paleta completa.
