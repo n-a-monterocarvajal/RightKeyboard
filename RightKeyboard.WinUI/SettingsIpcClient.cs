@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace RightKeyboard.WinUI;
 
-internal sealed class SettingsIpcClient
+public sealed class SettingsIpcClient
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 

@@ -1,26 +1,152 @@
 using System.Collections.ObjectModel;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 
 namespace RightKeyboard.WinUI;
 
-public sealed partial class SettingsWindow : Window
+public sealed class SettingsWindow : Window
 {
     private readonly SettingsIpcClient client;
     private readonly ObservableCollection<DeviceRow> rows = [];
+    private readonly ListView DeviceList = new();
+    private readonly TextBox AliasTextBox = new();
+    private readonly TextBlock DetectedNameText = new();
+    private readonly TextBlock TechnicalIdText = new();
+    private readonly TextBlock StatusText = new();
+    private readonly ComboBox LayoutComboBox = new();
+    private readonly CheckBox IgnoredCheckBox = new();
+    private readonly Button SaveButton = new();
+    private readonly Button ForgetButton = new();
     private SettingsSnapshot? snapshot;
 
-    internal SettingsWindow(SettingsIpcClient client)
+    public SettingsWindow(SettingsIpcClient client)
     {
         this.client = client;
-        InitializeComponent();
+        Title = "Configuración de RightKeyboard";
+        Content = BuildContent();
+        TryEnableMica();
         DeviceList.ItemsSource = rows;
         AppWindow.Resize(new Windows.Graphics.SizeInt32(980, 680));
         Activated += OnActivated;
     }
 
     private DeviceRow? SelectedRow => DeviceList.SelectedItem as DeviceRow;
+
+    private UIElement BuildContent()
+    {
+        Grid root = new() { Padding = new Thickness(24), RowSpacing = 16 };
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        StackPanel heading = new() { Spacing = 4 };
+        heading.Children.Add(new TextBlock
+        {
+            Text = "Teclados y preferencias",
+            FontSize = 28,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+        });
+        heading.Children.Add(new TextBlock
+        {
+            Text = "Administra los teclados conocidos sin interrumpir la detección en segundo plano.",
+            TextWrapping = TextWrapping.Wrap
+        });
+        root.Children.Add(heading);
+
+        Grid body = new() { ColumnSpacing = 20 };
+        body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(300) });
+        body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        Grid.SetRow(body, 1);
+
+        Grid devicesPanel = new() { RowSpacing = 10 };
+        devicesPanel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        devicesPanel.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        devicesPanel.Children.Add(new TextBlock
+        {
+            Text = "Dispositivos conocidos",
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+        });
+        Grid.SetRow(DeviceList, 1);
+        DeviceList.SelectionChanged += DeviceList_SelectionChanged;
+        devicesPanel.Children.Add(DeviceList);
+        Border devicesCard = new()
+        {
+            Padding = new Thickness(12),
+            CornerRadius = new CornerRadius(8),
+            BorderThickness = new Thickness(1),
+            Child = devicesPanel
+        };
+        body.Children.Add(devicesCard);
+
+        StackPanel editor = new() { Spacing = 12 };
+        AliasTextBox.Header = "Nombre para este teclado";
+        AliasTextBox.PlaceholderText = "Nombre reconocible";
+        editor.Children.Add(AliasTextBox);
+        DetectedNameText.TextWrapping = TextWrapping.Wrap;
+        TechnicalIdText.TextWrapping = TextWrapping.Wrap;
+        StatusText.TextWrapping = TextWrapping.Wrap;
+        editor.Children.Add(DetectedNameText);
+        editor.Children.Add(TechnicalIdText);
+        editor.Children.Add(StatusText);
+        LayoutComboBox.Header = "Distribución";
+        LayoutComboBox.DisplayMemberPath = "Name";
+        LayoutComboBox.HorizontalAlignment = HorizontalAlignment.Stretch;
+        editor.Children.Add(LayoutComboBox);
+        IgnoredCheckBox.Content = "Ignorar eventos de este dispositivo";
+        IgnoredCheckBox.Checked += IgnoredCheckBox_Changed;
+        IgnoredCheckBox.Unchecked += IgnoredCheckBox_Changed;
+        editor.Children.Add(IgnoredCheckBox);
+        StackPanel editorButtons = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
+        SaveButton.Content = "Guardar cambios";
+        SaveButton.Click += SaveButton_Click;
+        ForgetButton.Content = "Olvidar dispositivo";
+        ForgetButton.Click += ForgetButton_Click;
+        editorButtons.Children.Add(SaveButton);
+        editorButtons.Children.Add(ForgetButton);
+        editor.Children.Add(editorButtons);
+        Border editorCard = new()
+        {
+            Padding = new Thickness(20),
+            CornerRadius = new CornerRadius(8),
+            BorderThickness = new Thickness(1),
+            Child = new ScrollViewer { Content = editor }
+        };
+        Grid.SetColumn(editorCard, 1);
+        body.Children.Add(editorCard);
+        root.Children.Add(body);
+
+        Grid footer = new() { ColumnSpacing = 8 };
+        footer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        Button clear = new() { Content = "Limpiar preferencias" };
+        clear.Click += ClearButton_Click;
+        footer.Children.Add(clear);
+        Button reload = new() { Content = "Recargar" };
+        reload.Click += ReloadButton_Click;
+        Grid.SetColumn(reload, 1);
+        footer.Children.Add(reload);
+        Button close = new() { Content = "Cerrar" };
+        close.Click += CloseButton_Click;
+        Grid.SetColumn(close, 2);
+        footer.Children.Add(close);
+        Grid.SetRow(footer, 2);
+        root.Children.Add(footer);
+        return root;
+    }
+
+    private void TryEnableMica()
+    {
+        try
+        {
+            SystemBackdrop = new Microsoft.UI.Xaml.Media.MicaBackdrop();
+        }
+        catch
+        {
+            SystemBackdrop = null;
+        }
+    }
 
     private async void OnActivated(object sender, WindowActivatedEventArgs args)
     {
@@ -92,12 +218,6 @@ public sealed partial class SettingsWindow : Window
         LayoutComboBox.IsEnabled = SaveButton.IsEnabled && IgnoredCheckBox.IsChecked != true;
 
     private async void SaveButton_Click(object sender, RoutedEventArgs e) => await SaveSelectedAsync();
-
-    private async void SaveAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
-    {
-        await SaveSelectedAsync();
-        args.Handled = true;
-    }
 
     private async Task SaveSelectedAsync()
     {
@@ -242,4 +362,6 @@ public sealed class DeviceRow
     public bool Connected { get; }
     public bool Ignored { get; }
     internal SettingsLayout? Layout { get; }
+
+    public override string ToString() => $"{DisplayName}\n{Summary}";
 }
