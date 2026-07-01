@@ -11,7 +11,9 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private readonly NotifyIcon notifyIcon;
     private readonly SynchronizationContext uiContext;
     private readonly PreferenceResetService preferenceReset;
+    private readonly System.Windows.Forms.Timer selectionTimer;
     private KeyboardDevice? pendingDevice;
+    private SettingsDialog? settingsDialog;
     private bool selectingLayout;
 
     public TrayApplicationContext()
@@ -20,6 +22,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
         devices = new KeyboardDevicesCollection();
         configuration = LoadConfiguration();
         preferenceReset = new PreferenceResetService(configuration);
+        selectionTimer = new System.Windows.Forms.Timer { Interval = 100 };
+        selectionTimer.Tick += OnSelectionTimerTick;
 
         menu = TrayMenuFactory.Create(ShowSettings, ClearPreferences, ExitThread);
 
@@ -73,6 +77,13 @@ internal sealed class TrayApplicationContext : ApplicationContext
             return;
         }
 
+        if (settingsDialog is { IsDisposed: false } openSettings && keyboardEvent.CanStartMapping)
+        {
+            configuration.TouchDevice(device);
+            openSettings.HighlightDevice(device.Identity);
+            return;
+        }
+
         int matchingDevices = devices.CountConnectedWithFingerprint(device.Fingerprint);
         if (configuration.IsIgnored(device, matchingDevices, out bool learnedIgnoredIdentity))
         {
@@ -108,7 +119,14 @@ internal sealed class TrayApplicationContext : ApplicationContext
         }
 
         pendingDevice = device;
-        uiContext.Post(_ => SelectLayoutForPendingDevice(), null);
+        selectionTimer.Stop();
+        selectionTimer.Start();
+    }
+
+    private void OnSelectionTimerTick(object? sender, EventArgs e)
+    {
+        selectionTimer.Stop();
+        SelectLayoutForPendingDevice();
     }
 
     private void SelectLayoutForPendingDevice()
@@ -151,20 +169,20 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     private void ShowSettings()
     {
-        if (selectingLayout)
+        if (selectingLayout || settingsDialog is not null)
         {
             return;
         }
 
-        selectingLayout = true;
         try
         {
-            using SettingsDialog dialog = new(configuration, devices, SaveConfiguration);
-            dialog.ShowDialog();
+            settingsDialog = new SettingsDialog(configuration, devices, SaveConfiguration);
+            settingsDialog.ShowDialog();
         }
         finally
         {
-            selectingLayout = false;
+            settingsDialog?.Dispose();
+            settingsDialog = null;
         }
     }
 
@@ -205,6 +223,11 @@ internal sealed class TrayApplicationContext : ApplicationContext
         notifyIcon.Visible = false;
         inputWindow.KeyboardInput -= OnKeyboardInput;
         inputWindow.DevicesChanged -= OnDevicesChanged;
+        selectionTimer.Stop();
+        selectionTimer.Tick -= OnSelectionTimerTick;
+        selectionTimer.Dispose();
+        settingsDialog?.Close();
+        settingsDialog?.Dispose();
         inputWindow.Dispose();
         notifyIcon.Dispose();
         menu.Dispose();

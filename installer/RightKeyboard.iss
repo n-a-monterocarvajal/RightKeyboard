@@ -5,7 +5,7 @@
   #define OutputDir "..\artifacts\installer"
 #endif
 #ifndef AppVersion
-  #define AppVersion "1.5.0-alpha.5"
+  #define AppVersion "1.5.0-alpha.6"
 #endif
 
 #define AppId "{{D7EC931A-AB1D-4F36-9F95-674B202CF334}"
@@ -97,6 +97,19 @@ function InitializeSetup: Boolean;
 begin
   IsUpgrade := RegKeyExists(HKCU, '{#UninstallKey}');
   Result := True;
+end;
+
+procedure InitializeWizard;
+begin
+  if IsUpgrade then
+  begin
+    WizardForm.Caption := 'Actualizar RightKeyboard';
+    WizardForm.NextButton.Caption := '&Actualizar';
+    WizardForm.WelcomeLabel1.Caption := 'Actualizar RightKeyboard';
+    WizardForm.WelcomeLabel2.Caption :=
+      'El asistente actualizará la instalación existente de RightKeyboard a la versión {#AppVersion}.' + #13#10 + #13#10 +
+      'Se conservarán las preferencias y la configuración de inicio automático.';
+  end;
 end;
 
 procedure SignalCloseEvent;

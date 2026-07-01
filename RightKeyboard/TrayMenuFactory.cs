@@ -40,9 +40,8 @@ internal static class TrayMenuFactory
     {
         ToolStripMenuItem item = new(text, null, (_, _) => action())
         {
-            AutoSize = false,
-            Size = new Size(220, 36),
-            Padding = Padding.Empty,
+            AutoSize = true,
+            Padding = new Padding(12, 7, 16, 7),
             TextAlign = ContentAlignment.MiddleLeft,
             AutoToolTip = false,
             AccessibleName = text.Replace("&", string.Empty, StringComparison.Ordinal),

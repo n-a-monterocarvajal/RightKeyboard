@@ -22,8 +22,9 @@ public sealed class TrayMenuFactoryTests
             Assert.That(actions.Select(item => item.Text), Is.EqualTo(
                 new[] { "&Configuración", "&Limpiar preferencias", "&Salir" }));
             Assert.That(actions, Is.All.Matches<ToolStripMenuItem>(
-                item => !item.AutoSize &&
-                    item.Height == 36 &&
+                item => item.AutoSize &&
+                    item.Padding.Top == 7 &&
+                    item.Padding.Bottom == 7 &&
                     item.TextAlign == ContentAlignment.MiddleLeft));
             Assert.That(menu.Items[2], Is.TypeOf<ToolStripSeparator>());
         });

@@ -4,6 +4,15 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [1.5.0] - En desarrollo
 
+### Alpha 6
+
+- Corrección del contraste en tema claro y actualización en caliente de la paleta completa.
+- Corrección del cierre redondeado derecho y de la altura uniforme del resaltado del menú de bandeja.
+- Identificación visual del teclado pulsado dentro de Configuración mediante la indicación **Pulsado ahora**.
+- Apertura diferida del selector para impedir que la tecla que lo dispara se escriba en el alias.
+- Terminología explícita de actualización en el instalador cuando detecta una versión previa, conservando preferencias e inicio automático.
+- La interfaz WinForms actual queda tratada como transición: la adopción genuina de Fluent y Acrylic requiere migrar las ventanas a WinUI 3 antes de cerrar 1.5.
+
 ### Alpha 5
 
 - Corrección del repintado acumulativo y de la alineación vertical del menú de bandeja.

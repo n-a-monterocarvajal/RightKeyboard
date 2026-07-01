@@ -19,6 +19,7 @@ internal sealed class SettingsDialog : FluentForm
     private readonly Button forgetButton;
     private readonly PreferenceResetService preferenceReset;
     private string? selectedIdentity;
+    private string? lastTriggeredIdentity;
 
     public SettingsDialog(
         Configuration configuration,
@@ -35,7 +36,6 @@ internal sealed class SettingsDialog : FluentForm
             .ThenBy(layout => layout.LayoutName, StringComparer.CurrentCultureIgnoreCase)
             .ToArray();
 
-        SetStyle(ControlStyles.ApplyThemingImplicitly, true);
         Text = "Configuración de RightKeyboard";
         AccessibleDescription = "Edita alias, distribuciones y dispositivos ignorados, incluso si están desconectados.";
         StartPosition = FormStartPosition.CenterScreen;
@@ -325,6 +325,30 @@ internal sealed class SettingsDialog : FluentForm
         }
     }
 
+    internal void HighlightDevice(string identity)
+    {
+        lastTriggeredIdentity = identity;
+        RadioButton? selected = deviceList.Controls
+            .OfType<RadioButton>()
+            .FirstOrDefault(button =>
+                string.Equals(button.Tag as string, identity, StringComparison.OrdinalIgnoreCase));
+        if (selected is null)
+        {
+            RefreshDeviceList(identity);
+            selected = deviceList.Controls
+                .OfType<RadioButton>()
+                .FirstOrDefault(button =>
+                    string.Equals(button.Tag as string, identity, StringComparison.OrdinalIgnoreCase));
+        }
+        else
+        {
+            selected.Checked = true;
+            SelectDevice(identity);
+        }
+
+        selected?.Focus();
+    }
+
     private void ResizeDeviceButtons()
     {
         int width = Math.Max(180, deviceList.ClientSize.Width - deviceList.Padding.Horizontal - 12);
@@ -343,7 +367,10 @@ internal sealed class SettingsDialog : FluentForm
         detectedNameLabel.Text = $"Detectado: {preference.DetectedName}";
         technicalIdLabel.Text = $"Identificador: {preference.TechnicalId}";
         bool connected = devices.Any(device => device.Identity == identity);
-        statusLabel.Text = $"Estado: {(connected ? "Conectado" : "Desconectado")} · Última detección: {preference.LastSeenUtc.ToLocalTime():g}";
+        string triggerState = string.Equals(identity, lastTriggeredIdentity, StringComparison.OrdinalIgnoreCase)
+            ? " · Pulsado ahora"
+            : string.Empty;
+        statusLabel.Text = $"Estado: {(connected ? "Conectado" : "Desconectado")} · Última detección: {preference.LastSeenUtc.ToLocalTime():g}{triggerState}";
         statusLabel.AccessibleDescription = connected
             ? "El dispositivo está conectado actualmente."
             : "El dispositivo no está conectado, pero sus preferencias siguen siendo editables.";

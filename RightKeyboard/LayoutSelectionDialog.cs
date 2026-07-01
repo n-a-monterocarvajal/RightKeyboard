@@ -12,8 +12,6 @@ internal sealed class LayoutSelectionDialog : FluentForm
         : base(FluentBackdropKind.Tabbed)
     {
         this.device = device;
-        SetStyle(ControlStyles.ApplyThemingImplicitly, true);
-
         Text = "Seleccionar distribución del teclado";
         AccessibleDescription = "Asigna un nombre y una distribución al teclado detectado.";
         StartPosition = FormStartPosition.CenterScreen;

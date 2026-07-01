@@ -27,6 +27,7 @@ Ejecutar esta lista en un host Windows 11 con al menos un teclado sin preferenci
 
 ## Configuración
 
+- Con Configuración abierta, pulsar una tecla en cada teclado: la tarjeta correspondiente debe seleccionarse y mostrar **Pulsado ahora**, sin abrir otro diálogo ni escribir en el campo de alias.
 - Verificar tarjetas para dispositivos conectados, desconectados, ignorados y sin distribución; un alias largo no debe ocultar el estado.
 - Editar alias, distribución y estado ignorado; guardar con el botón y con `Ctrl+S`, cerrar y volver a abrir para comprobar persistencia.
 - Confirmar que un dispositivo desconectado sigue siendo editable y que «Olvidar dispositivo» conserva la preferencia al cancelar.
@@ -37,6 +38,10 @@ Ejecutar esta lista en un host Windows 11 con al menos un teclado sin preferenci
 ## Bandeja
 
 - Confirmar este orden exacto: Configuración, Limpiar preferencias, separador y Salir.
-- Abrir el menú con teclado, recorrerlo con flechas y comprobar el resaltado en los tres temas.
+- Abrir el menú con teclado, recorrerlo con flechas y comprobar en los tres temas que el resaltado mantiene ambos cierres redondeados dentro del menú.
 - Hacer doble clic en el icono y confirmar que abre Configuración una sola vez.
 - Elegir «Limpiar preferencias», cancelar y comprobar que no cambia nada; repetir aceptando solo con datos de prueba.
+
+## Disparo inicial
+
+- Con Configuración cerrada y las preferencias vacías, pulsar una sola letra en un teclado nuevo: debe abrirse el selector, pero esa letra no debe aparecer como primer carácter del alias.

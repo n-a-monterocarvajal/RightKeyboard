@@ -23,8 +23,14 @@ internal sealed class ModernMenuRenderer : ToolStripProfessionalRenderer
         }
 
         float scale = (e.ToolStrip?.DeviceDpi ?? 96) / 96f;
-        Rectangle bounds = new(Point.Empty, e.Item.Size);
-        bounds.Inflate(-(int)Math.Ceiling(4 * scale), -(int)Math.Ceiling(2 * scale));
+        int horizontalInset = (int)Math.Ceiling(4 * scale);
+        int verticalInset = (int)Math.Ceiling(2 * scale);
+        int availableWidth = e.ToolStrip?.DisplayRectangle.Width ?? e.Item.Width;
+        Rectangle bounds = new(
+            horizontalInset,
+            verticalInset,
+            Math.Max(1, availableWidth - (horizontalInset * 2)),
+            Math.Max(1, e.Item.Height - (verticalInset * 2)));
         int radius = Math.Max(3, (int)Math.Round(6 * scale));
         Color selectionColor = SystemInformation.HighContrast
             ? SystemColors.Highlight
@@ -53,7 +59,7 @@ internal sealed class ModernMenuRenderer : ToolStripProfessionalRenderer
         Rectangle textBounds = new(
             12,
             0,
-            Math.Max(1, e.Item.Width - 24),
+            Math.Max(1, (e.ToolStrip?.DisplayRectangle.Width ?? e.Item.Width) - 24),
             e.Item.Height);
         TextRenderer.DrawText(
             e.Graphics,
