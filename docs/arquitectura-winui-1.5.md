@@ -13,7 +13,7 @@ No se alojará una isla XAML dentro del residente. Cargar WinUI, Windows App SDK
 - `RightKeyboard.exe` sigue siendo el producto funcional y no cambia su flujo predeterminado.
 - `RightKeyboard.WinUI.exe` es un prototipo no empaquetado de Configuración.
 - El prototipo usa controles WinUI 3, tema del sistema, `MicaBackdrop`, escalado y automatización de interfaz nativos.
-- El prototipo lee y guarda el mismo modelo `Configuration`; mientras no exista IPC, no debe abrirse a la vez que la Configuración productiva.
+- Esta fase ya fue superada por el IPC de la segunda fase; el prototipo dejó de acceder directamente a `Configuration`.
 - Alias, distribución, ignorado, olvido y limpieza ya son funcionales; importación, exportación e inicio automático permanecen en el fallback WinForms hasta que el núcleo pueda ejecutarlos por IPC.
 - La interfaz WinForms sólida permanece como fallback y no vuelve a extender DWM sobre controles GDI.
 
@@ -31,22 +31,27 @@ Fuentes oficiales:
 
 ## Propiedad del estado
 
-El núcleo seguirá siendo la autoridad cuando el frontend se integre. La siguiente fase introducirá un protocolo local versionado:
+El núcleo es la autoridad y expone un protocolo local versionado:
 
 1. el núcleo entrega un snapshot de dispositivos, distribuciones y preferencias;
 2. WinUI devuelve comandos explícitos (guardar dispositivo, limpiar, importar o cambiar inicio automático);
 3. el núcleo valida, persiste y responde con el estado resultante;
 4. si el frontend no arranca o termina inesperadamente, se abre la Configuración WinForms.
 
-No se escribirá `preferences.json` desde dos procesos simultáneamente. El acceso directo del prototipo existe solo para validar la interfaz antes de implementar IPC.
+No se escribe `preferences.json` desde dos procesos simultáneamente.
+
+## Segunda fase: IPC integrado
+
+El núcleo expone un canal local versionado mediante `NamedPipeServerStream`, limitado al usuario actual. El frontend solicita instantáneas y envía comandos explícitos para guardar, olvidar o limpiar; nunca abre ni escribe `preferences.json` directamente. Cada comando se valida y ejecuta en el hilo de interfaz del núcleo, que sigue siendo la única autoridad de persistencia y enumeración Raw Input.
+
+La opción **Configuración** de la bandeja inicia `RightKeyboard.WinUI.exe` bajo demanda. Solo se admite una ventana a la vez. Si el ejecutable no está instalado o no puede iniciarse, se conserva el diálogo WinForms como fallback funcional.
 
 ## Riesgos abiertos
 
 - tamaño de Windows App SDK autocontenido y tiempo de arranque en frío;
 - consumo del proceso WinUI con Mica activo e inactivo;
-- firma y composición del instalador Inno Setup con dos aplicaciones;
+- medición final del instalador Inno Setup con las dos aplicaciones autocontenidas;
 - foco/activación entre `NotifyIcon` y el proceso frontend;
-- serialización de identificadores y distribuciones sin exponer detalles de Raw Input;
 - extracción futura de `Configuration` y sus DTO a un ensamblado compartido para que el frontend no referencie el ejecutable WinForms;
 - comportamiento de Mica y esquinas en Windows 10, VM, contraste alto y transparencia desactivada.
 

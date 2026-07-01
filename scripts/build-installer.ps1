@@ -8,6 +8,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $projectPath = Join-Path $repositoryRoot 'RightKeyboard\RightKeyboard.csproj'
+$winUiProjectPath = Join-Path $repositoryRoot 'RightKeyboard.WinUI\RightKeyboard.WinUI.csproj'
 $installerScript = Join-Path $repositoryRoot 'installer\RightKeyboard.iss'
 $publishDirectory = Join-Path $repositoryRoot 'artifacts\publish\win-x64'
 $installerDirectory = Join-Path $repositoryRoot 'artifacts\installer'
@@ -43,6 +44,23 @@ dotnet publish $projectPath `
     -p:DebugSymbols=false `
     -p:DebugType=None
 if ($LASTEXITCODE -ne 0) { throw 'Falló dotnet publish.' }
+
+$winUiDirectory = Join-Path $publishDirectory 'ui'
+dotnet restore $winUiProjectPath --runtime win-x64
+if ($LASTEXITCODE -ne 0) { throw 'Falló dotnet restore para WinUI.' }
+
+dotnet publish $winUiProjectPath `
+    --configuration $Configuration `
+    --runtime win-x64 `
+    --self-contained true `
+    --no-restore `
+    --output $winUiDirectory `
+    -p:Version=$Version `
+    -p:WindowsAppSDKSelfContained=true `
+    -p:ContinuousIntegrationBuild=true `
+    -p:DebugSymbols=false `
+    -p:DebugType=None
+if ($LASTEXITCODE -ne 0) { throw 'Falló dotnet publish para WinUI.' }
 
 $candidates = @(
     $IsccPath,

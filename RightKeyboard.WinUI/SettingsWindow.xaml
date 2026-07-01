@@ -5,7 +5,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:RightKeyboard.WinUI"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    Title="Configuración de RightKeyboard — prototipo WinUI"
+    Title="Configuración de RightKeyboard"
     mc:Ignorable="d">
 
     <Window.SystemBackdrop>
@@ -23,7 +23,7 @@
             <TextBlock Style="{StaticResource TitleTextBlockStyle}" Text="Teclados y preferencias" />
             <TextBlock
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                Text="Prototipo WinUI 3 separado; la ventana estable continúa disponible como fallback."
+                Text="Administra los teclados conocidos sin interrumpir la detección en segundo plano."
                 TextWrapping="Wrap" />
         </StackPanel>
 
@@ -146,10 +146,11 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <Button
+                x:Name="ClearButton"
                 AutomationProperties.HelpText="Elimina alias, distribuciones y dispositivos ignorados después de confirmar."
                 Click="ClearButton_Click"
                 Content="Limpiar preferencias" />
-            <Button Grid.Column="1" Click="ReloadButton_Click" Content="Recargar" />
+            <Button x:Name="ReloadButton" Grid.Column="1" Click="ReloadButton_Click" Content="Recargar" />
             <Button Grid.Column="2" Click="CloseButton_Click" Content="Cerrar" />
         </Grid>
     </Grid>

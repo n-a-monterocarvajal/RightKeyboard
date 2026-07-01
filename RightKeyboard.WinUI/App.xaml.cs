@@ -15,9 +15,7 @@ public partial class App : Application
     {
         try
         {
-            KeyboardDevicesCollection devices = new();
-            Configuration configuration = Configuration.LoadConfiguration(devices);
-            window = new SettingsWindow(configuration, devices);
+            window = new SettingsWindow(new SettingsIpcClient());
         }
         catch (Exception error)
         {

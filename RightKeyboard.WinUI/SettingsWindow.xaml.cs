@@ -7,51 +7,60 @@ namespace RightKeyboard.WinUI;
 
 public sealed partial class SettingsWindow : Window
 {
-    private readonly Configuration configuration;
-    private readonly KeyboardDevicesCollection devices;
-    private readonly Layout[] layouts;
+    private readonly SettingsIpcClient client;
     private readonly ObservableCollection<DeviceRow> rows = [];
+    private SettingsSnapshot? snapshot;
 
-    public SettingsWindow(Configuration configuration, KeyboardDevicesCollection devices)
+    internal SettingsWindow(SettingsIpcClient client)
     {
-        this.configuration = configuration;
-        this.devices = devices;
-        layouts = Layout.EnumerateLayouts()
-            .OrderBy(layout => layout.LanguageName, StringComparer.CurrentCultureIgnoreCase)
-            .ThenBy(layout => layout.LayoutName, StringComparer.CurrentCultureIgnoreCase)
-            .ToArray();
-
+        this.client = client;
         InitializeComponent();
         DeviceList.ItemsSource = rows;
-        LayoutComboBox.Items.Add("Sin distribución");
-        foreach (Layout layout in layouts)
-        {
-            LayoutComboBox.Items.Add(layout);
-        }
-
         AppWindow.Resize(new Windows.Graphics.SizeInt32(980, 680));
-        RefreshRows();
+        Activated += OnActivated;
     }
 
     private DeviceRow? SelectedRow => DeviceList.SelectedItem as DeviceRow;
 
-    private void RefreshRows(string? identityToSelect = null)
+    private async void OnActivated(object sender, WindowActivatedEventArgs args)
     {
-        devices.Refresh();
-        HashSet<string> connected = devices.Select(device => device.Identity)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        foreach (KeyboardDevice device in devices)
+        Activated -= OnActivated;
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync(string? identityToSelect = null)
+    {
+        try
         {
-            configuration.TouchDevice(device);
+            SetBusy(true);
+            ApplySnapshot(await client.GetSnapshotAsync(), identityToSelect);
+        }
+        catch (Exception error)
+        {
+            await ShowErrorAsync("No se pudo leer la configuración", error);
+        }
+        finally
+        {
+            SetBusy(false);
+        }
+    }
+
+    private void ApplySnapshot(SettingsSnapshot value, string? identityToSelect = null)
+    {
+        snapshot = value;
+        rows.Clear();
+        foreach (SettingsDevice device in value.Devices)
+        {
+            SettingsLayout? layout = value.Layouts.FirstOrDefault(candidate =>
+                candidate.Identifier == device.LayoutIdentifier);
+            rows.Add(new DeviceRow(device, layout));
         }
 
-        rows.Clear();
-        foreach (DevicePreference preference in configuration.Devices.Values
-                     .OrderBy(preference => preference.DisplayName, StringComparer.CurrentCultureIgnoreCase))
+        LayoutComboBox.Items.Clear();
+        LayoutComboBox.Items.Add("Sin distribución");
+        foreach (SettingsLayout layout in value.Layouts)
         {
-            bool ignored = configuration.IgnoredDevices.Contains(preference.Identity);
-            configuration.LayoutMappings.TryGetValue(preference.Identity, out Layout? layout);
-            rows.Add(new DeviceRow(preference, connected.Contains(preference.Identity), ignored, layout));
+            LayoutComboBox.Items.Add(layout);
         }
 
         DeviceList.SelectedItem = rows.FirstOrDefault(row =>
@@ -67,43 +76,51 @@ public sealed partial class SettingsWindow : Window
             return;
         }
 
-        DevicePreference preference = configuration.Devices[row.Identity];
-        AliasTextBox.Text = preference.CustomName ?? preference.DisplayName;
-        DetectedNameText.Text = $"Detectado: {preference.DetectedName}";
-        TechnicalIdText.Text = $"Identificador: {preference.TechnicalId}";
-        StatusText.Text = $"Estado: {(row.Connected ? "Conectado" : "Desconectado")} · Última detección: {preference.LastSeenUtc.ToLocalTime():g}";
+        AliasTextBox.Text = row.DisplayName;
+        DetectedNameText.Text = $"Detectado: {row.DetectedName}";
+        TechnicalIdText.Text = $"Identificador: {row.TechnicalId}";
+        StatusText.Text = $"Estado: {(row.Connected ? "Conectado" : "Desconectado")} · Última detección: {row.LastSeenUtc.ToLocalTime():g}";
         IgnoredCheckBox.IsChecked = row.Ignored;
         LayoutComboBox.SelectedItem = row.Layout is null
             ? LayoutComboBox.Items[0]
-            : layouts.FirstOrDefault(candidate => candidate.Identifier == row.Layout.Identifier) ?? row.Layout;
+            : LayoutComboBox.Items.OfType<SettingsLayout>()
+                .FirstOrDefault(candidate => candidate.Identifier == row.Layout.Identifier);
         SetEditorEnabled(true);
     }
 
     private void IgnoredCheckBox_Changed(object sender, RoutedEventArgs e) =>
         LayoutComboBox.IsEnabled = SaveButton.IsEnabled && IgnoredCheckBox.IsChecked != true;
 
-    private void SaveButton_Click(object sender, RoutedEventArgs e) => SaveSelected();
+    private async void SaveButton_Click(object sender, RoutedEventArgs e) => await SaveSelectedAsync();
 
-    private void SaveAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    private async void SaveAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
-        SaveSelected();
+        await SaveSelectedAsync();
         args.Handled = true;
     }
 
-    private void SaveSelected()
+    private async Task SaveSelectedAsync()
     {
         if (SelectedRow is not DeviceRow row)
         {
             return;
         }
 
-        configuration.UpdatePreference(
-            row.Identity,
-            AliasTextBox.Text,
-            LayoutComboBox.SelectedItem as Layout,
-            IgnoredCheckBox.IsChecked == true);
-        configuration.Save();
-        RefreshRows(row.Identity);
+        try
+        {
+            SetBusy(true);
+            SettingsLayout? layout = LayoutComboBox.SelectedItem as SettingsLayout;
+            ApplySnapshot(await client.SaveAsync(
+                row.Identity, AliasTextBox.Text, layout?.Identifier, IgnoredCheckBox.IsChecked == true), row.Identity);
+        }
+        catch (Exception error)
+        {
+            await ShowErrorAsync("No se pudieron guardar los cambios", error);
+        }
+        finally
+        {
+            SetBusy(false);
+        }
     }
 
     private async void ForgetButton_Click(object sender, RoutedEventArgs e)
@@ -114,17 +131,25 @@ public sealed partial class SettingsWindow : Window
         }
 
         ContentDialog confirmation = Confirmation(
-            "Olvidar dispositivo",
-            $"Se olvidarán el nombre y la preferencia de \"{row.DisplayName}\".",
-            "Olvidar");
+            "Olvidar dispositivo", $"Se olvidarán el nombre y la preferencia de \"{row.DisplayName}\".", "Olvidar");
         if (await confirmation.ShowAsync() != ContentDialogResult.Primary)
         {
             return;
         }
 
-        configuration.Forget(row.Identity);
-        configuration.Save();
-        RefreshRows();
+        try
+        {
+            SetBusy(true);
+            ApplySnapshot(await client.ForgetAsync(row.Identity));
+        }
+        catch (Exception error)
+        {
+            await ShowErrorAsync("No se pudo olvidar el dispositivo", error);
+        }
+        finally
+        {
+            SetBusy(false);
+        }
     }
 
     private async void ClearButton_Click(object sender, RoutedEventArgs e)
@@ -138,19 +163,23 @@ public sealed partial class SettingsWindow : Window
             return;
         }
 
-        configuration.Clear();
-        rows.Clear();
-        AliasTextBox.Text = string.Empty;
-        DetectedNameText.Text = string.Empty;
-        TechnicalIdText.Text = string.Empty;
-        StatusText.Text = "Las preferencias se limpiaron correctamente.";
-        IgnoredCheckBox.IsChecked = false;
-        LayoutComboBox.SelectedIndex = 0;
-        SetEditorEnabled(false);
+        try
+        {
+            SetBusy(true);
+            ApplySnapshot(await client.ClearAsync());
+            StatusText.Text = "Las preferencias se limpiaron correctamente.";
+        }
+        catch (Exception error)
+        {
+            await ShowErrorAsync("No se pudieron limpiar las preferencias", error);
+        }
+        finally
+        {
+            SetBusy(false);
+        }
     }
 
-    private void ReloadButton_Click(object sender, RoutedEventArgs e) => RefreshRows(SelectedRow?.Identity);
-
+    private async void ReloadButton_Click(object sender, RoutedEventArgs e) => await ReloadAsync(SelectedRow?.Identity);
     private void CloseButton_Click(object sender, RoutedEventArgs e) => Close();
 
     private ContentDialog Confirmation(string title, string content, string primaryText) => new()
@@ -162,6 +191,21 @@ public sealed partial class SettingsWindow : Window
         CloseButtonText = "Cancelar",
         DefaultButton = ContentDialogButton.Close
     };
+
+    private async Task ShowErrorAsync(string title, Exception error)
+    {
+        ContentDialog dialog = Confirmation(title, error.Message, "Aceptar");
+        dialog.CloseButtonText = string.Empty;
+        await dialog.ShowAsync();
+    }
+
+    private void SetBusy(bool busy)
+    {
+        DeviceList.IsEnabled = !busy;
+        ReloadButton.IsEnabled = !busy;
+        ClearButton.IsEnabled = !busy;
+        SetEditorEnabled(!busy && DeviceList.SelectedItem is not null);
+    }
 
     private void SetEditorEnabled(bool enabled)
     {
@@ -175,23 +219,29 @@ public sealed partial class SettingsWindow : Window
 
 public sealed class DeviceRow
 {
-    public DeviceRow(DevicePreference preference, bool connected, bool ignored, Layout? layout)
+    internal DeviceRow(SettingsDevice device, SettingsLayout? layout)
     {
-        Identity = preference.Identity;
-        DisplayName = preference.DisplayName;
-        Connected = connected;
-        Ignored = ignored;
+        Identity = device.Identity;
+        DisplayName = device.DisplayName;
+        DetectedName = device.DetectedName;
+        TechnicalId = device.TechnicalId;
+        LastSeenUtc = device.LastSeenUtc;
+        Connected = device.Connected;
+        Ignored = device.Ignored;
         Layout = layout;
-        DevicePresentation presentation = DevicePresentation.Create(connected, ignored, layout);
-        Summary = presentation.SecondaryText;
-        AccessibleName = presentation.GetAccessibleName(DisplayName);
+        string state = device.Ignored ? "Ignorado" : device.Connected ? "Conectado" : "Desconectado";
+        Summary = layout is null ? state : $"{state} · {layout.Name}";
+        AccessibleName = $"{DisplayName}. {Summary}";
     }
 
     public string Identity { get; }
     public string DisplayName { get; }
+    public string DetectedName { get; }
+    public string TechnicalId { get; }
+    public DateTimeOffset LastSeenUtc { get; }
     public string Summary { get; }
     public string AccessibleName { get; }
     public bool Connected { get; }
     public bool Ignored { get; }
-    public Layout? Layout { get; }
+    internal SettingsLayout? Layout { get; }
 }

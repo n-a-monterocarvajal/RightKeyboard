@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using RightKeyboard.Win32;
 
 namespace RightKeyboard;
@@ -12,8 +13,10 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private readonly SynchronizationContext uiContext;
     private readonly PreferenceResetService preferenceReset;
     private readonly System.Windows.Forms.Timer selectionTimer;
+    private readonly SettingsIpcServer settingsIpc;
     private KeyboardDevice? pendingDevice;
     private SettingsDialog? settingsDialog;
+    private Process? settingsProcess;
     private bool selectingLayout;
 
     public TrayApplicationContext()
@@ -24,6 +27,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         preferenceReset = new PreferenceResetService(configuration);
         selectionTimer = new System.Windows.Forms.Timer { Interval = 100 };
         selectionTimer.Tick += OnSelectionTimerTick;
+        settingsIpc = new SettingsIpcServer(configuration, devices, uiContext);
 
         menu = TrayMenuFactory.Create(ShowSettings, ClearPreferences, ExitThread);
 
@@ -169,7 +173,12 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     private void ShowSettings()
     {
-        if (selectingLayout || settingsDialog is not null)
+        if (selectingLayout || settingsDialog is not null || settingsProcess is { HasExited: false })
+        {
+            return;
+        }
+
+        if (TryLaunchWinUiSettings())
         {
             return;
         }
@@ -184,6 +193,45 @@ internal sealed class TrayApplicationContext : ApplicationContext
             settingsDialog?.Dispose();
             settingsDialog = null;
         }
+    }
+
+    private bool TryLaunchWinUiSettings()
+    {
+        string? executable = FindWinUiExecutable();
+        if (executable is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            settingsProcess = Process.Start(new ProcessStartInfo(executable) { UseShellExecute = true });
+            return settingsProcess is not null;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static string? FindWinUiExecutable()
+    {
+        string installed = Path.Combine(AppContext.BaseDirectory, "ui", "RightKeyboard.WinUI.exe");
+        if (File.Exists(installed))
+        {
+            return installed;
+        }
+
+#if DEBUG
+        string development = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory, "..", "..", "..", "..", "RightKeyboard.WinUI", "bin", "x64", "Debug",
+            "net10.0-windows10.0.19041.0", "win-x64", "RightKeyboard.WinUI.exe"));
+        if (File.Exists(development))
+        {
+            return development;
+        }
+#endif
+        return null;
     }
 
     private static void ApplyLayout(Layout layout)
@@ -226,8 +274,14 @@ internal sealed class TrayApplicationContext : ApplicationContext
         selectionTimer.Stop();
         selectionTimer.Tick -= OnSelectionTimerTick;
         selectionTimer.Dispose();
+        settingsIpc.Dispose();
         settingsDialog?.Close();
         settingsDialog?.Dispose();
+        if (settingsProcess is { HasExited: false })
+        {
+            settingsProcess.CloseMainWindow();
+        }
+        settingsProcess?.Dispose();
         inputWindow.Dispose();
         notifyIcon.Dispose();
         menu.Dispose();
