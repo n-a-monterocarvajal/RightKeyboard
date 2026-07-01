@@ -146,11 +146,10 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <Button
-                x:Name="ClearButton"
                 AutomationProperties.HelpText="Elimina alias, distribuciones y dispositivos ignorados después de confirmar."
                 Click="ClearButton_Click"
                 Content="Limpiar preferencias" />
-            <Button x:Name="ReloadButton" Grid.Column="1" Click="ReloadButton_Click" Content="Recargar" />
+            <Button Grid.Column="1" Click="ReloadButton_Click" Content="Recargar" />
             <Button Grid.Column="2" Click="CloseButton_Click" Content="Cerrar" />
         </Grid>
     </Grid>

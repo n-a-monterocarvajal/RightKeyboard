@@ -202,8 +202,6 @@ public sealed partial class SettingsWindow : Window
     private void SetBusy(bool busy)
     {
         DeviceList.IsEnabled = !busy;
-        ReloadButton.IsEnabled = !busy;
-        ClearButton.IsEnabled = !busy;
         SetEditorEnabled(!busy && DeviceList.SelectedItem is not null);
     }
 
