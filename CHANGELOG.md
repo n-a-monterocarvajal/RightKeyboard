@@ -4,6 +4,14 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [1.5.0] - En desarrollo
 
+### Prototipo WinUI 3 posterior a Beta 1
+
+- Decisión de mantener Raw Input, `NotifyIcon` y coordinación residente en el núcleo WinForms, con un frontend WinUI 3 separado y activado bajo demanda.
+- Primer prototipo compilable de Configuración con Windows App SDK 2.2, controles XAML, Mica, tema del sistema, DPI y automatización accesible nativos.
+- Edición funcional de alias, distribución, ignorado, olvido y limpieza sobre el modelo `Configuration`, sin sustituir todavía la ventana estable.
+- Retirada completa de `DwmExtendFrameIntoClientArea` del camino WinForms; no se simula Acrylic sobre controles GDI.
+- Comparación documentada de despliegue autocontenido y runtime compartido, además de arranque y memoria del frontend.
+
 ### Beta 1
 
 - Primera versión intermedia pública de la línea 1.5, con identidad persistente, Configuración, alias, dispositivos ignorados, importación/exportación, inicio automático e instalador por usuario.

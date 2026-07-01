@@ -14,11 +14,12 @@ No se alojará una isla XAML dentro del residente. Cargar WinUI, Windows App SDK
 - `RightKeyboard.WinUI.exe` es un prototipo no empaquetado de Configuración.
 - El prototipo usa controles WinUI 3, tema del sistema, `MicaBackdrop`, escalado y automatización de interfaz nativos.
 - El prototipo lee y guarda el mismo modelo `Configuration`; mientras no exista IPC, no debe abrirse a la vez que la Configuración productiva.
+- Alias, distribución, ignorado, olvido y limpieza ya son funcionales; importación, exportación e inicio automático permanecen en el fallback WinForms hasta que el núcleo pueda ejecutarlos por IPC.
 - La interfaz WinForms sólida permanece como fallback y no vuelve a extender DWM sobre controles GDI.
 
 ## Despliegue del prototipo
 
-Se usa Windows App SDK 2.2 estable, compatible desde Windows 10 1809. El proyecto es no empaquetado (`WindowsPackageType=None`) y autocontenido respecto de Windows App SDK para medir una copia reproducible sin instalar runtime global. Esta elección es provisional: Microsoft advierte que el modo autocontenido aumenta tamaño, arranque y memoria al no compartir páginas de código. Antes de integrar el frontend en el instalador se comparará con el modo dependiente del framework y su instalador de runtime.
+Se usa Windows App SDK 2.2 estable, compatible desde Windows 10 1809. El proyecto es no empaquetado (`WindowsPackageType=None`) y autocontenido respecto de Windows App SDK para medir una copia reproducible sin instalar runtime global; durante el prototipo, .NET permanece framework-dependent para poder reutilizar el ensamblado del núcleo sin publicar una segunda copia completa de .NET. Esta elección es provisional: Microsoft advierte que el modo autocontenido aumenta tamaño, arranque y memoria al no compartir páginas de código. Antes de integrar el frontend en el instalador se comparará con el modo dependiente del framework y su instalador de runtime.
 
 Fuentes oficiales:
 
@@ -46,4 +47,23 @@ No se escribirá `preferences.json` desde dos procesos simultáneamente. El acce
 - firma y composición del instalador Inno Setup con dos aplicaciones;
 - foco/activación entre `NotifyIcon` y el proceso frontend;
 - serialización de identificadores y distribuciones sin exponer detalles de Raw Input;
+- extracción futura de `Configuration` y sus DTO a un ensamblado compartido para que el frontend no referencie el ejecutable WinForms;
 - comportamiento de Mica y esquinas en Windows 10, VM, contraste alto y transparencia desactivada.
+
+## Medición inicial del prototipo
+
+Mediciones en la VM de desarrollo, compilación x64 del 30 de junio de 2026:
+
+| Medida | Resultado |
+|---|---:|
+| Publicación Release, Windows App SDK autocontenido | 330 archivos; 144.786.636 bytes |
+| Publicación Release, Windows App SDK compartido | 52 archivos; 80.597.316 bytes, más el runtime externo |
+| Salida Debug autocontenida | 333 archivos; 146.167.487 bytes |
+| Primera ventana visible, segundo arranque observado | 2.004 ms |
+| Working set con Configuración abierta | 130.732.032 bytes |
+| Memoria privada con Configuración abierta | 38.604.800 bytes |
+| Hilos con Configuración abierta | 25 |
+
+El núcleo no referencia `Microsoft.WindowsAppSDK`; por tanto, su inicio y consumo residente no cambian en esta fase. Al cerrar `RightKeyboard.WinUI.exe`, toda la memoria del frontend se libera. Las cifras de arranque son orientativas: quedan pendientes una medición fría repetible y la comparación en hardware físico.
+
+El delta de disco es demasiado alto para integrar sin más el modo autocontenido. La siguiente fase debe evaluar el runtime compartido instalado por Inno Setup o reducir dependencias del metapaquete cuando Microsoft documente una referencia modular compatible con WinUI.

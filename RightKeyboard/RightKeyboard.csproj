@@ -16,5 +16,6 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="RightKeyboard.NUnit" />
+    <InternalsVisibleTo Include="RightKeyboard.WinUI" />
   </ItemGroup>
 </Project>

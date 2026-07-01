@@ -1,0 +1,156 @@
+<Window
+    x:Class="RightKeyboard.WinUI.SettingsWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="using:RightKeyboard.WinUI"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Title="Configuración de RightKeyboard — prototipo WinUI"
+    mc:Ignorable="d">
+
+    <Window.SystemBackdrop>
+        <MicaBackdrop />
+    </Window.SystemBackdrop>
+
+    <Grid Padding="24" Background="Transparent" RowSpacing="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Spacing="4">
+            <TextBlock Style="{StaticResource TitleTextBlockStyle}" Text="Teclados y preferencias" />
+            <TextBlock
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Text="Prototipo WinUI 3 separado; la ventana estable continúa disponible como fallback."
+                TextWrapping="Wrap" />
+        </StackPanel>
+
+        <Grid Grid.Row="1" ColumnSpacing="20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Grid
+                Padding="12"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="8">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <TextBlock
+                    Margin="4,2,4,10"
+                    FontWeight="SemiBold"
+                    Text="Dispositivos conocidos" />
+                <ListView
+                    x:Name="DeviceList"
+                    Grid.Row="1"
+                    AutomationProperties.HelpText="Incluye dispositivos conectados, desconectados e ignorados."
+                    AutomationProperties.Name="Dispositivos conocidos"
+                    IsItemClickEnabled="False"
+                    SelectionChanged="DeviceList_SelectionChanged">
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="local:DeviceRow">
+                            <StackPanel
+                                Padding="4"
+                                AutomationProperties.Name="{x:Bind AccessibleName}"
+                                Spacing="2">
+                                <TextBlock FontWeight="SemiBold" Text="{x:Bind DisplayName}" TextTrimming="CharacterEllipsis" />
+                                <TextBlock
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Text="{x:Bind Summary}"
+                                    TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </Grid>
+
+            <ScrollViewer Grid.Column="1">
+                <Grid
+                    Padding="20"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    RowSpacing="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBox
+                        x:Name="AliasTextBox"
+                        AutomationProperties.HelpText="Alias opcional que se muestra en lugar del nombre detectado."
+                        Header="Nombre para este teclado"
+                        PlaceholderText="Nombre reconocible" />
+                    <TextBlock
+                        x:Name="DetectedNameText"
+                        Grid.Row="1"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        TextWrapping="Wrap" />
+                    <TextBlock
+                        x:Name="TechnicalIdText"
+                        Grid.Row="2"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        TextWrapping="Wrap" />
+                    <TextBlock
+                        x:Name="StatusText"
+                        Grid.Row="3"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        TextWrapping="Wrap" />
+                    <ComboBox
+                        x:Name="LayoutComboBox"
+                        Grid.Row="4"
+                        AutomationProperties.HelpText="Idioma y distribución que se aplicarán al usar este dispositivo."
+                        DisplayMemberPath="Name"
+                        Header="Distribución"
+                        HorizontalAlignment="Stretch" />
+                    <CheckBox
+                        x:Name="IgnoredCheckBox"
+                        Grid.Row="5"
+                        Checked="IgnoredCheckBox_Changed"
+                        Content="Ignorar eventos de este dispositivo"
+                        Unchecked="IgnoredCheckBox_Changed" />
+                    <StackPanel Grid.Row="6" Orientation="Horizontal" Spacing="8">
+                        <Button
+                            x:Name="SaveButton"
+                            AutomationProperties.HelpText="Guarda el alias, la distribución y el estado ignorado."
+                            Click="SaveButton_Click"
+                            Content="Guardar cambios"
+                            Style="{StaticResource AccentButtonStyle}">
+                            <Button.KeyboardAccelerators>
+                                <KeyboardAccelerator Key="S" Modifiers="Control" Invoked="SaveAccelerator_Invoked" />
+                            </Button.KeyboardAccelerators>
+                        </Button>
+                        <Button x:Name="ForgetButton" Click="ForgetButton_Click" Content="Olvidar dispositivo" />
+                    </StackPanel>
+                </Grid>
+            </ScrollViewer>
+        </Grid>
+
+        <Grid Grid.Row="2" ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Button
+                AutomationProperties.HelpText="Elimina alias, distribuciones y dispositivos ignorados después de confirmar."
+                Click="ClearButton_Click"
+                Content="Limpiar preferencias" />
+            <Button Grid.Column="1" Click="ReloadButton_Click" Content="Recargar" />
+            <Button Grid.Column="2" Click="CloseButton_Click" Content="Cerrar" />
+        </Grid>
+    </Grid>
+</Window>
