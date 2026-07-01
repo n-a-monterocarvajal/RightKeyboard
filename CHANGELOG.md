@@ -4,6 +4,12 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [1.5.0] - En desarrollo
 
+### Alpha 8
+
+- Eliminación del segundo motor de tema que repintaba controles WinForms después de aplicar la paleta de RightKeyboard y producía texto blanco sobre superficies claras.
+- La barra de título, los bordes y los materiales siguen el tema mediante DWM; toda el área cliente queda bajo una única capa de color.
+- Nueva prueba automatizada de contraste para etiquetas, campos y botones en modo claro.
+
 ### Alpha 7
 
 - Corrección del tema claro: la paleta propia usa ahora la misma fuente de tema que WinForms, evitando combinar superficies claras con texto oscuro heredado.

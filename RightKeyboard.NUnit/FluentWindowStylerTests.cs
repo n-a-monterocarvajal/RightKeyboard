@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Windows.Forms;
 using NUnit.Framework;
 
 namespace RightKeyboard.Tests;
@@ -72,6 +73,71 @@ public sealed class FluentWindowStylerTests
             Assert.That(light.Text, Is.Not.EqualTo(dark.Text));
             Assert.That(light.Hover, Is.Not.EqualTo(dark.Hover));
         });
+    }
+
+    [TestCase(0, false, true)]
+    [TestCase(1, true, false)]
+    [TestCase(1, false, false)]
+    public void ResolveDarkMode_InterpretaLaPreferenciaDeAplicaciones(
+        int appsUseLightTheme,
+        bool fallback,
+        bool expected)
+    {
+        Assert.That(
+            FluentTheme.ResolveDarkMode(appsUseLightTheme, fallback),
+            Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void ResolveDarkMode_UsaFallbackCuandoNoHayPreferencia()
+    {
+        Assert.That(FluentTheme.ResolveDarkMode(null, fallback: true), Is.True);
+    }
+
+    [Test]
+    public void ApplyPalette_TemaClaroMantieneTextoLegibleEnCadaSuperficie()
+    {
+        FluentPalette palette = FluentPalette.Create(darkMode: false);
+        using Form form = new();
+        using Panel panel = new();
+        using Label label = new() { Text = "Texto" };
+        using TextBox textBox = new() { Text = "Campo" };
+        using Button button = new() { Text = "Acción" };
+        panel.Controls.AddRange([label, textBox, button]);
+        form.Controls.Add(panel);
+
+        FluentTheme.ApplyPalette(form, palette);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(form.BackColor, Is.EqualTo(palette.Window));
+            Assert.That(label.ForeColor, Is.EqualTo(palette.Text));
+            Assert.That(textBox.BackColor, Is.EqualTo(palette.Field));
+            Assert.That(textBox.ForeColor, Is.EqualTo(palette.Text));
+            Assert.That(button.BackColor, Is.EqualTo(palette.Surface));
+            Assert.That(button.ForeColor, Is.EqualTo(palette.Text));
+            Assert.That(ContrastRatio(label.ForeColor, palette.Window), Is.GreaterThanOrEqualTo(4.5));
+            Assert.That(ContrastRatio(textBox.ForeColor, textBox.BackColor), Is.GreaterThanOrEqualTo(4.5));
+            Assert.That(ContrastRatio(button.ForeColor, button.BackColor), Is.GreaterThanOrEqualTo(4.5));
+        });
+    }
+
+    private static double ContrastRatio(Color foreground, Color background)
+    {
+        static double Luminance(Color color)
+        {
+            static double Linear(byte component)
+            {
+                double value = component / 255d;
+                return value <= 0.04045 ? value / 12.92 : Math.Pow((value + 0.055) / 1.055, 2.4);
+            }
+
+            return (0.2126 * Linear(color.R)) + (0.7152 * Linear(color.G)) + (0.0722 * Linear(color.B));
+        }
+
+        double lighter = Math.Max(Luminance(foreground), Luminance(background));
+        double darker = Math.Min(Luminance(foreground), Luminance(background));
+        return (lighter + 0.05) / (darker + 0.05);
     }
 
 }

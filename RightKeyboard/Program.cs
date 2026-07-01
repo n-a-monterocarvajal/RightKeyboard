@@ -15,7 +15,6 @@ internal static class Program
         }
 
         ApplicationConfiguration.Initialize();
-        Application.SetColorMode(SystemColorMode.System);
         using EventWaitHandle closeEvent = new(false, EventResetMode.AutoReset, CloseEventName);
         using TrayApplicationContext context = new();
         RegisteredWaitHandle closeRegistration = ThreadPool.RegisterWaitForSingleObject(

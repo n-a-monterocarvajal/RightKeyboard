@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Drawing.Drawing2D;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Microsoft.Win32;
 
 namespace RightKeyboard;
 
@@ -154,6 +155,9 @@ internal readonly record struct FluentPalette(
 
 internal static class FluentTheme
 {
+    private const string PersonalizeKey = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
+    private const string AppsUseLightTheme = "AppsUseLightTheme";
+
     private sealed class RoleHolder(FluentThemeRole role)
     {
         public FluentThemeRole Role { get; } = role;
@@ -161,9 +165,26 @@ internal static class FluentTheme
 
     private static readonly ConditionalWeakTable<Control, RoleHolder> Roles = new();
 
-    public static bool IsDarkMode => Application.IsDarkModeEnabled;
+    public static bool IsDarkMode
+    {
+        get
+        {
+            try
+            {
+                using RegistryKey? key = Registry.CurrentUser.OpenSubKey(PersonalizeKey);
+                return ResolveDarkMode(key?.GetValue(AppsUseLightTheme), fallback: false);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+    }
 
     public static FluentPalette Current => FluentPalette.Create(IsDarkMode);
+
+    internal static bool ResolveDarkMode(object? appsUseLightTheme, bool fallback) =>
+        appsUseLightTheme is int value ? value == 0 : fallback;
 
     public static void Mark(Control control, FluentThemeRole role)
     {
@@ -174,11 +195,17 @@ internal static class FluentTheme
     public static void Apply(Control root)
     {
         FluentPalette palette = Current;
-        Apply(root, palette);
+        ApplyPalette(root, palette);
         root.Invalidate(true);
     }
 
-    private static void Apply(Control control, FluentPalette palette)
+    internal static void ApplyPalette(Control root, FluentPalette palette)
+    {
+        ApplyControl(root, palette);
+        root.Invalidate(true);
+    }
+
+    private static void ApplyControl(Control control, FluentPalette palette)
     {
         Roles.TryGetValue(control, out RoleHolder? holder);
         FluentThemeRole? role = holder?.Role;
@@ -235,7 +262,7 @@ internal static class FluentTheme
 
         foreach (Control child in control.Controls)
         {
-            Apply(child, palette);
+            ApplyControl(child, palette);
         }
     }
 
