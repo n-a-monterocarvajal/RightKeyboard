@@ -2,9 +2,11 @@
 
 Este documento es la fuente de verdad para certificar `1.5.0-rc.1` y `1.5.0`. Se actualiza con evidencia reproducible y no sustituye las especificaciones funcionales de [continuación](continuacion-1.5.md) ni de [distribución](distribucion-1.5.md).
 
-## Estado integrado de alpha 5
+La migración posterior de las ventanas a WinUI 3 tiene un contrato separado de [criterios, presupuestos y medición](criterios-winui3-1.5.md). Ese contrato debe entregarse al frente Interfaz antes de evaluar su implementación.
 
-Integración auditada el 30 de junio de 2026 sobre la rama `codex/version-1.5`, versión `1.5.0-beta.1`. Los frentes de trabajo están combinados y la certificación física continúa.
+## Estado integrado de beta 1
+
+Integración auditada el 30 de junio de 2026 sobre la etiqueta pública `v1.5.0-beta.1` (`dfb1556`). Los frentes de trabajo están combinados y la certificación física continúa.
 
 | Área | Resultado | Evidencia o brecha |
 |---|---|---|

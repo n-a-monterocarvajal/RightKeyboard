@@ -46,6 +46,8 @@ La validación local posterior confirmó además que la transparencia entre supe
 
 La migración real continúa como frontend WinUI 3 separado y activado bajo demanda. La decisión y sus fases están en [arquitectura-winui-1.5.md](arquitectura-winui-1.5.md).
 
+Los requisitos verificables para esa decisión están definidos en el [contrato de aceptación de WinUI 3](criterios-winui3-1.5.md), que conserva `v1.5.0-beta.1` como línea base y separa las puertas obligatorias de los objetivos iniciales de rendimiento.
+
 ## Medición de alpha.4
 
 Publicaciones autocontenidas `win-x64`, Release y sin símbolos:

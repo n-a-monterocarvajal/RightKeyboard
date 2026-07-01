@@ -2,6 +2,8 @@
 
 Ejecutar esta lista en un host Windows 11 con al menos un teclado sin preferencia guardada.
 
+Esta lista valida la interfaz WinForms de `v1.5.0-beta.1`. Para una implementación WinUI 3 deben aplicarse además los [criterios de aceptación y la matriz de medición de la migración](criterios-winui3-1.5.md).
+
 ## Escalado y temas
 
 - Probar al 100 %, 150 % y 200 %; mover cada diálogo entre monitores con DPI distinto y confirmar que texto, botones y bordes se reescalan sin recortes.
