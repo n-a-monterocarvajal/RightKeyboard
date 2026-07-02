@@ -8,6 +8,13 @@ Ejecutar `scripts\build-winui-prototype.ps1` y abrir `RightKeyboard.WinUI.exe` f
 
 - En Windows 11 con transparencia activa, confirmar Mica visible alrededor de las tarjetas y esquinas nativas sin píxeles GDI residuales.
 - Desactivar transparencia y activar ahorro de batería: la ventana debe usar el fallback sólido de WinUI sin perder contraste.
+
+## Bandeja y panel de iconos ocultos
+
+- Abrir el panel de iconos ocultos y hacer clic secundario en RightKeyboard.
+- Mover el puntero entre **Configuración**, **Limpiar preferencias** y **Salir**: el panel del sistema no debe contraerse mientras se usa el menú.
+- Cerrar el menú con `Esc` y haciendo clic fuera; no deben quedar ventanas auxiliares ni zonas de hover persistentes.
+- Repetir en tema claro, oscuro y con escalado de 125 % o superior. El menú debe conservar el estilo nativo que entregue Windows.
 - Cambiar entre tema claro, oscuro y contraste alto con la ventana abierta; textos, campos, selección, foco y diálogos deben actualizarse.
 - Repetir en Windows 10 1809 o posterior: debe abrir con fondo sólido y conservar toda la funcionalidad del prototipo.
 

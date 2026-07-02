@@ -8,7 +8,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private readonly KeyboardDevicesCollection devices;
     private readonly Configuration configuration;
     private readonly RawInputWindow inputWindow;
-    private readonly ContextMenuStrip menu;
+    private readonly NativeTrayMenu menu;
     private readonly NotifyIcon notifyIcon;
     private readonly SynchronizationContext uiContext;
     private readonly PreferenceResetService preferenceReset;
@@ -29,20 +29,25 @@ internal sealed class TrayApplicationContext : ApplicationContext
         selectionTimer.Tick += OnSelectionTimerTick;
         settingsIpc = new SettingsIpcServer(configuration, devices, uiContext);
 
-        menu = TrayMenuFactory.Create(ShowSettings, ClearPreferences, ExitThread);
+        inputWindow = new RawInputWindow();
+        inputWindow.KeyboardInput += OnKeyboardInput;
+        inputWindow.DevicesChanged += OnDevicesChanged;
+        menu = new NativeTrayMenu(inputWindow.Handle, ShowSettings, ClearPreferences, ExitThread);
 
         notifyIcon = new NotifyIcon
         {
-            ContextMenuStrip = menu,
             Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath) ?? SystemIcons.Application,
             Text = "RightKeyboard",
             Visible = true
         };
         notifyIcon.DoubleClick += (_, _) => ShowSettings();
-
-        inputWindow = new RawInputWindow();
-        inputWindow.KeyboardInput += OnKeyboardInput;
-        inputWindow.DevicesChanged += OnDevicesChanged;
+        notifyIcon.MouseUp += (_, args) =>
+        {
+            if (args.Button == MouseButtons.Right)
+            {
+                menu.Show();
+            }
+        };
     }
 
     public void RequestExit() => uiContext.Post(_ => ExitThread(), null);

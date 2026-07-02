@@ -120,7 +120,12 @@ public sealed class SettingsWindow : Window
             Padding = new Thickness(20),
             CornerRadius = new CornerRadius(8),
             BorderThickness = new Thickness(1),
-            Child = new ScrollViewer { Content = editor }
+            Child = new ScrollViewer
+            {
+                Content = editor,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                VerticalScrollMode = ScrollMode.Auto
+            }
         };
         cards.Add(editorCard);
         Grid.SetColumn(editorCard, 1);
@@ -198,6 +203,10 @@ public sealed class SettingsWindow : Window
     private async void OnActivated(object sender, WindowActivatedEventArgs args)
     {
         Activated -= OnActivated;
+        double scale = (Content as FrameworkElement)?.XamlRoot?.RasterizationScale ?? 1;
+        AppWindow.Resize(new Windows.Graphics.SizeInt32(
+            (int)Math.Ceiling(980 * scale),
+            (int)Math.Ceiling(680 * scale)));
         await ReloadAsync();
     }
 
