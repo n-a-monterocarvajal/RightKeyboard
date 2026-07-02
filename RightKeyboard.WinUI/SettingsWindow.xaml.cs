@@ -19,6 +19,7 @@ public sealed class SettingsWindow : Window
     private readonly CheckBox IgnoredCheckBox = new();
     private readonly Button SaveButton = new();
     private readonly Button ForgetButton = new();
+    private readonly List<Button> buttons = [];
     private readonly List<Border> cards = [];
     private readonly List<TextBlock> secondaryText = [];
     private Grid? contentRoot;
@@ -28,10 +29,12 @@ public sealed class SettingsWindow : Window
     {
         this.client = client;
         Title = "Configuración de RightKeyboard";
+        ExtendsContentIntoTitleBar = true;
         Content = BuildContent();
+        ConfigureCaptionButtons();
         ApplyFluentResources();
         TryEnableBackdrop();
-        AppWindow.Resize(new Windows.Graphics.SizeInt32(980, 680));
+        AppWindow.Resize(new Windows.Graphics.SizeInt32(1020, 760));
         Activated += OnActivated;
     }
 
@@ -39,13 +42,35 @@ public sealed class SettingsWindow : Window
 
     private UIElement BuildContent()
     {
-        Grid root = new() { Padding = new Thickness(24), RowSpacing = 16 };
+        Grid root = new() { Padding = new Thickness(24, 0, 24, 24), RowSpacing = 16 };
         contentRoot = root;
         root.Background = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
         root.ActualThemeChanged += (_, _) => ApplyFluentResources();
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(48) });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        Grid titleBar = new() { Padding = new Thickness(0, 0, 150, 0), ColumnSpacing = 10 };
+        titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        FontIcon appIcon = new()
+        {
+            Glyph = "\uE765",
+            FontFamily = new FontFamily("Segoe Fluent Icons"),
+            FontSize = 16
+        };
+        titleBar.Children.Add(appIcon);
+        TextBlock appTitle = new()
+        {
+            Text = "RightKeyboard",
+            VerticalAlignment = VerticalAlignment.Center,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+        };
+        Grid.SetColumn(appTitle, 1);
+        titleBar.Children.Add(appTitle);
+        root.Children.Add(titleBar);
+        SetTitleBar(titleBar);
 
         StackPanel heading = new() { Spacing = 4 };
         heading.Children.Add(new TextBlock
@@ -61,12 +86,13 @@ public sealed class SettingsWindow : Window
         };
         secondaryText.Add(subtitle);
         heading.Children.Add(subtitle);
+        Grid.SetRow(heading, 1);
         root.Children.Add(heading);
 
         Grid body = new() { ColumnSpacing = 20 };
         body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(300) });
         body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        Grid.SetRow(body, 1);
+        Grid.SetRow(body, 2);
 
         Grid devicesPanel = new() { RowSpacing = 10 };
         devicesPanel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -94,6 +120,7 @@ public sealed class SettingsWindow : Window
         StackPanel editor = new() { Spacing = 12 };
         AliasTextBox.Header = "Nombre para este teclado";
         AliasTextBox.PlaceholderText = "Nombre reconocible";
+        AliasTextBox.CornerRadius = new CornerRadius(8);
         editor.Children.Add(AliasTextBox);
         DetectedNameText.TextWrapping = TextWrapping.Wrap;
         TechnicalIdText.TextWrapping = TextWrapping.Wrap;
@@ -107,6 +134,7 @@ public sealed class SettingsWindow : Window
         LayoutComboBox.Header = "Distribución";
         LayoutComboBox.DisplayMemberPath = "Name";
         LayoutComboBox.HorizontalAlignment = HorizontalAlignment.Stretch;
+        LayoutComboBox.CornerRadius = new CornerRadius(8);
         editor.Children.Add(LayoutComboBox);
         IgnoredCheckBox.Content = "Ignorar eventos de este dispositivo";
         IgnoredCheckBox.Checked += IgnoredCheckBox_Changed;
@@ -114,9 +142,13 @@ public sealed class SettingsWindow : Window
         editor.Children.Add(IgnoredCheckBox);
         StackPanel editorButtons = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
         SaveButton.Content = "Guardar cambios";
+        SaveButton.CornerRadius = new CornerRadius(8);
         SaveButton.Click += SaveButton_Click;
         ForgetButton.Content = "Olvidar dispositivo";
+        ForgetButton.CornerRadius = new CornerRadius(8);
         ForgetButton.Click += ForgetButton_Click;
+        buttons.Add(SaveButton);
+        buttons.Add(ForgetButton);
         editorButtons.Children.Add(SaveButton);
         editorButtons.Children.Add(ForgetButton);
         editor.Children.Add(editorButtons);
@@ -142,19 +174,31 @@ public sealed class SettingsWindow : Window
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         Button clear = new() { Content = "Limpiar preferencias" };
+        clear.CornerRadius = new CornerRadius(8);
+        buttons.Add(clear);
         clear.Click += ClearButton_Click;
         footer.Children.Add(clear);
         Button reload = new() { Content = "Recargar" };
+        reload.CornerRadius = new CornerRadius(8);
+        buttons.Add(reload);
         reload.Click += ReloadButton_Click;
         Grid.SetColumn(reload, 1);
         footer.Children.Add(reload);
         Button close = new() { Content = "Cerrar" };
+        close.CornerRadius = new CornerRadius(8);
+        buttons.Add(close);
         close.Click += CloseButton_Click;
         Grid.SetColumn(close, 2);
         footer.Children.Add(close);
-        Grid.SetRow(footer, 2);
+        Grid.SetRow(footer, 3);
         root.Children.Add(footer);
         return root;
+    }
+
+    private void ConfigureCaptionButtons()
+    {
+        AppWindow.TitleBar.ButtonBackgroundColor = Color.FromArgb(0, 0, 0, 0);
+        AppWindow.TitleBar.ButtonInactiveBackgroundColor = Color.FromArgb(0, 0, 0, 0);
     }
 
     private void ApplyFluentResources()
@@ -170,6 +214,13 @@ public sealed class SettingsWindow : Window
             ? Color.FromArgb(0xC8, 0xFF, 0xFF, 0xFF)
             : Color.FromArgb(0xA8, 0x00, 0x00, 0x00));
 
+        AppWindow.TitleBar.ButtonForegroundColor = dark
+            ? Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF)
+            : Color.FromArgb(0xFF, 0x00, 0x00, 0x00);
+        AppWindow.TitleBar.ButtonHoverBackgroundColor = dark
+            ? Color.FromArgb(0x22, 0xFF, 0xFF, 0xFF)
+            : Color.FromArgb(0x16, 0x00, 0x00, 0x00);
+
         foreach (Border card in cards)
         {
             card.Background = background;
@@ -179,6 +230,13 @@ public sealed class SettingsWindow : Window
         foreach (TextBlock text in secondaryText)
         {
             text.Foreground = foreground;
+        }
+
+        foreach (Button button in buttons)
+        {
+            button.CornerRadius = new CornerRadius(8);
+            button.MinHeight = 36;
+            button.Padding = new Thickness(14, 6, 14, 6);
         }
 
         if (Application.Current.Resources.TryGetValue("AccentButtonStyle", out object accentStyle) &&
@@ -212,8 +270,8 @@ public sealed class SettingsWindow : Window
         Activated -= OnActivated;
         double scale = (Content as FrameworkElement)?.XamlRoot?.RasterizationScale ?? 1;
         AppWindow.Resize(new Windows.Graphics.SizeInt32(
-            (int)Math.Ceiling(980 * scale),
-            (int)Math.Ceiling(680 * scale)));
+            (int)Math.Ceiling(1020 * scale),
+            (int)Math.Ceiling(760 * scale)));
         await ReloadAsync();
     }
 
