@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Windows.UI;
 
 namespace RightKeyboard.WinUI;
 
@@ -20,6 +21,7 @@ public sealed class SettingsWindow : Window
     private readonly Button ForgetButton = new();
     private readonly List<Border> cards = [];
     private readonly List<TextBlock> secondaryText = [];
+    private Grid? contentRoot;
     private SettingsSnapshot? snapshot;
 
     public SettingsWindow(SettingsIpcClient client)
@@ -28,17 +30,18 @@ public sealed class SettingsWindow : Window
         Title = "Configuración de RightKeyboard";
         Content = BuildContent();
         ApplyFluentResources();
-        TryEnableMica();
-        DeviceList.ItemsSource = rows;
+        TryEnableBackdrop();
         AppWindow.Resize(new Windows.Graphics.SizeInt32(980, 680));
         Activated += OnActivated;
     }
 
-    private DeviceRow? SelectedRow => DeviceList.SelectedItem as DeviceRow;
+    private DeviceRow? SelectedRow => (DeviceList.SelectedItem as ListViewItem)?.Tag as DeviceRow;
 
     private UIElement BuildContent()
     {
         Grid root = new() { Padding = new Thickness(24), RowSpacing = 16 };
+        contentRoot = root;
+        root.Background = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
         root.ActualThemeChanged += (_, _) => ApplyFluentResources();
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
@@ -74,6 +77,8 @@ public sealed class SettingsWindow : Window
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
         });
         Grid.SetRow(DeviceList, 1);
+        DeviceList.Background = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
+        DeviceList.BorderThickness = new Thickness(0);
         DeviceList.SelectionChanged += DeviceList_SelectionChanged;
         devicesPanel.Children.Add(DeviceList);
         Border devicesCard = new()
@@ -154,31 +159,26 @@ public sealed class SettingsWindow : Window
 
     private void ApplyFluentResources()
     {
-        if (Application.Current.Resources.TryGetValue("CardBackgroundFillColorDefaultBrush", out object cardBackground) &&
-            cardBackground is Brush background)
+        bool dark = contentRoot?.ActualTheme == ElementTheme.Dark;
+        SolidColorBrush background = new(dark
+            ? Color.FromArgb(0xC8, 0x2B, 0x28, 0x27)
+            : Color.FromArgb(0xD9, 0xFF, 0xFF, 0xFF));
+        SolidColorBrush stroke = new(dark
+            ? Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF)
+            : Color.FromArgb(0x35, 0x00, 0x00, 0x00));
+        SolidColorBrush foreground = new(dark
+            ? Color.FromArgb(0xC8, 0xFF, 0xFF, 0xFF)
+            : Color.FromArgb(0xA8, 0x00, 0x00, 0x00));
+
+        foreach (Border card in cards)
         {
-            foreach (Border card in cards)
-            {
-                card.Background = background;
-            }
+            card.Background = background;
+            card.BorderBrush = stroke;
         }
 
-        if (Application.Current.Resources.TryGetValue("CardStrokeColorDefaultBrush", out object cardStroke) &&
-            cardStroke is Brush stroke)
+        foreach (TextBlock text in secondaryText)
         {
-            foreach (Border card in cards)
-            {
-                card.BorderBrush = stroke;
-            }
-        }
-
-        if (Application.Current.Resources.TryGetValue("TextFillColorSecondaryBrush", out object secondaryBrush) &&
-            secondaryBrush is Brush foreground)
-        {
-            foreach (TextBlock text in secondaryText)
-            {
-                text.Foreground = foreground;
-            }
+            text.Foreground = foreground;
         }
 
         if (Application.Current.Resources.TryGetValue("AccentButtonStyle", out object accentStyle) &&
@@ -188,15 +188,22 @@ public sealed class SettingsWindow : Window
         }
     }
 
-    private void TryEnableMica()
+    private void TryEnableBackdrop()
     {
         try
         {
-            SystemBackdrop = new Microsoft.UI.Xaml.Media.MicaBackdrop();
+            SystemBackdrop = new DesktopAcrylicBackdrop();
         }
         catch
         {
-            SystemBackdrop = null;
+            try
+            {
+                SystemBackdrop = new MicaBackdrop();
+            }
+            catch
+            {
+                SystemBackdrop = null;
+            }
         }
     }
 
@@ -231,11 +238,14 @@ public sealed class SettingsWindow : Window
     {
         snapshot = value;
         rows.Clear();
+        DeviceList.Items.Clear();
         foreach (SettingsDevice device in value.Devices)
         {
             SettingsLayout? layout = value.Layouts.FirstOrDefault(candidate =>
                 candidate.Identifier == device.LayoutIdentifier);
-            rows.Add(new DeviceRow(device, layout));
+            DeviceRow row = new(device, layout);
+            rows.Add(row);
+            DeviceList.Items.Add(CreateDeviceItem(row));
         }
 
         LayoutComboBox.Items.Clear();
@@ -245,9 +255,37 @@ public sealed class SettingsWindow : Window
             LayoutComboBox.Items.Add(layout);
         }
 
-        DeviceList.SelectedItem = rows.FirstOrDefault(row =>
+        DeviceRow? selected = rows.FirstOrDefault(row =>
             string.Equals(row.Identity, identityToSelect, StringComparison.OrdinalIgnoreCase)) ?? rows.FirstOrDefault();
+        DeviceList.SelectedItem = DeviceList.Items.OfType<ListViewItem>()
+            .FirstOrDefault(item => ReferenceEquals(item.Tag, selected));
         SetEditorEnabled(DeviceList.SelectedItem is not null);
+    }
+
+    private static ListViewItem CreateDeviceItem(DeviceRow row)
+    {
+        StackPanel content = new() { Spacing = 2 };
+        content.Children.Add(new TextBlock
+        {
+            Text = row.DisplayName,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            TextTrimming = TextTrimming.CharacterEllipsis
+        });
+        content.Children.Add(new TextBlock
+        {
+            Text = row.Summary,
+            Opacity = 0.72,
+            TextTrimming = TextTrimming.CharacterEllipsis
+        });
+        return new ListViewItem
+        {
+            Tag = row,
+            Content = content,
+            CornerRadius = new CornerRadius(8),
+            Margin = new Thickness(0, 2, 0, 2),
+            Padding = new Thickness(10, 8, 10, 8),
+            HorizontalContentAlignment = HorizontalAlignment.Stretch
+        };
     }
 
     private void DeviceList_SelectionChanged(object sender, SelectionChangedEventArgs e)
