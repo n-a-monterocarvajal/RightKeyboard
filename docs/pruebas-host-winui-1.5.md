@@ -1,5 +1,7 @@
 # Pruebas del prototipo WinUI 3 en host
 
+Consultar también [las limitaciones conocidas](limitaciones-conocidas-1.5.md), especialmente primera pulsación, edición de alias y cambio de puerto USB.
+
 Ejecutar `scripts\build-winui-prototype.ps1` y abrir `RightKeyboard.WinUI.exe` fuera de una VM cuando se evalúen materiales.
 
 ## Ventana y materiales

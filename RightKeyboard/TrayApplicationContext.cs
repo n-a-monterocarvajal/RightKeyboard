@@ -117,6 +117,18 @@ internal sealed class TrayApplicationContext : ApplicationContext
             return;
         }
 
+        // Configuración debe poder recibir texto normalmente. Mientras el frontend
+        // WinUI está abierto observamos el dispositivo, pero no lanzamos el selector.
+        if (settingsProcess is { HasExited: false })
+        {
+            if (keyboardEvent.CanStartMapping)
+            {
+                configuration.TouchDevice(device);
+            }
+
+            return;
+        }
+
         if (!keyboardEvent.CanStartMapping || pendingDevice is not null)
         {
             return;

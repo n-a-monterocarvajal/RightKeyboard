@@ -18,6 +18,8 @@ public sealed class SettingsWindow : Window
     private readonly CheckBox IgnoredCheckBox = new();
     private readonly Button SaveButton = new();
     private readonly Button ForgetButton = new();
+    private readonly List<Border> cards = [];
+    private readonly List<TextBlock> secondaryText = [];
     private SettingsSnapshot? snapshot;
 
     public SettingsWindow(SettingsIpcClient client)
@@ -25,6 +27,7 @@ public sealed class SettingsWindow : Window
         this.client = client;
         Title = "Configuración de RightKeyboard";
         Content = BuildContent();
+        ApplyFluentResources();
         TryEnableMica();
         DeviceList.ItemsSource = rows;
         AppWindow.Resize(new Windows.Graphics.SizeInt32(980, 680));
@@ -36,6 +39,7 @@ public sealed class SettingsWindow : Window
     private UIElement BuildContent()
     {
         Grid root = new() { Padding = new Thickness(24), RowSpacing = 16 };
+        root.ActualThemeChanged += (_, _) => ApplyFluentResources();
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -47,11 +51,13 @@ public sealed class SettingsWindow : Window
             FontSize = 28,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
         });
-        heading.Children.Add(new TextBlock
+        TextBlock subtitle = new()
         {
             Text = "Administra los teclados conocidos sin interrumpir la detección en segundo plano.",
             TextWrapping = TextWrapping.Wrap
-        });
+        };
+        secondaryText.Add(subtitle);
+        heading.Children.Add(subtitle);
         root.Children.Add(heading);
 
         Grid body = new() { ColumnSpacing = 20 };
@@ -77,6 +83,7 @@ public sealed class SettingsWindow : Window
             BorderThickness = new Thickness(1),
             Child = devicesPanel
         };
+        cards.Add(devicesCard);
         body.Children.Add(devicesCard);
 
         StackPanel editor = new() { Spacing = 12 };
@@ -86,6 +93,9 @@ public sealed class SettingsWindow : Window
         DetectedNameText.TextWrapping = TextWrapping.Wrap;
         TechnicalIdText.TextWrapping = TextWrapping.Wrap;
         StatusText.TextWrapping = TextWrapping.Wrap;
+        secondaryText.Add(DetectedNameText);
+        secondaryText.Add(TechnicalIdText);
+        secondaryText.Add(StatusText);
         editor.Children.Add(DetectedNameText);
         editor.Children.Add(TechnicalIdText);
         editor.Children.Add(StatusText);
@@ -112,6 +122,7 @@ public sealed class SettingsWindow : Window
             BorderThickness = new Thickness(1),
             Child = new ScrollViewer { Content = editor }
         };
+        cards.Add(editorCard);
         Grid.SetColumn(editorCard, 1);
         body.Children.Add(editorCard);
         root.Children.Add(body);
@@ -134,6 +145,42 @@ public sealed class SettingsWindow : Window
         Grid.SetRow(footer, 2);
         root.Children.Add(footer);
         return root;
+    }
+
+    private void ApplyFluentResources()
+    {
+        if (Application.Current.Resources.TryGetValue("CardBackgroundFillColorDefaultBrush", out object cardBackground) &&
+            cardBackground is Brush background)
+        {
+            foreach (Border card in cards)
+            {
+                card.Background = background;
+            }
+        }
+
+        if (Application.Current.Resources.TryGetValue("CardStrokeColorDefaultBrush", out object cardStroke) &&
+            cardStroke is Brush stroke)
+        {
+            foreach (Border card in cards)
+            {
+                card.BorderBrush = stroke;
+            }
+        }
+
+        if (Application.Current.Resources.TryGetValue("TextFillColorSecondaryBrush", out object secondaryBrush) &&
+            secondaryBrush is Brush foreground)
+        {
+            foreach (TextBlock text in secondaryText)
+            {
+                text.Foreground = foreground;
+            }
+        }
+
+        if (Application.Current.Resources.TryGetValue("AccentButtonStyle", out object accentStyle) &&
+            accentStyle is Style style)
+        {
+            SaveButton.Style = style;
+        }
     }
 
     private void TryEnableMica()
