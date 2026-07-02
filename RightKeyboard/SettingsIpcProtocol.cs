@@ -8,6 +8,7 @@ internal static class SettingsIpcProtocol
     internal const string SaveAction = "save";
     internal const string ForgetAction = "forget";
     internal const string ClearAction = "clear";
+    internal const string ActivityAction = "activity";
 }
 
 internal sealed record SettingsRequest(
@@ -18,7 +19,13 @@ internal sealed record SettingsRequest(
     long? LayoutIdentifier = null,
     bool? Ignored = null);
 
-internal sealed record SettingsResponse(bool Success, string? Error, SettingsSnapshot? Snapshot);
+internal sealed record SettingsResponse(
+    bool Success,
+    string? Error,
+    SettingsSnapshot? Snapshot,
+    SettingsActivity? Activity = null);
+
+internal sealed record SettingsActivity(long Sequence, string? Identity);
 
 internal sealed record SettingsSnapshot(
     int Version,

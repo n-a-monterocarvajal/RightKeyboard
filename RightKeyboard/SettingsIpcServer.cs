@@ -11,6 +11,8 @@ internal sealed class SettingsIpcServer : IDisposable
     private readonly SynchronizationContext uiContext;
     private readonly CancellationTokenSource cancellation = new();
     private readonly Task serverTask;
+    private long activitySequence;
+    private string? activeDeviceIdentity;
 
     internal SettingsIpcServer(
         Configuration configuration,
@@ -21,6 +23,12 @@ internal sealed class SettingsIpcServer : IDisposable
         this.devices = devices;
         this.uiContext = uiContext;
         serverTask = Task.Run(ListenAsync);
+    }
+
+    internal void NotifyDeviceInput(string identity)
+    {
+        activeDeviceIdentity = identity;
+        Interlocked.Increment(ref activitySequence);
     }
 
     private async Task ListenAsync()
@@ -81,6 +89,12 @@ internal sealed class SettingsIpcServer : IDisposable
 
         switch (request.Action)
         {
+            case SettingsIpcProtocol.ActivityAction:
+                return new SettingsResponse(
+                    true,
+                    null,
+                    null,
+                    new SettingsActivity(Interlocked.Read(ref activitySequence), activeDeviceIdentity));
             case SettingsIpcProtocol.SnapshotAction:
                 break;
             case SettingsIpcProtocol.SaveAction:

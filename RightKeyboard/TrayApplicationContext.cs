@@ -17,6 +17,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private KeyboardDevice? pendingDevice;
     private SettingsDialog? settingsDialog;
     private Process? settingsProcess;
+    private Process? selectionProcess;
+    private KeyboardDevice? activeSelectionDevice;
     private bool selectingLayout;
 
     public TrayApplicationContext()
@@ -84,6 +86,11 @@ internal sealed class TrayApplicationContext : ApplicationContext
         catch
         {
             return;
+        }
+
+        if (settingsProcess is { HasExited: false })
+        {
+            settingsIpc.NotifyDeviceInput(device.Identity);
         }
 
         if (settingsDialog is { IsDisposed: false } openSettings && keyboardEvent.CanStartMapping)
@@ -160,6 +167,11 @@ internal sealed class TrayApplicationContext : ApplicationContext
         }
 
         selectingLayout = true;
+        if (TryLaunchWinUiSelector(device))
+        {
+            return;
+        }
+
         try
         {
             using LayoutSelectionDialog dialog = new(device, configuration.GetDisplayName(device));
@@ -179,6 +191,62 @@ internal sealed class TrayApplicationContext : ApplicationContext
             configuration.SetLayout(device, dialog.SelectedLayout, dialog.CustomName);
             SaveConfiguration();
             ApplyLayout(dialog.SelectedLayout);
+        }
+        finally
+        {
+            selectingLayout = false;
+        }
+    }
+
+    private bool TryLaunchWinUiSelector(KeyboardDevice device)
+    {
+        string? executable = FindWinUiExecutable();
+        if (executable is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            ProcessStartInfo startInfo = new(executable) { UseShellExecute = false };
+            startInfo.ArgumentList.Add("--select");
+            startInfo.ArgumentList.Add(device.Identity);
+            selectionProcess = Process.Start(startInfo);
+            if (selectionProcess is null)
+            {
+                return false;
+            }
+
+            activeSelectionDevice = device;
+            selectionProcess.Exited += (_, _) => uiContext.Post(_ => CompleteWinUiSelection(), null);
+            selectionProcess.EnableRaisingEvents = true;
+            return true;
+        }
+        catch
+        {
+            selectionProcess?.Dispose();
+            selectionProcess = null;
+            activeSelectionDevice = null;
+            return false;
+        }
+    }
+
+    private void CompleteWinUiSelection()
+    {
+        KeyboardDevice? device = activeSelectionDevice;
+        activeSelectionDevice = null;
+        selectionProcess?.Dispose();
+        selectionProcess = null;
+        try
+        {
+            if (device is KeyboardDevice selectedDevice)
+            {
+                int matchingDevices = devices.CountConnectedWithFingerprint(selectedDevice.Fingerprint);
+                if (configuration.TryGetLayout(selectedDevice, matchingDevices, out Layout? layout, out _))
+                {
+                    ApplyLayout(layout!);
+                }
+            }
         }
         finally
         {
@@ -299,6 +367,11 @@ internal sealed class TrayApplicationContext : ApplicationContext
             settingsProcess.CloseMainWindow();
         }
         settingsProcess?.Dispose();
+        if (selectionProcess is { HasExited: false })
+        {
+            selectionProcess.CloseMainWindow();
+        }
+        selectionProcess?.Dispose();
         inputWindow.Dispose();
         notifyIcon.Dispose();
         menu.Dispose();

@@ -15,7 +15,11 @@ public partial class App : Application
     {
         try
         {
-            window = new SettingsWindow(new SettingsIpcClient());
+            string[] commandLine = Environment.GetCommandLineArgs();
+            int selectorArgument = Array.FindIndex(commandLine, argument => argument == "--select");
+            window = selectorArgument >= 0 && selectorArgument + 1 < commandLine.Length
+                ? new LayoutSelectionWindow(new SettingsIpcClient(), commandLine[selectorArgument + 1])
+                : new SettingsWindow(new SettingsIpcClient());
         }
         catch (Exception error)
         {

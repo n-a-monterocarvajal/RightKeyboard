@@ -15,7 +15,7 @@
     <SelfContained>false</SelfContained>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>1.5.0-beta.1</Version>
+    <Version>1.5.0-beta.2</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,5 +24,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RightKeyboard\RightKeyboard.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\RightKeyboard\ico_input0002.ico" Link="Assets\RightKeyboard.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
   </ItemGroup>
 </Project>

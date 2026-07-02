@@ -19,7 +19,20 @@ public sealed class SettingsIpcClient
     internal Task<SettingsSnapshot> ClearAsync() =>
         SendAsync(new SettingsRequest(SettingsIpcProtocol.Version, SettingsIpcProtocol.ClearAction));
 
+    internal async Task<SettingsActivity> GetActivityAsync()
+    {
+        SettingsResponse response = await SendResponseAsync(
+            new SettingsRequest(SettingsIpcProtocol.Version, SettingsIpcProtocol.ActivityAction));
+        return response.Activity ?? new SettingsActivity(0, null);
+    }
+
     private static async Task<SettingsSnapshot> SendAsync(SettingsRequest request)
+    {
+        SettingsResponse response = await SendResponseAsync(request);
+        return response.Snapshot ?? throw new InvalidOperationException("El núcleo no devolvió la configuración.");
+    }
+
+    private static async Task<SettingsResponse> SendResponseAsync(SettingsRequest request)
     {
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(5));
         await using NamedPipeClientStream pipe = new(
@@ -33,11 +46,11 @@ public sealed class SettingsIpcClient
         SettingsResponse? response = json is null
             ? null
             : JsonSerializer.Deserialize<SettingsResponse>(json, JsonOptions);
-        if (response is null || !response.Success || response.Snapshot is null)
+        if (response is null || !response.Success)
         {
             throw new InvalidOperationException(response?.Error ?? "El núcleo de RightKeyboard no respondió.");
         }
 
-        return response.Snapshot;
+        return response;
     }
 }

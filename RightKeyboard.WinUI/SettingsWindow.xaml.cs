@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.UI;
 
 namespace RightKeyboard.WinUI;
@@ -22,8 +23,12 @@ public sealed class SettingsWindow : Window
     private readonly List<Button> buttons = [];
     private readonly List<Border> cards = [];
     private readonly List<TextBlock> secondaryText = [];
+    private readonly TextBlock activityText = new();
+    private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer activityTimer;
     private Grid? contentRoot;
     private SettingsSnapshot? snapshot;
+    private long lastActivitySequence;
+    private bool pollingActivity;
 
     public SettingsWindow(SettingsIpcClient client)
     {
@@ -35,7 +40,11 @@ public sealed class SettingsWindow : Window
         ApplyFluentResources();
         TryEnableBackdrop();
         AppWindow.Resize(new Windows.Graphics.SizeInt32(1020, 760));
+        activityTimer = DispatcherQueue.CreateTimer();
+        activityTimer.Interval = TimeSpan.FromMilliseconds(500);
+        activityTimer.Tick += PollActivityAsync;
         Activated += OnActivated;
+        Closed += (_, _) => activityTimer.Stop();
     }
 
     private DeviceRow? SelectedRow => (DeviceList.SelectedItem as ListViewItem)?.Tag as DeviceRow;
@@ -54,11 +63,12 @@ public sealed class SettingsWindow : Window
         Grid titleBar = new() { Padding = new Thickness(0, 0, 150, 0), ColumnSpacing = 10 };
         titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        FontIcon appIcon = new()
+        Image appIcon = new()
         {
-            Glyph = "\uE765",
-            FontFamily = new FontFamily("Segoe Fluent Icons"),
-            FontSize = 16
+            Source = new BitmapImage(new Uri("ms-appx:///Assets/RightKeyboard.ico")),
+            Width = 20,
+            Height = 20,
+            Stretch = Stretch.Uniform
         };
         titleBar.Children.Add(appIcon);
         TextBlock appTitle = new()
@@ -86,6 +96,11 @@ public sealed class SettingsWindow : Window
         };
         secondaryText.Add(subtitle);
         heading.Children.Add(subtitle);
+        activityText.Text = "Pulsa una tecla para identificar visualmente su dispositivo.";
+        activityText.FontSize = 12;
+        activityText.Opacity = 0.78;
+        secondaryText.Add(activityText);
+        heading.Children.Add(activityText);
         Grid.SetRow(heading, 1);
         root.Children.Add(heading);
 
@@ -273,6 +288,60 @@ public sealed class SettingsWindow : Window
             (int)Math.Ceiling(1020 * scale),
             (int)Math.Ceiling(760 * scale)));
         await ReloadAsync();
+        activityTimer.Start();
+    }
+
+    private async void PollActivityAsync(
+        Microsoft.UI.Dispatching.DispatcherQueueTimer sender,
+        object args)
+    {
+        if (pollingActivity)
+        {
+            return;
+        }
+
+        pollingActivity = true;
+        try
+        {
+            SettingsActivity activity = await client.GetActivityAsync();
+            if (activity.Sequence == 0 || activity.Sequence == lastActivitySequence || activity.Identity is null)
+            {
+                return;
+            }
+
+            lastActivitySequence = activity.Sequence;
+            ListViewItem? item = DeviceList.Items.OfType<ListViewItem>()
+                .FirstOrDefault(candidate =>
+                    candidate.Tag is DeviceRow row &&
+                    string.Equals(row.Identity, activity.Identity, StringComparison.OrdinalIgnoreCase));
+            if (item is null)
+            {
+                await ReloadAsync(activity.Identity);
+                item = DeviceList.Items.OfType<ListViewItem>()
+                    .FirstOrDefault(candidate =>
+                        candidate.Tag is DeviceRow row &&
+                        string.Equals(row.Identity, activity.Identity, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (item?.Tag is DeviceRow activeRow)
+            {
+                DeviceList.SelectedItem = item;
+                DeviceList.ScrollIntoView(item);
+                activityText.Text = $"Entrada detectada: {activeRow.DisplayName}";
+            }
+            else
+            {
+                activityText.Text = "Entrada detectada desde un dispositivo pendiente de configurar.";
+            }
+        }
+        catch
+        {
+            // El feedback es auxiliar y nunca debe interrumpir la edición.
+        }
+        finally
+        {
+            pollingActivity = false;
+        }
     }
 
     private async Task ReloadAsync(string? identityToSelect = null)
@@ -461,7 +530,8 @@ public sealed class SettingsWindow : Window
         Content = content,
         PrimaryButtonText = primaryText,
         CloseButtonText = "Cancelar",
-        DefaultButton = ContentDialogButton.Close
+        DefaultButton = ContentDialogButton.Close,
+        CornerRadius = new CornerRadius(12)
     };
 
     private async Task ShowErrorAsync(string title, Exception error)

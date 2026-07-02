@@ -30,7 +30,7 @@ public sealed class SettingsIpcProtocolTests
             SettingsIpcProtocol.Version,
             [new SettingsDevice("device:1", "Alias", "Detectado", "ID", DateTimeOffset.UnixEpoch, true, false, 1234)],
             [new SettingsLayout(1234, "español (Chile)", "Latin American")]);
-        SettingsResponse response = new(true, null, snapshot);
+        SettingsResponse response = new(true, null, snapshot, new SettingsActivity(7, "device:1"));
 
         string json = JsonSerializer.Serialize(response, new JsonSerializerOptions(JsonSerializerDefaults.Web));
         SettingsResponse? restored = JsonSerializer.Deserialize<SettingsResponse>(
@@ -41,6 +41,7 @@ public sealed class SettingsIpcProtocolTests
             Assert.That(restored?.Success, Is.True);
             Assert.That(restored?.Snapshot?.Devices.Single().DisplayName, Is.EqualTo("Alias"));
             Assert.That(restored?.Snapshot?.Layouts.Single().Name, Is.EqualTo("español (Chile) / Latin American"));
+            Assert.That(restored?.Activity, Is.EqualTo(new SettingsActivity(7, "device:1")));
         });
     }
 }

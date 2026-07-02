@@ -4,6 +4,16 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [1.5.0] - En desarrollo
 
+### Beta 2
+
+- Configuración y selector automático migrados a un frontend WinUI 3 separado y activado bajo demanda.
+- Acrylic con fallback a Mica, temas claro/oscuro, tarjetas, controles y barra de título Fluent.
+- Iconografía coherente, escalado por monitor y selector agrupado por idioma.
+- Menú de bandeja sustituido por un menú Win32 nativo.
+- IPC local restringido al usuario; el núcleo conserva la autoridad de preferencias y Raw Input.
+- Feedback visual del teclado activo sin interferir con la edición del alias.
+- Instalador dual autocontenido por usuario, sin elevación.
+
 ### Prototipo WinUI 3 posterior a Beta 1
 
 - Decisión de mantener Raw Input, `NotifyIcon` y coordinación residente en el núcleo WinForms, con un frontend WinUI 3 separado y activado bajo demanda.
