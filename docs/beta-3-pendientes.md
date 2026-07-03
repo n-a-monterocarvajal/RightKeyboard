@@ -7,6 +7,11 @@ Registrados durante la validación física de `1.5.0-beta.2`.
 - Corregir el primer elemento vacío que aparece con un fondo rojizo al desplegar la lista de distribuciones en Configuración.
 - Revisar plantillas, estados de selección y contraste del selector en temas claro y oscuro.
 
+## Configuración y actividad de teclado — corregido en desarrollo
+
+- Mientras el campo de alias tiene foco, el feedback de Raw Input ya no cambia selección, desplaza la lista ni impide la escritura.
+- Los dispositivos se ordenan por utilidad: conectados configurados, conectados sin configurar, desconectados configurados, desconectados sin configurar e ignorados al final; dentro de cada grupo, por nombre.
+
 ## Diálogos
 
 - Aplicar radios Fluent a los botones internos **Limpiar** y **Cancelar** del diálogo de confirmación. El contenedor ya está redondeado, pero los botones generados por `ContentDialog` conservan esquinas rectas.

@@ -323,6 +323,17 @@ public sealed class SettingsWindow : Window
                         string.Equals(row.Identity, activity.Identity, StringComparison.OrdinalIgnoreCase));
             }
 
+            // Escribir un alias genera Raw Input desde el mismo teclado. El feedback
+            // puede actualizar su texto, pero nunca debe mover selección ni foco.
+            if (AliasTextBox.FocusState != FocusState.Unfocused)
+            {
+                string name = item?.Tag is DeviceRow editingRow
+                    ? editingRow.DisplayName
+                    : "dispositivo pendiente de configurar";
+                activityText.Text = $"Entrada detectada: {name}";
+                return;
+            }
+
             if (item?.Tag is DeviceRow activeRow)
             {
                 DeviceList.SelectedItem = item;
@@ -366,10 +377,18 @@ public sealed class SettingsWindow : Window
         snapshot = value;
         rows.Clear();
         DeviceList.Items.Clear();
-        foreach (SettingsDevice device in value.Devices)
+        IEnumerable<(SettingsDevice Device, SettingsLayout? Layout)> orderedDevices = value.Devices
+            .Select(device =>
+            {
+                SettingsLayout? layout = value.Layouts.FirstOrDefault(candidate =>
+                    candidate.Identifier == device.LayoutIdentifier);
+                return (Device: device, Layout: layout);
+            })
+            .OrderBy(item => DeviceSortRank(item.Device, item.Layout))
+            .ThenBy(item => item.Device.DisplayName, StringComparer.CurrentCultureIgnoreCase);
+
+        foreach ((SettingsDevice device, SettingsLayout? layout) in orderedDevices)
         {
-            SettingsLayout? layout = value.Layouts.FirstOrDefault(candidate =>
-                candidate.Identifier == device.LayoutIdentifier);
             DeviceRow row = new(device, layout);
             rows.Add(row);
             DeviceList.Items.Add(CreateDeviceItem(row));
@@ -387,6 +406,21 @@ public sealed class SettingsWindow : Window
         DeviceList.SelectedItem = DeviceList.Items.OfType<ListViewItem>()
             .FirstOrDefault(item => ReferenceEquals(item.Tag, selected));
         SetEditorEnabled(DeviceList.SelectedItem is not null);
+    }
+
+    private static int DeviceSortRank(SettingsDevice device, SettingsLayout? layout)
+    {
+        if (device.Ignored)
+        {
+            return 4;
+        }
+
+        if (device.Connected)
+        {
+            return layout is null ? 1 : 0;
+        }
+
+        return layout is null ? 3 : 2;
     }
 
     private static ListViewItem CreateDeviceItem(DeviceRow row)
