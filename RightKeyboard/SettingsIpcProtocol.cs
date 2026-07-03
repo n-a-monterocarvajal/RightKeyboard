@@ -45,4 +45,6 @@ internal sealed record SettingsDevice(
 internal sealed record SettingsLayout(long Identifier, string LanguageName, string LayoutName)
 {
     public string Name => $"{LanguageName} / {LayoutName}";
+
+    public override string ToString() => Name;
 }

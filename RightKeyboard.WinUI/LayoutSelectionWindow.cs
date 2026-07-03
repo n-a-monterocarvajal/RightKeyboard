@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
+using System.Runtime.InteropServices;
 using Windows.UI;
 
 namespace RightKeyboard.WinUI;
@@ -176,6 +177,17 @@ public sealed class LayoutSelectionWindow : Window
                 layouts.SelectedItem = item;
             }
         }
+
+        ActivateSelectorWindow();
+        alias.Focus(FocusState.Programmatic);
+    }
+
+    private void ActivateSelectorWindow()
+    {
+        nint handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
+        ShowWindow(handle, 9);
+        BringWindowToTop(handle);
+        SetForegroundWindow(handle);
     }
 
     private async void Accept_Click(object sender, RoutedEventArgs e)
@@ -206,4 +218,13 @@ public sealed class LayoutSelectionWindow : Window
         AppWindow.TitleBar.ButtonBackgroundColor = Color.FromArgb(0, 0, 0, 0);
         AppWindow.TitleBar.ButtonInactiveBackgroundColor = Color.FromArgb(0, 0, 0, 0);
     }
+
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(nint window);
+
+    [DllImport("user32.dll")]
+    private static extern bool BringWindowToTop(nint window);
+
+    [DllImport("user32.dll")]
+    private static extern bool ShowWindow(nint window, int command);
 }

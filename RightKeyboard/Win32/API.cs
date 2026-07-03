@@ -73,6 +73,9 @@ internal static class API
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool PostMessageW(nint window, uint message, nint wParam, nint lParam);
 
+    [DllImport("user32.dll")]
+    internal static extern bool AllowSetForegroundWindow(uint processId);
+
     internal static void RegisterKeyboardInput(nint target)
     {
         RAWINPUTDEVICE[] devices = [new(0x01, 0x06, RidevInputSink | RidevDeviceNotify, target)];

@@ -218,6 +218,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
             }
 
             activeSelectionDevice = device;
+            API.AllowSetForegroundWindow((uint)selectionProcess.Id);
             selectionProcess.Exited += (_, _) => uiContext.Post(_ => CompleteWinUiSelection(), null);
             selectionProcess.EnableRaisingEvents = true;
             return true;

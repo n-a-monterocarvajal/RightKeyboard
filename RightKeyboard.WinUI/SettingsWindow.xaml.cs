@@ -147,7 +147,6 @@ public sealed class SettingsWindow : Window
         editor.Children.Add(TechnicalIdText);
         editor.Children.Add(StatusText);
         LayoutComboBox.Header = "Distribución";
-        LayoutComboBox.DisplayMemberPath = "Name";
         LayoutComboBox.HorizontalAlignment = HorizontalAlignment.Stretch;
         LayoutComboBox.CornerRadius = new CornerRadius(8);
         editor.Children.Add(LayoutComboBox);
@@ -505,9 +504,10 @@ public sealed class SettingsWindow : Window
             return;
         }
 
-        ContentDialog confirmation = Confirmation(
-            "Olvidar dispositivo", $"Se olvidarán el nombre y la preferencia de \"{row.DisplayName}\".", "Olvidar");
-        if (await confirmation.ShowAsync() != ContentDialogResult.Primary)
+        if (!await ShowOverlayAsync(
+                "Olvidar dispositivo",
+                $"Se olvidarán el nombre y la preferencia de \"{row.DisplayName}\".",
+                "Olvidar"))
         {
             return;
         }
@@ -529,11 +529,10 @@ public sealed class SettingsWindow : Window
 
     private async void ClearButton_Click(object sender, RoutedEventArgs e)
     {
-        ContentDialog confirmation = Confirmation(
-            "Limpiar preferencias",
-            "Se eliminarán todos los alias, distribuciones y dispositivos ignorados. Esta acción no se puede deshacer.",
-            "Limpiar");
-        if (await confirmation.ShowAsync() != ContentDialogResult.Primary)
+        if (!await ShowOverlayAsync(
+                "Limpiar preferencias",
+                "Se eliminarán todos los alias, distribuciones y dispositivos ignorados. Esta acción no se puede deshacer.",
+                "Limpiar"))
         {
             return;
         }
@@ -557,22 +556,118 @@ public sealed class SettingsWindow : Window
     private async void ReloadButton_Click(object sender, RoutedEventArgs e) => await ReloadAsync(SelectedRow?.Identity);
     private void CloseButton_Click(object sender, RoutedEventArgs e) => Close();
 
-    private ContentDialog Confirmation(string title, string content, string primaryText) => new()
-    {
-        XamlRoot = Content.XamlRoot,
-        Title = title,
-        Content = content,
-        PrimaryButtonText = primaryText,
-        CloseButtonText = "Cancelar",
-        DefaultButton = ContentDialogButton.Close,
-        CornerRadius = new CornerRadius(12)
-    };
-
     private async Task ShowErrorAsync(string title, Exception error)
     {
-        ContentDialog dialog = Confirmation(title, error.Message, "Aceptar");
-        dialog.CloseButtonText = string.Empty;
-        await dialog.ShowAsync();
+        await ShowOverlayAsync(title, error.Message, "Aceptar", showCancel: false);
+    }
+
+    private Task<bool> ShowOverlayAsync(
+        string title,
+        string message,
+        string primaryText,
+        bool showCancel = true)
+    {
+        if (contentRoot is null)
+        {
+            return Task.FromResult(false);
+        }
+
+        TaskCompletionSource<bool> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        bool dark = contentRoot.ActualTheme == ElementTheme.Dark;
+        Grid overlay = new()
+        {
+            Background = new SolidColorBrush(Color.FromArgb(0x99, 0, 0, 0)),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch
+        };
+        Grid.SetRowSpan(overlay, 4);
+        Canvas.SetZIndex(overlay, 100);
+
+        StackPanel panelContent = new() { Spacing = 16 };
+        panelContent.Children.Add(new TextBlock
+        {
+            Text = title,
+            FontSize = 24,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+        });
+        panelContent.Children.Add(new TextBlock
+        {
+            Text = message,
+            TextWrapping = TextWrapping.Wrap
+        });
+
+        Grid actions = new() { ColumnSpacing = 8 };
+        actions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        if (showCancel)
+        {
+            actions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        }
+
+        Button primary = new()
+        {
+            Content = primaryText,
+            CornerRadius = new CornerRadius(8),
+            MinHeight = 40,
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+        actions.Children.Add(primary);
+        Button? cancel = null;
+        if (showCancel)
+        {
+            cancel = new Button
+            {
+                Content = "Cancelar",
+                CornerRadius = new CornerRadius(8),
+                MinHeight = 40,
+                HorizontalAlignment = HorizontalAlignment.Stretch
+            };
+            if (Application.Current.Resources.TryGetValue("AccentButtonStyle", out object style) && style is Style accent)
+            {
+                cancel.Style = accent;
+            }
+            Grid.SetColumn(cancel, 1);
+            actions.Children.Add(cancel);
+        }
+        panelContent.Children.Add(actions);
+
+        Border panel = new()
+        {
+            Width = 660,
+            MaxWidth = 660,
+            Padding = new Thickness(28),
+            CornerRadius = new CornerRadius(14),
+            BorderThickness = new Thickness(1),
+            BorderBrush = new SolidColorBrush(dark
+                ? Color.FromArgb(0x70, 0xFF, 0xFF, 0xFF)
+                : Color.FromArgb(0x38, 0, 0, 0)),
+            Background = new SolidColorBrush(dark
+                ? Color.FromArgb(0xFA, 0x20, 0x20, 0x20)
+                : Color.FromArgb(0xFA, 0xFF, 0xFF, 0xFF)),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Child = panelContent
+        };
+        overlay.Children.Add(panel);
+        contentRoot.Children.Add(overlay);
+
+        void Complete(bool result)
+        {
+            contentRoot.Children.Remove(overlay);
+            completion.TrySetResult(result);
+        }
+
+        primary.Click += (_, _) => Complete(true);
+        if (cancel is not null)
+        {
+            cancel.Click += (_, _) => Complete(false);
+            cancel.Focus(FocusState.Programmatic);
+        }
+        else
+        {
+            primary.Focus(FocusState.Programmatic);
+        }
+
+        return completion.Task;
     }
 
     private void SetBusy(bool busy)

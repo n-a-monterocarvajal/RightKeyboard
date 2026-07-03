@@ -4,6 +4,15 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [1.5.0] - En desarrollo
 
+### Beta 3
+
+- El feedback del teclado activo ya no interrumpe la edición del alias.
+- Dispositivos ordenados por estado funcional; los ignorados quedan al final.
+- Corregida la opción vacía que aparecía al desplegar distribuciones.
+- Confirmaciones propias con botones y contenedor Fluent redondeados.
+- El selector automático recibe permiso de activación y foco inicial.
+- Se mantiene pendiente una revisión integral de textos antes de la versión estable.
+
 ### Beta 2
 
 - Configuración y selector automático migrados a un frontend WinUI 3 separado y activado bajo demanda.
