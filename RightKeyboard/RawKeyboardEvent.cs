@@ -13,6 +13,8 @@ public readonly record struct RawKeyboardEvent(
 
     public bool IsKeyDown => (Flags & KeyBreak) == 0 && Message is KeyDown or SystemKeyDown;
 
+    public bool IsSystemKeyDown => Message == SystemKeyDown;
+
     public bool CanStartMapping => IsKeyDown && IsUsableKey(VirtualKey) && !IsModifier(VirtualKey);
 
     private static bool IsUsableKey(ushort key) => key is not (

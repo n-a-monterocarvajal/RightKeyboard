@@ -1,4 +1,5 @@
 using System.IO.Pipes;
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace RightKeyboard;
@@ -11,17 +12,20 @@ internal sealed class SettingsIpcServer : IDisposable
     private readonly SynchronizationContext uiContext;
     private readonly CancellationTokenSource cancellation = new();
     private readonly Task serverTask;
+    private readonly DiagnosticLogger diagnostics;
     private long activitySequence;
     private string? activeDeviceIdentity;
 
     internal SettingsIpcServer(
         Configuration configuration,
         KeyboardDevicesCollection devices,
-        SynchronizationContext uiContext)
+        SynchronizationContext uiContext,
+        DiagnosticLogger diagnostics)
     {
         this.configuration = configuration;
         this.devices = devices;
         this.uiContext = uiContext;
+        this.diagnostics = diagnostics;
         serverTask = Task.Run(ListenAsync);
     }
 
@@ -95,6 +99,18 @@ internal sealed class SettingsIpcServer : IDisposable
                     null,
                     null,
                     new SettingsActivity(Interlocked.Read(ref activitySequence), activeDeviceIdentity));
+            case SettingsIpcProtocol.DiagnosticsAction:
+                return DiagnosticsResponse();
+            case SettingsIpcProtocol.SetDiagnosticsAction:
+                diagnostics.SetDetailedEnabled(request.DiagnosticsEnabled == true);
+                return DiagnosticsResponse();
+            case SettingsIpcProtocol.OpenDiagnosticsAction:
+                Directory.CreateDirectory(diagnostics.DirectoryPath);
+                Process.Start(new ProcessStartInfo("explorer.exe", diagnostics.DirectoryPath)
+                {
+                    UseShellExecute = true
+                });
+                return DiagnosticsResponse();
             case SettingsIpcProtocol.SnapshotAction:
                 break;
             case SettingsIpcProtocol.SaveAction:
@@ -123,6 +139,12 @@ internal sealed class SettingsIpcServer : IDisposable
 
         return new SettingsResponse(true, null, CreateSnapshot());
     }
+
+    private SettingsResponse DiagnosticsResponse() => new(
+        true,
+        null,
+        null,
+        Diagnostics: new SettingsDiagnostics(diagnostics.IsDetailedEnabled, diagnostics.DirectoryPath));
 
     private SettingsSnapshot CreateSnapshot()
     {

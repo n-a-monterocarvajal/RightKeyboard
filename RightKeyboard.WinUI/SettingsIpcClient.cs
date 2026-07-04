@@ -26,6 +26,22 @@ public sealed class SettingsIpcClient
         return response.Activity ?? new SettingsActivity(0, null);
     }
 
+    internal async Task<SettingsDiagnostics> GetDiagnosticsAsync() =>
+        (await SendResponseAsync(new SettingsRequest(
+            SettingsIpcProtocol.Version, SettingsIpcProtocol.DiagnosticsAction))).Diagnostics
+        ?? throw new InvalidOperationException("El núcleo no devolvió el estado del diagnóstico.");
+
+    internal async Task<SettingsDiagnostics> SetDiagnosticsAsync(bool enabled) =>
+        (await SendResponseAsync(new SettingsRequest(
+            SettingsIpcProtocol.Version,
+            SettingsIpcProtocol.SetDiagnosticsAction,
+            DiagnosticsEnabled: enabled))).Diagnostics
+        ?? throw new InvalidOperationException("El núcleo no devolvió el estado del diagnóstico.");
+
+    internal async Task OpenDiagnosticsAsync() =>
+        _ = await SendResponseAsync(new SettingsRequest(
+            SettingsIpcProtocol.Version, SettingsIpcProtocol.OpenDiagnosticsAction));
+
     private static async Task<SettingsSnapshot> SendAsync(SettingsRequest request)
     {
         SettingsResponse response = await SendResponseAsync(request);

@@ -1,15 +1,15 @@
 # Diagnóstico en pruebas de host
 
-Antes de cerrar 1.5 se incorporará un registro diagnóstico circular y opcional. Serilog es una opción adecuada por sus *sinks* y archivos rotativos, pero la decisión se tomará comparando su coste con una implementación pequeña basada en `Microsoft.Extensions.Logging`.
+Desde la beta 4 existe un registro diagnóstico circular y opcional, implementado sin dependencias externas para mantener liviano el proceso residente.
 
-El registro incluirá:
+El registro incluye:
 
-- versión, compilación de Windows y arquitectura;
-- `SystemUsesLightTheme`, `AppsUseLightTheme`, contraste alto y resultado de los atributos DWM;
-- conexión, desconexión y clasificación de dispositivos mediante identificadores anonimizados;
-- decisiones de asignación, exclusión e inicio del selector;
-- excepciones no controladas y errores de persistencia.
+- versión de la aplicación, Windows y arquitectura;
+- cambios del inventario mediante identificadores anonimizados y los códigos públicos VID/PID/interfaz HID;
+- clase de entrada, sin guardar la tecla concreta;
+- decisiones de asignación, recuperación por huella, exclusión e inicio del selector;
+- contexto para distinguir una identidad nueva de otra ya configurada.
 
-No incluirá caracteres pulsados, alias elegidos por el usuario, rutas PnP completas ni contenido de archivos importados. Se conservarán pocos archivos con límite de tamaño dentro de `%LOCALAPPDATA%\RightKeyboard\logs`, habrá una acción **Abrir carpeta de diagnóstico** y el modo detallado estará desactivado por defecto.
+No incluye caracteres pulsados, alias elegidos, nombres detectados, rutas PnP completas ni contenido de archivos importados. Conserva hasta tres archivos de 512 KiB en `%LOCALAPPDATA%\RightKeyboard\logs`.
 
-Para una versión publicada se conservarán únicamente eventos de inicio, actualización y errores. El trazado detallado se habilitará temporalmente desde Configuración o mediante un argumento de línea de comandos documentado.
+En Configuración se puede activar **Diagnóstico detallado** y usar **Abrir registros**. El modo detallado está desactivado por defecto. Para investigar una incidencia, se activa, se reproduce una vez y se desactiva. Los archivos nunca se transmiten automáticamente.

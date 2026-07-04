@@ -20,6 +20,7 @@ public sealed class SettingsWindow : Window
     private readonly CheckBox IgnoredCheckBox = new();
     private readonly Button SaveButton = new();
     private readonly Button ForgetButton = new();
+    private readonly CheckBox DiagnosticsCheckBox = new();
     private readonly List<Button> buttons = [];
     private readonly List<Border> cards = [];
     private readonly List<TextBlock> secondaryText = [];
@@ -29,6 +30,8 @@ public sealed class SettingsWindow : Window
     private SettingsSnapshot? snapshot;
     private long lastActivitySequence;
     private bool pollingActivity;
+    private bool applyingEditorState;
+    private DateTimeOffset suppressActivitySelectionUntil;
 
     public SettingsWindow(SettingsIpcClient client)
     {
@@ -136,6 +139,7 @@ public sealed class SettingsWindow : Window
         AliasTextBox.Header = "Nombre para este teclado";
         AliasTextBox.PlaceholderText = "Nombre reconocible";
         AliasTextBox.CornerRadius = new CornerRadius(8);
+        AliasTextBox.TextChanged += AliasTextBox_TextChanged;
         editor.Children.Add(AliasTextBox);
         DetectedNameText.TextWrapping = TextWrapping.Wrap;
         TechnicalIdText.TextWrapping = TextWrapping.Wrap;
@@ -187,11 +191,22 @@ public sealed class SettingsWindow : Window
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        StackPanel footerLeft = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
         Button clear = new() { Content = "Limpiar preferencias" };
         clear.CornerRadius = new CornerRadius(8);
         buttons.Add(clear);
         clear.Click += ClearButton_Click;
-        footer.Children.Add(clear);
+        footerLeft.Children.Add(clear);
+        DiagnosticsCheckBox.Content = "Diagnóstico detallado";
+        DiagnosticsCheckBox.VerticalAlignment = VerticalAlignment.Center;
+        DiagnosticsCheckBox.Click += DiagnosticsCheckBox_Click;
+        footerLeft.Children.Add(DiagnosticsCheckBox);
+        Button openDiagnostics = new() { Content = "Abrir registros" };
+        openDiagnostics.CornerRadius = new CornerRadius(8);
+        openDiagnostics.Click += OpenDiagnostics_Click;
+        buttons.Add(openDiagnostics);
+        footerLeft.Children.Add(openDiagnostics);
+        footer.Children.Add(footerLeft);
         Button reload = new() { Content = "Recargar" };
         reload.CornerRadius = new CornerRadius(8);
         buttons.Add(reload);
@@ -287,6 +302,7 @@ public sealed class SettingsWindow : Window
             (int)Math.Ceiling(1020 * scale),
             (int)Math.Ceiling(760 * scale)));
         await ReloadAsync();
+        await ReloadDiagnosticsAsync();
         activityTimer.Start();
     }
 
@@ -324,7 +340,7 @@ public sealed class SettingsWindow : Window
 
             // Escribir un alias genera Raw Input desde el mismo teclado. El feedback
             // puede actualizar su texto, pero nunca debe mover selección ni foco.
-            if (AliasTextBox.FocusState != FocusState.Unfocused)
+            if (DateTimeOffset.UtcNow < suppressActivitySelectionUntil)
             {
                 string name = item?.Tag is DeviceRow editingRow
                     ? editingRow.DisplayName
@@ -351,6 +367,15 @@ public sealed class SettingsWindow : Window
         finally
         {
             pollingActivity = false;
+        }
+    }
+
+    private void AliasTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (!applyingEditorState && AliasTextBox.FocusState != FocusState.Unfocused)
+        {
+            suppressActivitySelectionUntil = DateTimeOffset.UtcNow.AddMilliseconds(900);
+            activityText.Text = "Editando nombre; la identificación se reanuda al dejar de escribir.";
         }
     }
 
@@ -456,6 +481,7 @@ public sealed class SettingsWindow : Window
             return;
         }
 
+        applyingEditorState = true;
         AliasTextBox.Text = row.DisplayName;
         DetectedNameText.Text = $"Detectado: {row.DetectedName}";
         TechnicalIdText.Text = $"Identificador: {row.TechnicalId}";
@@ -465,7 +491,48 @@ public sealed class SettingsWindow : Window
             ? LayoutComboBox.Items[0]
             : LayoutComboBox.Items.OfType<SettingsLayout>()
                 .FirstOrDefault(candidate => candidate.Identifier == row.Layout.Identifier);
+        applyingEditorState = false;
         SetEditorEnabled(true);
+    }
+
+    private async Task ReloadDiagnosticsAsync()
+    {
+        try
+        {
+            DiagnosticsCheckBox.IsChecked = (await client.GetDiagnosticsAsync()).Enabled;
+        }
+        catch
+        {
+            DiagnosticsCheckBox.IsEnabled = false;
+        }
+    }
+
+    private async void DiagnosticsCheckBox_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            SettingsDiagnostics state = await client.SetDiagnosticsAsync(DiagnosticsCheckBox.IsChecked == true);
+            DiagnosticsCheckBox.IsChecked = state.Enabled;
+            activityText.Text = state.Enabled
+                ? "Diagnóstico activo. Reproduce el problema y abre los registros."
+                : "Diagnóstico desactivado.";
+        }
+        catch (Exception error)
+        {
+            await ShowErrorAsync("No se pudo cambiar el diagnóstico", error);
+        }
+    }
+
+    private async void OpenDiagnostics_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            await client.OpenDiagnosticsAsync();
+        }
+        catch (Exception error)
+        {
+            await ShowErrorAsync("No se pudo abrir la carpeta de registros", error);
+        }
     }
 
     private void IgnoredCheckBox_Changed(object sender, RoutedEventArgs e) =>

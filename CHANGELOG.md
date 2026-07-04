@@ -4,6 +4,13 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [1.5.0] - En desarrollo
 
+### Beta 4
+
+- La edición del alias ya no bloquea el reconocimiento visual mientras el campo conserve foco; solo se inhiben las pulsaciones que escriben texto.
+- Diagnóstico detallado opcional, local, circular y anonimizado para investigar identidades HID inesperadas como la observada con `Windows + V`.
+- Acciones en Configuración para activar el diagnóstico y abrir su carpeta.
+- Tres pruebas nuevas verifican desactivación y anonimización del registro.
+
 ### Beta 3
 
 - El feedback del teclado activo ya no interrumpe la edición del alias.
