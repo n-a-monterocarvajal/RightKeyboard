@@ -4,6 +4,12 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [1.5.0] - En desarrollo
 
+### Beta 5
+
+- El selector automático refuerza su activación y aplica un pulso temporal al frente cuando Windows conserva el foco de otra aplicación.
+- El diagnóstico detallado usa una cola asíncrona y escrituras agrupadas, fuera del hilo que cambia la distribución.
+- El aviso de edición del alias usa una animación nativa de entrada y salida, reiniciada con cada edición.
+
 ### Beta 4
 
 - La edición del alias ya no bloquea el reconocimiento visual mientras el campo conserve foco; solo se inhiben las pulsaciones que escriben texto.

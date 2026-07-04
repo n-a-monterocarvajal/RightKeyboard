@@ -410,6 +410,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         selectionTimer.Tick -= OnSelectionTimerTick;
         selectionTimer.Dispose();
         settingsIpc.Dispose();
+        diagnostics.Dispose();
         settingsDialog?.Close();
         settingsDialog?.Dispose();
         if (settingsProcess is { HasExited: false })

@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
+using Microsoft.UI.Xaml.Media.Animation;
 using Windows.UI;
 
 namespace RightKeyboard.WinUI;
@@ -25,6 +26,7 @@ public sealed class SettingsWindow : Window
     private readonly List<Border> cards = [];
     private readonly List<TextBlock> secondaryText = [];
     private readonly TextBlock activityText = new();
+    private readonly Storyboard aliasEditingStoryboard = new();
     private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer activityTimer;
     private Grid? contentRoot;
     private SettingsSnapshot? snapshot;
@@ -104,6 +106,7 @@ public sealed class SettingsWindow : Window
         activityText.Opacity = 0.78;
         secondaryText.Add(activityText);
         heading.Children.Add(activityText);
+        ConfigureAliasEditingAnimation();
         Grid.SetRow(heading, 1);
         root.Children.Add(heading);
 
@@ -345,7 +348,7 @@ public sealed class SettingsWindow : Window
                 string name = item?.Tag is DeviceRow editingRow
                     ? editingRow.DisplayName
                     : "dispositivo pendiente de configurar";
-                activityText.Text = $"Entrada detectada: {name}";
+                SetActivityText($"Entrada detectada: {name}");
                 return;
             }
 
@@ -353,11 +356,11 @@ public sealed class SettingsWindow : Window
             {
                 DeviceList.SelectedItem = item;
                 DeviceList.ScrollIntoView(item);
-                activityText.Text = $"Entrada detectada: {activeRow.DisplayName}";
+                SetActivityText($"Entrada detectada: {activeRow.DisplayName}");
             }
             else
             {
-                activityText.Text = "Entrada detectada desde un dispositivo pendiente de configurar.";
+                SetActivityText("Entrada detectada desde un dispositivo pendiente de configurar.");
             }
         }
         catch
@@ -375,8 +378,46 @@ public sealed class SettingsWindow : Window
         if (!applyingEditorState && AliasTextBox.FocusState != FocusState.Unfocused)
         {
             suppressActivitySelectionUntil = DateTimeOffset.UtcNow.AddMilliseconds(900);
-            activityText.Text = "Editando nombre; la identificación se reanuda al dejar de escribir.";
+            ShowAliasEditingMessage();
         }
+    }
+
+    private void ConfigureAliasEditingAnimation()
+    {
+        DoubleAnimation fadeIn = new()
+        {
+            From = 0,
+            To = 0.78,
+            Duration = new Duration(TimeSpan.FromMilliseconds(180))
+        };
+        DoubleAnimation fadeOut = new()
+        {
+            From = 0.78,
+            To = 0,
+            BeginTime = TimeSpan.FromSeconds(4),
+            Duration = new Duration(TimeSpan.FromMilliseconds(650))
+        };
+        Storyboard.SetTarget(fadeIn, activityText);
+        Storyboard.SetTargetProperty(fadeIn, "Opacity");
+        Storyboard.SetTarget(fadeOut, activityText);
+        Storyboard.SetTargetProperty(fadeOut, "Opacity");
+        aliasEditingStoryboard.Children.Add(fadeIn);
+        aliasEditingStoryboard.Children.Add(fadeOut);
+    }
+
+    private void ShowAliasEditingMessage()
+    {
+        aliasEditingStoryboard.Stop();
+        activityText.Text = "Editando nombre; la identificación se reanuda al dejar de escribir.";
+        activityText.Opacity = 0;
+        aliasEditingStoryboard.Begin();
+    }
+
+    private void SetActivityText(string text)
+    {
+        aliasEditingStoryboard.Stop();
+        activityText.Opacity = 0.78;
+        activityText.Text = text;
     }
 
     private async Task ReloadAsync(string? identityToSelect = null)
@@ -513,9 +554,9 @@ public sealed class SettingsWindow : Window
         {
             SettingsDiagnostics state = await client.SetDiagnosticsAsync(DiagnosticsCheckBox.IsChecked == true);
             DiagnosticsCheckBox.IsChecked = state.Enabled;
-            activityText.Text = state.Enabled
+            SetActivityText(state.Enabled
                 ? "Diagnóstico activo. Reproduce el problema y abre los registros."
-                : "Diagnóstico desactivado.";
+                : "Diagnóstico desactivado.");
         }
         catch (Exception error)
         {

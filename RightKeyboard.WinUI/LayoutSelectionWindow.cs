@@ -185,9 +185,33 @@ public sealed class LayoutSelectionWindow : Window
     private void ActivateSelectorWindow()
     {
         nint handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
-        ShowWindow(handle, 9);
-        BringWindowToTop(handle);
-        SetForegroundWindow(handle);
+        AppWindow.Show(true);
+        ShowWindow(handle, SwRestore);
+
+        nint foreground = GetForegroundWindow();
+        uint foregroundThread = foreground == 0 ? 0 : GetWindowThreadProcessId(foreground, out _);
+        uint currentThread = GetCurrentThreadId();
+        bool attached = foregroundThread != 0 && foregroundThread != currentThread &&
+                        AttachThreadInput(currentThread, foregroundThread, true);
+        try
+        {
+            BringWindowToTop(handle);
+            SetForegroundWindow(handle);
+            SetFocus(handle);
+        }
+        finally
+        {
+            if (attached) AttachThreadInput(currentThread, foregroundThread, false);
+        }
+
+        // Windows puede conservar el foco de la aplicación anterior. Este pulso
+        // garantiza que el selector quede visible sin mantenerlo "siempre arriba".
+        if (GetForegroundWindow() != handle)
+        {
+            SetWindowPos(handle, HwndTopmost, 0, 0, 0, 0, SwpNoMove | SwpNoSize | SwpShowWindow);
+            SetWindowPos(handle, HwndNotTopmost, 0, 0, 0, 0, SwpNoMove | SwpNoSize | SwpShowWindow);
+            SetForegroundWindow(handle);
+        }
     }
 
     private async void Accept_Click(object sender, RoutedEventArgs e)
@@ -227,4 +251,30 @@ public sealed class LayoutSelectionWindow : Window
 
     [DllImport("user32.dll")]
     private static extern bool ShowWindow(nint window, int command);
+
+    [DllImport("user32.dll")]
+    private static extern nint GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(nint window, out uint processId);
+
+    [DllImport("kernel32.dll")]
+    private static extern uint GetCurrentThreadId();
+
+    [DllImport("user32.dll")]
+    private static extern bool AttachThreadInput(uint attachThread, uint attachToThread, bool attach);
+
+    [DllImport("user32.dll")]
+    private static extern nint SetFocus(nint window);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetWindowPos(
+        nint window, nint insertAfter, int x, int y, int width, int height, uint flags);
+
+    private static readonly nint HwndTopmost = new(-1);
+    private static readonly nint HwndNotTopmost = new(-2);
+    private const int SwRestore = 9;
+    private const uint SwpNoSize = 0x0001;
+    private const uint SwpNoMove = 0x0002;
+    private const uint SwpShowWindow = 0x0040;
 }

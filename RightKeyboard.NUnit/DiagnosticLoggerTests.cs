@@ -32,6 +32,7 @@ public sealed class DiagnosticLoggerTests
         KeyboardDevice device = CreateDevice();
         logger.SetDetailedEnabled(true);
         logger.Write("entrada_recibida", device, new { decision = "prueba" });
+        logger.FlushAsync().GetAwaiter().GetResult();
 
         string[] lines = File.ReadAllLines(Path.Combine(directory, "rightkeyboard-diagnostico.log"));
         Assert.That(lines, Has.Length.EqualTo(2));
@@ -52,6 +53,7 @@ public sealed class DiagnosticLoggerTests
         DiagnosticLogger logger = new(directory);
         logger.SetDetailedEnabled(true);
         logger.SetDetailedEnabled(false);
+        logger.FlushAsync().GetAwaiter().GetResult();
         string path = Path.Combine(directory, "rightkeyboard-diagnostico.log");
         int linesBefore = File.ReadAllLines(path).Length;
         logger.Write("no_debe_aparecer", CreateDevice());

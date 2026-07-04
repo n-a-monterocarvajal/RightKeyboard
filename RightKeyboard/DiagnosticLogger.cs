@@ -1,67 +1,78 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Channels;
 
 namespace RightKeyboard;
 
-internal sealed class DiagnosticLogger
+internal sealed class DiagnosticLogger : IDisposable
 {
     private const long MaxFileBytes = 512 * 1024;
     private const int MaxFiles = 3;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-    private readonly object sync = new();
     private readonly string directory;
     private readonly string enabledMarker;
     private readonly string currentLog;
+    private readonly Channel<QueueItem> queue;
+    private readonly Task writerTask;
+    private volatile bool detailedEnabled;
+    private bool disposed;
 
     internal DiagnosticLogger(string? directory = null)
     {
         this.directory = directory ?? GetDefaultDirectory();
         enabledMarker = Path.Combine(this.directory, "diagnostico-habilitado");
         currentLog = Path.Combine(this.directory, "rightkeyboard-diagnostico.log");
+        detailedEnabled = File.Exists(enabledMarker);
+        queue = Channel.CreateBounded<QueueItem>(new BoundedChannelOptions(2048)
+        {
+            SingleReader = true,
+            SingleWriter = false,
+            FullMode = BoundedChannelFullMode.DropWrite
+        });
+        writerTask = Task.Run(WriteLoopAsync);
     }
 
-    internal bool IsDetailedEnabled => File.Exists(enabledMarker);
+    internal bool IsDetailedEnabled => detailedEnabled;
     internal string DirectoryPath => directory;
 
     internal void SetDetailedEnabled(bool enabled)
     {
-        lock (sync)
+        ObjectDisposedException.ThrowIf(disposed, this);
+        Directory.CreateDirectory(directory);
+        if (enabled)
         {
-            Directory.CreateDirectory(directory);
-            if (enabled)
-            {
-                File.WriteAllText(enabledMarker, "El diagnóstico detallado está habilitado.");
-                WriteCore("diagnostico_habilitado", null, null);
-            }
-            else
-            {
-                WriteCore("diagnostico_deshabilitado", null, null);
-                File.Delete(enabledMarker);
-            }
+            File.WriteAllText(enabledMarker, "El diagnóstico detallado está habilitado.");
+            detailedEnabled = true;
+            Enqueue("diagnostico_habilitado", null, null);
+        }
+        else
+        {
+            Enqueue("diagnostico_deshabilitado", null, null);
+            detailedEnabled = false;
+            File.Delete(enabledMarker);
         }
     }
 
     internal void Write(string eventName, KeyboardDevice? device = null, object? details = null)
     {
-        if (!IsDetailedEnabled)
+        if (!disposed && IsDetailedEnabled)
         {
-            return;
+            Enqueue(eventName, device, details);
         }
+    }
 
-        lock (sync)
-        {
-            WriteCore(eventName, device, details);
-        }
+    internal async Task FlushAsync()
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        TaskCompletionSource completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await queue.Writer.WriteAsync(new QueueItem(null, completion));
+        await completion.Task;
     }
 
     internal static string Anonymize(string? value)
     {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return string.Empty;
-        }
-
+        if (string.IsNullOrWhiteSpace(value)) return string.Empty;
         byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes("RightKeyboard/diagnostico/v1|" + value));
         return Convert.ToHexString(hash)[..16];
     }
@@ -69,10 +80,8 @@ internal sealed class DiagnosticLogger
     internal static string GetDefaultDirectory() => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RightKeyboard", "logs");
 
-    private void WriteCore(string eventName, KeyboardDevice? device, object? details)
+    private void Enqueue(string eventName, KeyboardDevice? device, object? details)
     {
-        Directory.CreateDirectory(directory);
-        RotateIfNeeded();
         var entry = new
         {
             timestampUtc = DateTimeOffset.UtcNow,
@@ -92,38 +101,72 @@ internal sealed class DiagnosticLogger
             } : null,
             details
         };
-        File.AppendAllText(currentLog, JsonSerializer.Serialize(entry, JsonOptions) + Environment.NewLine, Encoding.UTF8);
+        queue.Writer.TryWrite(new QueueItem(JsonSerializer.Serialize(entry, JsonOptions), null));
+    }
+
+    private async Task WriteLoopAsync()
+    {
+        List<QueueItem> batch = new();
+        await foreach (QueueItem first in queue.Reader.ReadAllAsync())
+        {
+            batch.Add(first);
+            await Task.Delay(100);
+            while (queue.Reader.TryRead(out QueueItem? item)) batch.Add(item);
+
+            string[] lines = batch.Where(item => item.Line is not null).Select(item => item.Line!).ToArray();
+            try
+            {
+                if (lines.Length > 0)
+                {
+                    Directory.CreateDirectory(directory);
+                    RotateIfNeeded();
+                    File.AppendAllText(currentLog, string.Join(Environment.NewLine, lines) + Environment.NewLine, Encoding.UTF8);
+                }
+            }
+            catch (IOException)
+            {
+                // El diagnóstico nunca debe interrumpir la función principal.
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // El diagnóstico nunca debe interrumpir la función principal.
+            }
+            finally
+            {
+                foreach (QueueItem item in batch) item.FlushCompletion?.TrySetResult();
+            }
+            batch.Clear();
+        }
     }
 
     private static string? ReadHexToken(string value, string marker, int length)
     {
         int markerIndex = value.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
-        if (markerIndex < 0 || markerIndex + marker.Length + length > value.Length)
-        {
-            return null;
-        }
-
+        if (markerIndex < 0 || markerIndex + marker.Length + length > value.Length) return null;
         string token = value.Substring(markerIndex + marker.Length, length);
         return token.All(Uri.IsHexDigit) ? token.ToUpperInvariant() : null;
     }
 
     private void RotateIfNeeded()
     {
-        if (!File.Exists(currentLog) || new FileInfo(currentLog).Length < MaxFileBytes)
-        {
-            return;
-        }
-
+        if (!File.Exists(currentLog) || new FileInfo(currentLog).Length < MaxFileBytes) return;
         File.Delete(currentLog + $".{MaxFiles - 1}");
         for (int index = MaxFiles - 2; index >= 1; index--)
         {
             string source = currentLog + $".{index}";
-            if (File.Exists(source))
-            {
-                File.Move(source, currentLog + $".{index + 1}");
-            }
+            if (File.Exists(source)) File.Move(source, currentLog + $".{index + 1}");
         }
-
         File.Move(currentLog, currentLog + ".1");
     }
+
+    public void Dispose()
+    {
+        if (disposed) return;
+        disposed = true;
+        queue.Writer.TryComplete();
+        try { writerTask.Wait(TimeSpan.FromSeconds(2)); }
+        catch (AggregateException) { }
+    }
+
+    private sealed record QueueItem(string? Line, TaskCompletionSource? FlushCompletion);
 }
