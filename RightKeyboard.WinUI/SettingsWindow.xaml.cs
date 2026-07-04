@@ -3,8 +3,11 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
-using Microsoft.UI.Xaml.Media.Animation;
+using Microsoft.UI.Xaml.Hosting;
+using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Composition;
 using Windows.UI;
+using Windows.UI.ViewManagement;
 
 namespace RightKeyboard.WinUI;
 
@@ -26,15 +29,17 @@ public sealed class SettingsWindow : Window
     private readonly List<Border> cards = [];
     private readonly List<TextBlock> secondaryText = [];
     private readonly TextBlock activityText = new();
-    private readonly Storyboard aliasEditingStoryboard = new();
+    private readonly TextBlock activityHintText = new();
     private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer activityTimer;
+    private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer activityHintTimer;
     private Grid? contentRoot;
     private SettingsSnapshot? snapshot;
     private long lastActivitySequence;
     private bool pollingActivity;
     private bool applyingEditorState;
-    private bool aliasEditingAnimationStarted;
-    private DateTimeOffset suppressActivitySelectionUntil;
+    private Visual? activityVisual;
+    private Visual? activityHintVisual;
+    private bool activityHintVisible;
 
     public SettingsWindow(SettingsIpcClient client)
     {
@@ -49,8 +54,15 @@ public sealed class SettingsWindow : Window
         activityTimer = DispatcherQueue.CreateTimer();
         activityTimer.Interval = TimeSpan.FromMilliseconds(500);
         activityTimer.Tick += PollActivityAsync;
+        activityHintTimer = DispatcherQueue.CreateTimer();
+        activityHintTimer.Interval = TimeSpan.FromMilliseconds(1400);
+        activityHintTimer.Tick += HideAliasEditingMessage;
         Activated += OnActivated;
-        Closed += (_, _) => activityTimer.Stop();
+        Closed += (_, _) =>
+        {
+            activityTimer.Stop();
+            activityHintTimer.Stop();
+        };
     }
 
     private DeviceRow? SelectedRow => (DeviceList.SelectedItem as ListViewItem)?.Tag as DeviceRow;
@@ -61,7 +73,7 @@ public sealed class SettingsWindow : Window
         contentRoot = root;
         root.Background = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
         root.ActualThemeChanged += (_, _) => ApplyFluentResources();
-        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(48) });
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(56) });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -77,14 +89,24 @@ public sealed class SettingsWindow : Window
             Stretch = Stretch.Uniform
         };
         titleBar.Children.Add(appIcon);
-        TextBlock appTitle = new()
+        StackPanel appIdentity = new()
+        {
+            VerticalAlignment = VerticalAlignment.Center,
+            Spacing = 0
+        };
+        appIdentity.Children.Add(new TextBlock
         {
             Text = "RightKeyboard",
-            VerticalAlignment = VerticalAlignment.Center,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
-        };
-        Grid.SetColumn(appTitle, 1);
-        titleBar.Children.Add(appTitle);
+        });
+        appIdentity.Children.Add(new TextBlock
+        {
+            Text = VersionPresentation.Current,
+            FontSize = 11,
+            Opacity = 0.68
+        });
+        Grid.SetColumn(appIdentity, 1);
+        titleBar.Children.Add(appIdentity);
         root.Children.Add(titleBar);
         SetTitleBar(titleBar);
 
@@ -97,17 +119,23 @@ public sealed class SettingsWindow : Window
         });
         TextBlock subtitle = new()
         {
-            Text = "Administra los teclados conocidos sin interrumpir la detección en segundo plano.",
+            Text = "Administra los teclados detectados.",
             TextWrapping = TextWrapping.Wrap
         };
         secondaryText.Add(subtitle);
         heading.Children.Add(subtitle);
-        activityText.Text = "Pulsa una tecla para identificar visualmente su dispositivo.";
+        activityText.Text = "Pulsa una tecla para identificar su dispositivo.";
         activityText.FontSize = 12;
-        activityText.Opacity = 0.78;
+        activityText.Opacity = 1;
         secondaryText.Add(activityText);
-        heading.Children.Add(activityText);
-        ConfigureAliasEditingAnimation();
+        activityHintText.Text = "· La identificación se reanudará al dejar de escribir.";
+        activityHintText.FontSize = 12;
+        activityHintText.Opacity = 1;
+        secondaryText.Add(activityHintText);
+        StackPanel activityLine = new() { Orientation = Orientation.Horizontal, Spacing = 4 };
+        activityLine.Children.Add(activityText);
+        activityLine.Children.Add(activityHintText);
+        heading.Children.Add(activityLine);
         Grid.SetRow(heading, 1);
         root.Children.Add(heading);
 
@@ -144,6 +172,7 @@ public sealed class SettingsWindow : Window
         AliasTextBox.PlaceholderText = "Nombre reconocible";
         AliasTextBox.CornerRadius = new CornerRadius(8);
         AliasTextBox.TextChanged += AliasTextBox_TextChanged;
+        AliasTextBox.KeyDown += AliasTextBox_KeyDown;
         editor.Children.Add(AliasTextBox);
         DetectedNameText.TextWrapping = TextWrapping.Wrap;
         TechnicalIdText.TextWrapping = TextWrapping.Wrap;
@@ -301,6 +330,8 @@ public sealed class SettingsWindow : Window
     private async void OnActivated(object sender, WindowActivatedEventArgs args)
     {
         Activated -= OnActivated;
+        GetActivityVisual().Opacity = 0.78f;
+        GetActivityHintVisual().Opacity = 0;
         double scale = (Content as FrameworkElement)?.XamlRoot?.RasterizationScale ?? 1;
         AppWindow.Resize(new Windows.Graphics.SizeInt32(
             (int)Math.Ceiling(1020 * scale),
@@ -344,12 +375,13 @@ public sealed class SettingsWindow : Window
 
             // Escribir un alias genera Raw Input desde el mismo teclado. El feedback
             // puede actualizar su texto, pero nunca debe mover selección ni foco.
-            if (DateTimeOffset.UtcNow < suppressActivitySelectionUntil)
+            if (AliasTextBox.FocusState != FocusState.Unfocused)
             {
                 string name = item?.Tag is DeviceRow editingRow
                     ? editingRow.DisplayName
                     : "dispositivo pendiente de configurar";
-                SetActivityText($"Entrada detectada: {name}");
+                string identifier = item?.Tag is DeviceRow row ? row.TechnicalId : string.Empty;
+                SetActivityText(FormatDetectedActivity(name, identifier));
                 return;
             }
 
@@ -357,7 +389,7 @@ public sealed class SettingsWindow : Window
             {
                 DeviceList.SelectedItem = item;
                 DeviceList.ScrollIntoView(item);
-                SetActivityText($"Entrada detectada: {activeRow.DisplayName}");
+                SetActivityText(FormatDetectedActivity(activeRow.DisplayName, activeRow.TechnicalId));
             }
             else
             {
@@ -378,56 +410,96 @@ public sealed class SettingsWindow : Window
     {
         if (!applyingEditorState && AliasTextBox.FocusState != FocusState.Unfocused)
         {
-            suppressActivitySelectionUntil = DateTimeOffset.UtcNow.AddMilliseconds(900);
             ShowAliasEditingMessage();
         }
     }
 
-    private void ConfigureAliasEditingAnimation()
+    private async void AliasTextBox_KeyDown(object sender, KeyRoutedEventArgs e)
     {
-        DoubleAnimation fadeIn = new()
+        if (e.Key == Windows.System.VirtualKey.Enter)
         {
-            From = 0,
-            To = 0.78,
-            Duration = new Duration(TimeSpan.FromMilliseconds(180))
-        };
-        DoubleAnimation fadeOut = new()
+            e.Handled = true;
+            await SaveSelectedAsync();
+            DeviceList.Focus(FocusState.Programmatic);
+        }
+        else if (e.Key == Windows.System.VirtualKey.Escape)
         {
-            From = 0.78,
-            To = 0,
-            BeginTime = TimeSpan.FromSeconds(4),
-            Duration = new Duration(TimeSpan.FromMilliseconds(650))
-        };
-        Storyboard.SetTarget(fadeIn, activityText);
-        Storyboard.SetTargetProperty(fadeIn, "Opacity");
-        Storyboard.SetTarget(fadeOut, activityText);
-        Storyboard.SetTargetProperty(fadeOut, "Opacity");
-        aliasEditingStoryboard.Children.Add(fadeIn);
-        aliasEditingStoryboard.Children.Add(fadeOut);
+            e.Handled = true;
+            if (SelectedRow is DeviceRow row)
+            {
+                applyingEditorState = true;
+                AliasTextBox.Text = row.DisplayName;
+                applyingEditorState = false;
+            }
+            DeviceList.Focus(FocusState.Programmatic);
+        }
     }
 
     private void ShowAliasEditingMessage()
     {
-        if (aliasEditingAnimationStarted)
+        activityHintTimer.Stop();
+        activityHintTimer.Start();
+        if (activityHintVisible)
         {
-            aliasEditingStoryboard.Stop();
+            return;
         }
-        activityText.Text = "Editando nombre; la identificación se reanuda al dejar de escribir.";
-        activityText.Opacity = 0;
-        aliasEditingStoryboard.Begin();
-        aliasEditingAnimationStarted = true;
+
+        activityHintVisible = true;
+        AnimateOpacity(GetActivityVisual(), 0.78f, 0.52f, 180);
+        AnimateOpacity(GetActivityHintVisual(), 0, 0.78f, 180);
+    }
+
+    private void HideAliasEditingMessage(
+        Microsoft.UI.Dispatching.DispatcherQueueTimer sender,
+        object args)
+    {
+        sender.Stop();
+        if (!activityHintVisible)
+        {
+            return;
+        }
+
+        activityHintVisible = false;
+        AnimateOpacity(GetActivityVisual(), 0.52f, 0.78f, 500);
+        AnimateOpacity(GetActivityHintVisual(), 0.78f, 0, 500);
     }
 
     private void SetActivityText(string text)
     {
-        if (aliasEditingAnimationStarted)
-        {
-            aliasEditingStoryboard.Stop();
-            aliasEditingAnimationStarted = false;
-        }
-        activityText.Opacity = 0.78;
         activityText.Text = text;
+        GetActivityVisual().Opacity = activityHintVisible ? 0.52f : 0.78f;
     }
+
+    private Visual GetActivityVisual()
+    {
+        return activityVisual ??= ElementCompositionPreview.GetElementVisual(activityText);
+    }
+
+    private Visual GetActivityHintVisual() =>
+        activityHintVisual ??= ElementCompositionPreview.GetElementVisual(activityHintText);
+
+    private static void AnimateOpacity(Visual visual, float from, float to, int milliseconds)
+    {
+        try
+        {
+            visual.StopAnimation("Opacity");
+            visual.Opacity = to;
+            ScalarKeyFrameAnimation animation = visual.Compositor.CreateScalarKeyFrameAnimation();
+            animation.InsertKeyFrame(0, from);
+            animation.InsertKeyFrame(1, to);
+            animation.Duration = TimeSpan.FromMilliseconds(milliseconds);
+            visual.StartAnimation("Opacity", animation);
+        }
+        catch
+        {
+            visual.Opacity = to;
+        }
+    }
+
+    private static string FormatDetectedActivity(string name, string? technicalId) =>
+        string.IsNullOrWhiteSpace(technicalId)
+            ? $"Entrada detectada: {name}"
+            : $"Entrada detectada: {name} · {technicalId}";
 
     private async Task ReloadAsync(string? identityToSelect = null)
     {
@@ -695,7 +767,9 @@ public sealed class SettingsWindow : Window
         {
             Background = new SolidColorBrush(Color.FromArgb(0x99, 0, 0, 0)),
             HorizontalAlignment = HorizontalAlignment.Stretch,
-            VerticalAlignment = VerticalAlignment.Stretch
+            VerticalAlignment = VerticalAlignment.Stretch,
+            Margin = new Thickness(-24, 0, -24, -24),
+            TabFocusNavigation = KeyboardNavigationMode.Cycle
         };
         Grid.SetRowSpan(overlay, 4);
         Canvas.SetZIndex(overlay, 100);
@@ -766,9 +840,16 @@ public sealed class SettingsWindow : Window
         };
         overlay.Children.Add(panel);
         contentRoot.Children.Add(overlay);
+        _ = AnimateOverlayAsync(overlay, panel, showing: true);
 
-        void Complete(bool result)
+        bool closing = false;
+        async void Complete(bool result)
         {
+            if (closing) return;
+            closing = true;
+            primary.IsEnabled = false;
+            if (cancel is not null) cancel.IsEnabled = false;
+            await AnimateOverlayAsync(overlay, panel, showing: false);
             contentRoot.Children.Remove(overlay);
             completion.TrySetResult(result);
         }
@@ -784,7 +865,60 @@ public sealed class SettingsWindow : Window
             primary.Focus(FocusState.Programmatic);
         }
 
+        KeyboardAccelerator escape = new() { Key = Windows.System.VirtualKey.Escape };
+        escape.Invoked += (_, args) =>
+        {
+            args.Handled = true;
+            Complete(false);
+        };
+        overlay.KeyboardAccelerators.Add(escape);
+
         return completion.Task;
+    }
+
+    private static async Task AnimateOverlayAsync(Grid overlay, Border panel, bool showing)
+    {
+        Visual overlayVisual = ElementCompositionPreview.GetElementVisual(overlay);
+        Visual panelVisual = ElementCompositionPreview.GetElementVisual(panel);
+        if (!AnimationsEnabled())
+        {
+            overlayVisual.Opacity = showing ? 1 : 0;
+            panelVisual.Scale = showing ? System.Numerics.Vector3.One : new System.Numerics.Vector3(0.985f);
+            return;
+        }
+
+        panel.UpdateLayout();
+        panelVisual.CenterPoint = new System.Numerics.Vector3(
+            (float)panel.ActualWidth / 2,
+            (float)panel.ActualHeight / 2,
+            0);
+        Compositor compositor = overlayVisual.Compositor;
+        TimeSpan duration = TimeSpan.FromMilliseconds(showing ? 190 : 150);
+        CompositionEasingFunction easing = compositor.CreateCubicBezierEasingFunction(
+            new System.Numerics.Vector2(0.1f, 0.9f),
+            new System.Numerics.Vector2(0.2f, 1f));
+        ScalarKeyFrameAnimation opacity = compositor.CreateScalarKeyFrameAnimation();
+        opacity.InsertKeyFrame(0, showing ? 0 : 1);
+        opacity.InsertKeyFrame(1, showing ? 1 : 0, easing);
+        opacity.Duration = duration;
+        Vector3KeyFrameAnimation scale = compositor.CreateVector3KeyFrameAnimation();
+        scale.InsertKeyFrame(0, showing ? new System.Numerics.Vector3(0.985f) : System.Numerics.Vector3.One);
+        scale.InsertKeyFrame(1, showing ? System.Numerics.Vector3.One : new System.Numerics.Vector3(0.985f), easing);
+        scale.Duration = duration;
+
+        TaskCompletionSource completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        CompositionScopedBatch batch = compositor.CreateScopedBatch(CompositionBatchTypes.Animation);
+        batch.Completed += (_, _) => completion.TrySetResult();
+        overlayVisual.StartAnimation("Opacity", opacity);
+        panelVisual.StartAnimation("Scale", scale);
+        batch.End();
+        await completion.Task;
+    }
+
+    private static bool AnimationsEnabled()
+    {
+        try { return new UISettings().AnimationsEnabled; }
+        catch { return false; }
     }
 
     private void SetBusy(bool busy)

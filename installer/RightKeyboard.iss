@@ -5,7 +5,7 @@
   #define OutputDir "..\artifacts\installer"
 #endif
 #ifndef AppVersion
-  #define AppVersion "1.5.0-beta.5.1"
+  #define AppVersion "1.5.0-beta.6"
 #endif
 
 #define AppId "{{D7EC931A-AB1D-4F36-9F95-674B202CF334}"
@@ -128,7 +128,21 @@ begin
     WizardForm.PageDescriptionLabel.Caption :=
       'RightKeyboard está listo para actualizarse a la versión {#AppVersion}.';
     WizardForm.ReadyLabel.Caption :=
-      'Haga clic en Actualizar para continuar. Se conservarán sus preferencias y la configuración de inicio automático.';
+      'Haga clic en Actualizar para continuar. Se conservarán sus preferencias y el inicio automático.';
+  end
+  else if CurPageID = wpInstalling then
+  begin
+    WizardForm.PageNameLabel.Caption := 'Actualizando';
+    WizardForm.PageDescriptionLabel.Caption :=
+      'Por favor, espere mientras se actualiza RightKeyboard en su sistema.';
+  end
+  else if CurPageID = wpFinished then
+  begin
+    WizardForm.FinishedHeadingLabel.Caption := 'Actualización completada';
+    WizardForm.FinishedLabel.Caption :=
+      'RightKeyboard se actualizó correctamente a la versión {#AppVersion}.' + #13#10 + #13#10 +
+      'Puede iniciar la aplicación mediante los accesos directos creados.' + #13#10 + #13#10 +
+      'Haga clic en Finalizar para cerrar el asistente.';
   end;
 end;
 

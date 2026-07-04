@@ -6,6 +6,19 @@ namespace RightKeyboard.Tests;
 public sealed class RawKeyboardEventTests
 {
     [Test]
+    public void DiagnosticSignals_DoNotExposeKeyValue()
+    {
+        RawKeyboardEvent keyboardEvent = new(1, 0x41, 0x1E, 0x0002, 0x0100, 7);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(keyboardEvent.HasScanCode, Is.True);
+            Assert.That(keyboardEvent.HasExtraInformation, Is.True);
+            Assert.That(keyboardEvent.IsExtendedKey, Is.True);
+        });
+    }
+
+    [Test]
     public void KeyRelease_DoesNotStartMapping()
     {
         RawKeyboardEvent keyboardEvent = new(1, 0x41, 0x1E, 0x0001, 0x0101);

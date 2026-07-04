@@ -97,6 +97,9 @@ internal sealed class DiagnosticLogger : IDisposable
                 productId = ReadHexToken(value.DevicePath, "PID_", 4),
                 interfaceNumber = ReadHexToken(value.DevicePath, "MI_", 2),
                 collectionNumber = ReadHexToken(value.DevicePath, "COL", 2),
+                pathEnumerator = ReadPathEnumerator(value.DevicePath),
+                virtualPathHint = HasVirtualPathHint(value.DevicePath),
+                capabilities = value.Capabilities,
                 clearlyNonKeyboard = value.IsClearlyNonKeyboard
             } : null,
             details
@@ -146,6 +149,23 @@ internal sealed class DiagnosticLogger : IDisposable
         string token = value.Substring(markerIndex + marker.Length, length);
         return token.All(Uri.IsHexDigit) ? token.ToUpperInvariant() : null;
     }
+
+    internal static string ReadPathEnumerator(string value)
+    {
+        string normalized = value.TrimStart('\\', '?', '.');
+        int separator = normalized.IndexOf('#');
+        string candidate = (separator < 0 ? normalized : normalized[..separator]).ToUpperInvariant();
+        return candidate.Length is > 0 and <= 16 && candidate.All(character =>
+            char.IsAsciiLetterOrDigit(character) || character is '_' or '-')
+            ? candidate
+            : "OTRO";
+    }
+
+    internal static bool HasVirtualPathHint(string value) =>
+        value.Contains("RDP_KBD", StringComparison.OrdinalIgnoreCase) ||
+        value.Contains("TERMSRV", StringComparison.OrdinalIgnoreCase) ||
+        value.Contains("VIRTUAL", StringComparison.OrdinalIgnoreCase) ||
+        value.Contains("VMBUS", StringComparison.OrdinalIgnoreCase);
 
     private void RotateIfNeeded()
     {

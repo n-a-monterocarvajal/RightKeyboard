@@ -106,12 +106,25 @@ internal sealed class TrayApplicationContext : ApplicationContext
             keyCategory = keyboardEvent.CanStartMapping ? "asignable" : "auxiliar_o_modificadora",
             messageCategory = keyboardEvent.IsSystemKeyDown ? "sistema" : "normal",
             keyboardEvent.Flags,
+            keyboardEvent.HasScanCode,
+            keyboardEvent.HasExtraInformation,
+            keyboardEvent.IsExtendedKey,
             knownIdentity,
             mappedIdentity,
             ignoredIdentity,
             matchingFingerprintDevices = matchingDevices,
             settingsOpen = settingsProcess is { HasExited: false }
         });
+
+        if (!keyboardEvent.HasScanCode && DeviceClassifier.IsLikelySyntheticInputSource(device))
+        {
+            diagnostics.Write("entrada_sintetica_excluida", device, new
+            {
+                reason = "sin_scan_code_y_capacidades",
+                keyboardEvent.VirtualKey
+            });
+            return;
+        }
 
         if (settingsProcess is { HasExited: false })
         {

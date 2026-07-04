@@ -60,6 +60,17 @@ public sealed class DiagnosticLoggerTests
         Assert.That(File.ReadAllLines(path), Has.Length.EqualTo(linesBefore));
     }
 
+    [TestCase(@"\\?\HID#VID_046D&PID_C548#PRIVATE", "HID")]
+    [TestCase(@"\\?\ROOT#RDP_KBD#0000", "ROOT")]
+    [TestCase(@"\\?\ACPI#PNP0303#4", "ACPI")]
+    public void ReadPathEnumerator_ReturnsOnlyNonUniqueFamily(string path, string expected) =>
+        Assert.That(DiagnosticLogger.ReadPathEnumerator(path), Is.EqualTo(expected));
+
+    [TestCase(@"\\?\ROOT#RDP_KBD#0000")]
+    [TestCase(@"\\?\VMBUS#SYNTHETIC_KBD#PRIVATE")]
+    public void HasVirtualPathHint_RecognizesKnownVirtualFamilies(string path) =>
+        Assert.That(DiagnosticLogger.HasVirtualPathHint(path), Is.True);
+
     private static KeyboardDevice CreateDevice() => new(
         @"\\?\HID#VID_1234&PID_5678#PRIVATE", 42,
         "container:aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",

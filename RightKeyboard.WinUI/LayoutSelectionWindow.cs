@@ -14,6 +14,7 @@ public sealed class LayoutSelectionWindow : Window
     private readonly TextBox alias = new();
     private readonly ListView layouts = new();
     private readonly Button accept = new();
+    private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer activationRetryTimer;
     private SettingsDevice? device;
 
     public LayoutSelectionWindow(SettingsIpcClient client, string identity)
@@ -25,14 +26,19 @@ public sealed class LayoutSelectionWindow : Window
         Content = BuildContent();
         TryEnableBackdrop();
         AppWindow.Resize(new Windows.Graphics.SizeInt32(720, 680));
+        activationRetryTimer = DispatcherQueue.CreateTimer();
+        activationRetryTimer.Interval = TimeSpan.FromMilliseconds(180);
+        activationRetryTimer.IsRepeating = false;
+        activationRetryTimer.Tick += RetryActivation;
         Activated += OnActivated;
+        Closed += (_, _) => activationRetryTimer.Stop();
     }
 
     private UIElement BuildContent()
     {
         Grid root = new() { Padding = new Thickness(24, 0, 24, 24), RowSpacing = 16 };
         root.Background = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
-        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(48) });
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(56) });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
@@ -108,14 +114,24 @@ public sealed class LayoutSelectionWindow : Window
             Width = 20,
             Height = 20
         });
-        TextBlock title = new()
+        StackPanel identity = new()
+        {
+            VerticalAlignment = VerticalAlignment.Center,
+            Spacing = 0
+        };
+        identity.Children.Add(new TextBlock
         {
             Text = "RightKeyboard",
-            VerticalAlignment = VerticalAlignment.Center,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
-        };
-        Grid.SetColumn(title, 1);
-        bar.Children.Add(title);
+        });
+        identity.Children.Add(new TextBlock
+        {
+            Text = VersionPresentation.Current,
+            FontSize = 11,
+            Opacity = 0.68
+        });
+        Grid.SetColumn(identity, 1);
+        bar.Children.Add(identity);
         return bar;
     }
 
@@ -130,6 +146,9 @@ public sealed class LayoutSelectionWindow : Window
     private async void OnActivated(object sender, WindowActivatedEventArgs args)
     {
         Activated -= OnActivated;
+        // Mostrar y activar primero la superficie vacía evita que la consulta IPC
+        // forme parte de la demora percibida al abrir el selector en frío.
+        ActivateSelectorWindow();
         double scale = (Content as FrameworkElement)?.XamlRoot?.RasterizationScale ?? 1;
         AppWindow.Resize(new Windows.Graphics.SizeInt32(
             (int)Math.Ceiling(720 * scale),
@@ -176,6 +195,21 @@ public sealed class LayoutSelectionWindow : Window
             {
                 layouts.SelectedItem = item;
             }
+        }
+
+        alias.Focus(FocusState.Programmatic);
+        activationRetryTimer.Start();
+    }
+
+    private void RetryActivation(
+        Microsoft.UI.Dispatching.DispatcherQueueTimer sender,
+        object args)
+    {
+        sender.Stop();
+        nint handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
+        if (GetForegroundWindow() == handle)
+        {
+            return;
         }
 
         ActivateSelectorWindow();

@@ -5,7 +5,8 @@ public readonly record struct RawKeyboardEvent(
     ushort VirtualKey,
     ushort MakeCode,
     ushort Flags,
-    uint Message)
+    uint Message,
+    uint ExtraInformation = 0)
 {
     private const ushort KeyBreak = 0x0001;
     private const uint KeyDown = 0x0100;
@@ -14,6 +15,12 @@ public readonly record struct RawKeyboardEvent(
     public bool IsKeyDown => (Flags & KeyBreak) == 0 && Message is KeyDown or SystemKeyDown;
 
     public bool IsSystemKeyDown => Message == SystemKeyDown;
+
+    public bool HasScanCode => MakeCode != 0;
+
+    public bool HasExtraInformation => ExtraInformation != 0;
+
+    public bool IsExtendedKey => (Flags & 0x0002) != 0;
 
     public bool CanStartMapping => IsKeyDown && IsUsableKey(VirtualKey) && !IsModifier(VirtualKey);
 

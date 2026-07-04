@@ -79,7 +79,8 @@ public sealed class KeyboardDevicesCollection : IEnumerable<KeyboardDevice>
             descriptor.Fingerprint,
             descriptor.DisplayName,
             descriptor.TechnicalId,
-            descriptor.IsClearlyNonKeyboard);
+            descriptor.IsClearlyNonKeyboard,
+            API.GetKeyboardDeviceCapabilities(handle));
     }
 
     public IEnumerator<KeyboardDevice> GetEnumerator() => devicesByHandle.Values.GetEnumerator();

@@ -4,6 +4,23 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [1.5.0] - En desarrollo
 
+### Beta 6
+
+- La capa modal cubre toda la superficie cliente y usa transiciones de composición al entrar y salir, respetando la preferencia de animaciones de Windows.
+- Las barras de título de Configuración y del selector muestran la versión efectiva como información secundaria.
+- «Entrada detectada» incluye el identificador técnico corto para distinguir dispositivos todavía sin alias.
+- La descripción principal se simplifica a «Administra los teclados detectados.»
+- Incluye la corrección de composición validada localmente que evita el cierre al editar el alias.
+- El instalador diferencia de forma coherente preparación, progreso y finalización de una actualización.
+- El aviso de edición prolonga su duración sin reiniciar el fade en cada carácter y conserva visible la identificación del teclado.
+- El selector reintenta una vez su activación después de cargar si Windows conserva el foco anterior.
+- El diagnóstico añade familia de ruta, señales de inyección, presencia de código de escaneo y capacidades Raw Input sin registrar la tecla concreta.
+
+### Beta 5.2
+
+- Sustituido el `Storyboard` del aviso de edición por una animación de composición nativa, evitando la excepción WinRT que cerraba Configuración.
+- Añadido un fallback protegido: un fallo del efecto visual ya no puede terminar el frontend.
+
 ### Beta 5.1
 
 - Corregido el cierre de Configuración al editar por primera vez el alias: la animación del aviso ya no intenta detenerse antes de haberse iniciado.

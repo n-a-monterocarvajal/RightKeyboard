@@ -12,6 +12,7 @@ internal static class API
     internal const int WmInputDeviceChange = 0x00FE;
     private const uint RidInput = 0x10000003;
     private const uint RidiDeviceName = 0x20000007;
+    private const uint RidiDeviceInfo = 0x2000000B;
     private const uint RimTypeKeyboard = 1;
     private const uint RidevInputSink = 0x00000100;
     private const uint RidevDeviceNotify = 0x00002000;
@@ -23,6 +24,32 @@ internal static class API
     {
         public nint Device;
         public uint Type;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RawInputDeviceInfo
+    {
+        public uint Size;
+        public uint Type;
+        public RawInputDeviceInfoData Data;
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    private struct RawInputDeviceInfoData
+    {
+        [FieldOffset(0)]
+        public RawInputKeyboardInfo Keyboard;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RawInputKeyboardInfo
+    {
+        public uint Type;
+        public uint SubType;
+        public uint KeyboardMode;
+        public uint NumberOfFunctionKeys;
+        public uint NumberOfIndicators;
+        public uint NumberOfKeysTotal;
     }
 
     [DllImport("user32.dll", SetLastError = true)]
@@ -50,6 +77,13 @@ internal static class API
         nint device,
         uint command,
         StringBuilder? data,
+        ref uint dataSize);
+
+    [DllImport("user32.dll", EntryPoint = "GetRawInputDeviceInfoW", SetLastError = true)]
+    private static extern uint GetRawInputDeviceInfo(
+        nint device,
+        uint command,
+        ref RawInputDeviceInfo data,
         ref uint dataSize);
 
     [DllImport("user32.dll")]
@@ -104,8 +138,29 @@ internal static class API
             input.Data.Keyboard.VirtualKey,
             input.Data.Keyboard.MakeCode,
             input.Data.Keyboard.Flags,
-            input.Data.Keyboard.Message);
+            input.Data.Keyboard.Message,
+            input.Data.Keyboard.ExtraInformation);
         return true;
+    }
+
+    internal static KeyboardDeviceCapabilities? GetKeyboardDeviceCapabilities(nint device)
+    {
+        RawInputDeviceInfo info = new() { Size = (uint)Marshal.SizeOf<RawInputDeviceInfo>() };
+        uint size = info.Size;
+        uint result = GetRawInputDeviceInfo(device, RidiDeviceInfo, ref info, ref size);
+        if (result == uint.MaxValue || info.Type != RimTypeKeyboard)
+        {
+            return null;
+        }
+
+        RawInputKeyboardInfo keyboard = info.Data.Keyboard;
+        return new KeyboardDeviceCapabilities(
+            keyboard.Type,
+            keyboard.SubType,
+            keyboard.KeyboardMode,
+            keyboard.NumberOfFunctionKeys,
+            keyboard.NumberOfIndicators,
+            keyboard.NumberOfKeysTotal);
     }
 
     internal static IReadOnlyList<RawInputDeviceList> GetKeyboardDevices()

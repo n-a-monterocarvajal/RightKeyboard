@@ -149,9 +149,12 @@ internal sealed class SettingsIpcServer : IDisposable
     private SettingsSnapshot CreateSnapshot()
     {
         devices.Refresh();
-        HashSet<string> connected = devices.Select(device => device.Identity)
+        KeyboardDevice[] visibleDevices = devices
+            .Where(device => !DeviceClassifier.IsLikelySyntheticInputSource(device))
+            .ToArray();
+        HashSet<string> connected = visibleDevices.Select(device => device.Identity)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        foreach (KeyboardDevice device in devices)
+        foreach (KeyboardDevice device in visibleDevices)
         {
             configuration.TouchDevice(device);
         }
