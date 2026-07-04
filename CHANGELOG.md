@@ -4,6 +4,11 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [1.5.0] - En desarrollo
 
+### Beta 5.1
+
+- Corregido el cierre de Configuración al editar por primera vez el alias: la animación del aviso ya no intenta detenerse antes de haberse iniciado.
+- Registrados para beta 6 el identificador corto en «Entrada detectada», la microcopia concisa, el overlay modal completo y la versión en la barra de título.
+
 ### Beta 5
 
 - El selector automático refuerza su activación y aplica un pulso temporal al frente cuando Windows conserva el foco de otra aplicación.

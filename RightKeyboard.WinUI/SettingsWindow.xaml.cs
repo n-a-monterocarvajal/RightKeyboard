@@ -33,6 +33,7 @@ public sealed class SettingsWindow : Window
     private long lastActivitySequence;
     private bool pollingActivity;
     private bool applyingEditorState;
+    private bool aliasEditingAnimationStarted;
     private DateTimeOffset suppressActivitySelectionUntil;
 
     public SettingsWindow(SettingsIpcClient client)
@@ -407,15 +408,23 @@ public sealed class SettingsWindow : Window
 
     private void ShowAliasEditingMessage()
     {
-        aliasEditingStoryboard.Stop();
+        if (aliasEditingAnimationStarted)
+        {
+            aliasEditingStoryboard.Stop();
+        }
         activityText.Text = "Editando nombre; la identificación se reanuda al dejar de escribir.";
         activityText.Opacity = 0;
         aliasEditingStoryboard.Begin();
+        aliasEditingAnimationStarted = true;
     }
 
     private void SetActivityText(string text)
     {
-        aliasEditingStoryboard.Stop();
+        if (aliasEditingAnimationStarted)
+        {
+            aliasEditingStoryboard.Stop();
+            aliasEditingAnimationStarted = false;
+        }
         activityText.Opacity = 0.78;
         activityText.Text = text;
     }

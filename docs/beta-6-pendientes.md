@@ -2,6 +2,11 @@
 
 Observaciones registradas durante la validación física de `1.5.0-beta.5`. No están implementadas todavía.
 
+## Bloqueo al editar el alias — corregido en desarrollo
+
+- `1.5.0-beta.5` podía cerrarse al primer cambio del campo «Nombre para este teclado» porque intentaba detener la animación del aviso antes de haber iniciado su `Storyboard`.
+- La animación mantiene ahora estado explícito: solo se detiene después de iniciarse y puede reiniciarse con cada edición.
+
 ## Capa modal de «Limpiar preferencias»
 
 - La capa de oscurecimiento debe cubrir toda la superficie cliente, incluida la barra de título personalizada y el pie de la ventana, sin dejar franjas visualmente activas.
@@ -17,3 +22,15 @@ Observaciones registradas durante la validación física de `1.5.0-beta.5`. No e
 - Obtener el texto desde los metadatos del ensamblado o una única fuente de versión, sin duplicar una cadena manual en la interfaz.
 - Usar tipografía y contraste secundarios, manteniendo alineación con el icono y espacio suficiente respecto de los controles nativos de minimizar, maximizar y cerrar.
 - Aplicar el mismo patrón a Configuración y al selector automático para conservar coherencia.
+
+## Identificación del teclado activo
+
+- Ampliar «Entrada detectada» con el identificador técnico corto del dispositivo para distinguir teclados que todavía comparten el nombre «Teclado sin nombre».
+- Formato previsto: `Entrada detectada: Teclado sin nombre · Dispositivo 62D6EDB4`.
+- No mostrar la ruta PnP completa ni otros identificadores extensos o sensibles.
+- Conservar el alias como información principal cuando exista, usando el identificador corto como referencia secundaria estable dentro de la sesión.
+
+## Microcopia de Configuración
+
+- Sustituir «Administra los teclados conocidos sin interrumpir la detección en segundo plano.» por «Administra los teclados detectados.»
+- Incluir este cambio dentro de la revisión general de textos pendiente antes de la versión estable.
