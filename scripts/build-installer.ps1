@@ -46,7 +46,7 @@ dotnet publish $projectPath `
 if ($LASTEXITCODE -ne 0) { throw 'Falló dotnet publish.' }
 
 $winUiDirectory = Join-Path $publishDirectory 'ui'
-dotnet restore $winUiProjectPath --runtime win-x64
+dotnet restore $winUiProjectPath --runtime win-x64 -p:PublishReadyToRun=true
 if ($LASTEXITCODE -ne 0) { throw 'Falló dotnet restore para WinUI.' }
 
 dotnet publish $winUiProjectPath `
@@ -57,6 +57,7 @@ dotnet publish $winUiProjectPath `
     --output $winUiDirectory `
     -p:Version=$Version `
     -p:WindowsAppSDKSelfContained=true `
+    -p:PublishReadyToRun=true `
     -p:ContinuousIntegrationBuild=true `
     -p:DebugSymbols=false `
     -p:DebugType=None

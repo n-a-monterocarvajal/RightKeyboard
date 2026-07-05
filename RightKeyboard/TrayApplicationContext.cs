@@ -11,7 +11,6 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private readonly NativeTrayMenu menu;
     private readonly NotifyIcon notifyIcon;
     private readonly SynchronizationContext uiContext;
-    private readonly PreferenceResetService preferenceReset;
     private readonly System.Windows.Forms.Timer selectionTimer;
     private readonly SettingsIpcServer settingsIpc;
     private readonly DiagnosticLogger diagnostics;
@@ -27,7 +26,6 @@ internal sealed class TrayApplicationContext : ApplicationContext
         uiContext = SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext();
         devices = new KeyboardDevicesCollection();
         configuration = LoadConfiguration();
-        preferenceReset = new PreferenceResetService(configuration);
         selectionTimer = new System.Windows.Forms.Timer { Interval = 100 };
         selectionTimer.Tick += OnSelectionTimerTick;
         diagnostics = new DiagnosticLogger();
@@ -42,7 +40,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         inputWindow = new RawInputWindow();
         inputWindow.KeyboardInput += OnKeyboardInput;
         inputWindow.DevicesChanged += OnDevicesChanged;
-        menu = new NativeTrayMenu(inputWindow.Handle, ShowSettings, ClearPreferences, ExitThread);
+        menu = new NativeTrayMenu(inputWindow.Handle, ShowSettings, ExitThread);
 
         notifyIcon = new NotifyIcon
         {
@@ -353,7 +351,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
         try
         {
-            settingsProcess = Process.Start(new ProcessStartInfo(executable) { UseShellExecute = true });
+            settingsProcess = Process.Start(new ProcessStartInfo(executable) { UseShellExecute = false });
             return settingsProcess is not null;
         }
         catch
@@ -388,11 +386,6 @@ internal sealed class TrayApplicationContext : ApplicationContext
         {
             API.RequestForegroundLayout(layout.Identifier);
         }
-    }
-
-    private void ClearPreferences()
-    {
-        preferenceReset.TryClear();
     }
 
     private void SaveConfiguration()

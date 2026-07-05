@@ -11,7 +11,6 @@ public sealed class NativeTrayMenuTests
         Assert.That(NativeTrayMenu.Commands, Is.EqualTo(new[]
         {
             (TrayMenuCommand.Settings, "Configuración"),
-            (TrayMenuCommand.ClearPreferences, "Limpiar preferencias"),
             (TrayMenuCommand.Exit, "Salir")
         }));
     }

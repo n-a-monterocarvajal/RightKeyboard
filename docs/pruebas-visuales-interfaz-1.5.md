@@ -35,14 +35,13 @@ Esta lista valida la interfaz WinForms de `v1.5.0-beta.1`. Para una implementaci
 - Confirmar que un dispositivo desconectado sigue siendo editable y que «Olvidar dispositivo» conserva la preferencia al cancelar.
 - Navegar toda la ventana solo con teclado y revisar con Narrador que alias, estado, preferencia y propósito de cada control se anuncian claramente.
 - Reducir la ventana al mínimo y comprobar que «Exportar», «Importar», inicio con Windows y «Cerrar» no se superponen ni se recortan.
-- Usar **Limpiar preferencias** dentro de Configuración: cancelar debe conservar todos los datos; aceptar debe vaciar alias, distribuciones e ignorados y persistir exactamente igual que la bandeja.
+- Usar **Limpiar preferencias** dentro de Configuración: cancelar debe conservar todos los datos; aceptar debe vaciar alias, distribuciones e ignorados.
 
 ## Bandeja
 
-- Confirmar este orden exacto: Configuración, Limpiar preferencias, separador y Salir.
+- Confirmar este orden exacto: Configuración, separador y Salir. La limpieza global solo debe estar disponible dentro de Configuración.
 - Abrir el menú con teclado, recorrerlo con flechas y comprobar en los tres temas que el resaltado mantiene ambos cierres redondeados dentro del menú.
 - Hacer doble clic en el icono y confirmar que abre Configuración una sola vez.
-- Elegir «Limpiar preferencias», cancelar y comprobar que no cambia nada; repetir aceptando solo con datos de prueba.
 
 ## Disparo inicial
 

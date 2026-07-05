@@ -15,7 +15,7 @@
     <SelfContained>false</SelfContained>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>1.5.0-beta.6</Version>
+    <Version>1.5.0-beta.7</Version>
   </PropertyGroup>
 
   <ItemGroup>

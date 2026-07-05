@@ -171,6 +171,7 @@ public sealed class SettingsWindow : Window
         AliasTextBox.Header = "Nombre para este teclado";
         AliasTextBox.PlaceholderText = "Nombre reconocible";
         AliasTextBox.CornerRadius = new CornerRadius(8);
+        ApplyRoundedTextBoxResources(AliasTextBox);
         AliasTextBox.TextChanged += AliasTextBox_TextChanged;
         AliasTextBox.KeyDown += AliasTextBox_KeyDown;
         editor.Children.Add(AliasTextBox);
@@ -893,7 +894,7 @@ public sealed class SettingsWindow : Window
             (float)panel.ActualHeight / 2,
             0);
         Compositor compositor = overlayVisual.Compositor;
-        TimeSpan duration = TimeSpan.FromMilliseconds(showing ? 190 : 150);
+        TimeSpan duration = TimeSpan.FromMilliseconds(showing ? 210 : 260);
         CompositionEasingFunction easing = compositor.CreateCubicBezierEasingFunction(
             new System.Numerics.Vector2(0.1f, 0.9f),
             new System.Numerics.Vector2(0.2f, 1f));
@@ -913,6 +914,29 @@ public sealed class SettingsWindow : Window
         panelVisual.StartAnimation("Scale", scale);
         batch.End();
         await completion.Task;
+    }
+
+    internal static void ApplyRoundedTextBoxResources(TextBox textBox)
+    {
+        // El botón interno de borrado usa un rectángulo propio que no respeta el
+        // radio exterior. Conservamos su icono y eliminamos el relleno desbordado.
+        SolidColorBrush transparent = new(Color.FromArgb(0, 0, 0, 0));
+        textBox.Resources["TextControlButtonBackgroundPointerOver"] = transparent;
+        textBox.Resources["TextControlButtonBackgroundPressed"] = transparent;
+        textBox.Resources["TextControlButtonBorderBrushPointerOver"] = transparent;
+        textBox.Resources["TextControlButtonBorderBrushPressed"] = transparent;
+        ResourceDictionary light = new();
+        light["TextControlButtonForegroundPointerOver"] = new SolidColorBrush(Color.FromArgb(0xE4, 0, 0, 0));
+        light["TextControlButtonForegroundPressed"] = new SolidColorBrush(Color.FromArgb(0xE4, 0, 0, 0));
+        ResourceDictionary dark = new();
+        dark["TextControlButtonForegroundPointerOver"] = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF));
+        dark["TextControlButtonForegroundPressed"] = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF));
+        ResourceDictionary fallback = new();
+        fallback["TextControlButtonForegroundPointerOver"] = new SolidColorBrush(Color.FromArgb(0xE4, 0, 0, 0));
+        fallback["TextControlButtonForegroundPressed"] = new SolidColorBrush(Color.FromArgb(0xE4, 0, 0, 0));
+        textBox.Resources.ThemeDictionaries["Light"] = light;
+        textBox.Resources.ThemeDictionaries["Dark"] = dark;
+        textBox.Resources.ThemeDictionaries["Default"] = fallback;
     }
 
     private static bool AnimationsEnabled()

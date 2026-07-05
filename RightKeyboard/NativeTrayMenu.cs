@@ -5,7 +5,6 @@ namespace RightKeyboard;
 internal enum TrayMenuCommand : uint
 {
     Settings = 1,
-    ClearPreferences = 2,
     Exit = 3
 }
 
@@ -19,21 +18,18 @@ internal sealed class NativeTrayMenu : IDisposable
     private readonly nint owner;
     private readonly nint handle;
     private readonly Action showSettings;
-    private readonly Action clearPreferences;
     private readonly Action exit;
 
     internal static IReadOnlyList<(TrayMenuCommand Command, string Text)> Commands { get; } =
     [
         (TrayMenuCommand.Settings, "Configuración"),
-        (TrayMenuCommand.ClearPreferences, "Limpiar preferencias"),
         (TrayMenuCommand.Exit, "Salir")
     ];
 
-    internal NativeTrayMenu(nint owner, Action showSettings, Action clearPreferences, Action exit)
+    internal NativeTrayMenu(nint owner, Action showSettings, Action exit)
     {
         this.owner = owner;
         this.showSettings = showSettings;
-        this.clearPreferences = clearPreferences;
         this.exit = exit;
         handle = CreatePopupMenu();
         if (handle == 0)
@@ -42,7 +38,6 @@ internal sealed class NativeTrayMenu : IDisposable
         }
 
         AppendMenuW(handle, MfString, (uint)TrayMenuCommand.Settings, "Configuración");
-        AppendMenuW(handle, MfString, (uint)TrayMenuCommand.ClearPreferences, "Limpiar preferencias");
         AppendMenuW(handle, MfSeparator, 0, null);
         AppendMenuW(handle, MfString, (uint)TrayMenuCommand.Exit, "Salir");
     }
@@ -67,7 +62,6 @@ internal sealed class NativeTrayMenu : IDisposable
         switch (command)
         {
             case TrayMenuCommand.Settings: showSettings(); break;
-            case TrayMenuCommand.ClearPreferences: clearPreferences(); break;
             case TrayMenuCommand.Exit: exit(); break;
         }
     }

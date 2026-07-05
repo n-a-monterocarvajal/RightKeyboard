@@ -148,7 +148,8 @@ internal sealed class SettingsIpcServer : IDisposable
 
     private SettingsSnapshot CreateSnapshot()
     {
-        devices.Refresh();
+        // El residente mantiene este inventario mediante WM_DEVICECHANGE. Volver a
+        // recorrer SetupAPI en cada apertura retrasaba innecesariamente ambas UI.
         KeyboardDevice[] visibleDevices = devices
             .Where(device => !DeviceClassifier.IsLikelySyntheticInputSource(device))
             .ToArray();

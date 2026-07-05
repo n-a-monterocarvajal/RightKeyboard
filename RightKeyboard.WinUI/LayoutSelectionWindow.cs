@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using System.Runtime.InteropServices;
@@ -67,6 +68,7 @@ public sealed class LayoutSelectionWindow : Window
         alias.Header = "Nombre para este teclado";
         alias.PlaceholderText = "Nombre reconocible";
         alias.CornerRadius = new CornerRadius(8);
+        SettingsWindow.ApplyRoundedTextBoxResources(alias);
         Grid.SetRow(alias, 2);
         root.Children.Add(alias);
 
@@ -197,11 +199,11 @@ public sealed class LayoutSelectionWindow : Window
             }
         }
 
-        alias.Focus(FocusState.Programmatic);
+        await FocusManager.TryFocusAsync(alias, FocusState.Programmatic);
         activationRetryTimer.Start();
     }
 
-    private void RetryActivation(
+    private async void RetryActivation(
         Microsoft.UI.Dispatching.DispatcherQueueTimer sender,
         object args)
     {
@@ -209,11 +211,12 @@ public sealed class LayoutSelectionWindow : Window
         nint handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
         if (GetForegroundWindow() == handle)
         {
+            await FocusManager.TryFocusAsync(alias, FocusState.Programmatic);
             return;
         }
 
         ActivateSelectorWindow();
-        alias.Focus(FocusState.Programmatic);
+        await FocusManager.TryFocusAsync(alias, FocusState.Programmatic);
     }
 
     private void ActivateSelectorWindow()

@@ -12,7 +12,7 @@ Ejecutar `scripts\build-winui-prototype.ps1` y abrir `RightKeyboard.WinUI.exe` f
 ## Bandeja y panel de iconos ocultos
 
 - Abrir el panel de iconos ocultos y hacer clic secundario en RightKeyboard.
-- Mover el puntero entre **Configuración**, **Limpiar preferencias** y **Salir**: el panel del sistema no debe contraerse mientras se usa el menú.
+- Mover el puntero entre **Configuración** y **Salir**: el panel del sistema no debe contraerse mientras se usa el menú.
 - Cerrar el menú con `Esc` y haciendo clic fuera; no deben quedar ventanas auxiliares ni zonas de hover persistentes.
 - Repetir en tema claro, oscuro y con escalado de 125 % o superior. El menú debe conservar el estilo nativo que entregue Windows.
 - Cambiar entre tema claro, oscuro y contraste alto con la ventana abierta; textos, campos, selección, foco y diálogos deben actualizarse.
