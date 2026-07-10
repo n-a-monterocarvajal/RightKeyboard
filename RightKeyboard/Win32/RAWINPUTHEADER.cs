@@ -26,5 +26,13 @@ internal struct RAWKEYBOARD
 internal struct RAWINPUT
 {
     public RAWINPUTHEADER Header;
+    public RAWINPUTDATA Data;
+}
+
+// RAWINPUT contiene una unión cuyo miembro mayor (RAWMOUSE) ocupa 24 bytes.
+[StructLayout(LayoutKind.Explicit, Size = 24)]
+internal struct RAWINPUTDATA
+{
+    [FieldOffset(0)]
     public RAWKEYBOARD Keyboard;
 }

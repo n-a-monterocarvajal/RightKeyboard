@@ -8,9 +8,14 @@
     <ApplicationIcon>ico_input0002.ico</ApplicationIcon>
     <AssemblyName>RightKeyboard</AssemblyName>
     <RootNamespace>RightKeyboard</RootNamespace>
-    <Version>1.4.0</Version>
+    <Version>1.5.0</Version>
     <Authors>Colaboradores de RightKeyboard</Authors>
     <Description>Asocia cada teclado físico con una distribución de teclado de Windows.</Description>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="RightKeyboard.NUnit" />
+    <InternalsVisibleTo Include="RightKeyboard.WinUI" />
+  </ItemGroup>
 </Project>

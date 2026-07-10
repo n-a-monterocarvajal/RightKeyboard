@@ -9,10 +9,13 @@ namespace RightKeyboard.Win32;
 internal static class API
 {
     internal const int WmInput = 0x00FF;
+    internal const int WmInputDeviceChange = 0x00FE;
     private const uint RidInput = 0x10000003;
     private const uint RidiDeviceName = 0x20000007;
+    private const uint RidiDeviceInfo = 0x2000000B;
     private const uint RimTypeKeyboard = 1;
     private const uint RidevInputSink = 0x00000100;
+    private const uint RidevDeviceNotify = 0x00002000;
     private const uint WmInputLanguageChangeRequest = 0x0050;
     private const int KlNameLength = 9;
 
@@ -23,17 +26,43 @@ internal static class API
         public uint Type;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RawInputDeviceInfo
+    {
+        public uint Size;
+        public uint Type;
+        public RawInputDeviceInfoData Data;
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    private struct RawInputDeviceInfoData
+    {
+        [FieldOffset(0)]
+        public RawInputKeyboardInfo Keyboard;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RawInputKeyboardInfo
+    {
+        public uint Type;
+        public uint SubType;
+        public uint KeyboardMode;
+        public uint NumberOfFunctionKeys;
+        public uint NumberOfIndicators;
+        public uint NumberOfKeysTotal;
+    }
+
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool RegisterRawInputDevices(
         [In] RAWINPUTDEVICE[] devices,
         uint deviceCount,
         uint structureSize);
 
-    [DllImport("user32.dll", SetLastError = true)]
+    [DllImport("user32.dll", EntryPoint = "GetRawInputData", SetLastError = true)]
     private static extern uint GetRawInputData(
         nint rawInput,
         uint command,
-        nint data,
+        out RAWINPUT data,
         ref uint size,
         uint headerSize);
 
@@ -48,6 +77,13 @@ internal static class API
         nint device,
         uint command,
         StringBuilder? data,
+        ref uint dataSize);
+
+    [DllImport("user32.dll", EntryPoint = "GetRawInputDeviceInfoW", SetLastError = true)]
+    private static extern uint GetRawInputDeviceInfo(
+        nint device,
+        uint command,
+        ref RawInputDeviceInfo data,
         ref uint dataSize);
 
     [DllImport("user32.dll")]
@@ -71,9 +107,12 @@ internal static class API
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool PostMessageW(nint window, uint message, nint wParam, nint lParam);
 
+    [DllImport("user32.dll")]
+    internal static extern bool AllowSetForegroundWindow(uint processId);
+
     internal static void RegisterKeyboardInput(nint target)
     {
-        RAWINPUTDEVICE[] devices = [new(0x01, 0x06, RidevInputSink, target)];
+        RAWINPUTDEVICE[] devices = [new(0x01, 0x06, RidevInputSink | RidevDeviceNotify, target)];
         if (!RegisterRawInputDevices(devices, 1, (uint)Marshal.SizeOf<RAWINPUTDEVICE>()))
         {
             throw new Win32Exception(Marshal.GetLastPInvokeError(), "No se pudo registrar la entrada de teclado.");
@@ -83,41 +122,45 @@ internal static class API
     internal static bool TryReadKeyboardEvent(nint rawInputHandle, out RawKeyboardEvent keyboardEvent)
     {
         keyboardEvent = default;
-        uint size = 0;
+        uint size = (uint)Marshal.SizeOf<RAWINPUT>();
         uint headerSize = (uint)Marshal.SizeOf<RAWINPUTHEADER>();
-
-        if (GetRawInputData(rawInputHandle, RidInput, 0, ref size, headerSize) == uint.MaxValue || size == 0)
+        uint bytesRead = GetRawInputData(rawInputHandle, RidInput, out RAWINPUT input, ref size, headerSize);
+        if (bytesRead == uint.MaxValue ||
+            bytesRead < headerSize ||
+            input.Header.Type != RimTypeKeyboard ||
+            input.Header.Device == 0)
         {
             return false;
         }
 
-        nint buffer = Marshal.AllocHGlobal(checked((int)size));
-        try
-        {
-            uint bytesRead = GetRawInputData(rawInputHandle, RidInput, buffer, ref size, headerSize);
-            if (bytesRead == uint.MaxValue || bytesRead < headerSize)
-            {
-                return false;
-            }
+        keyboardEvent = new RawKeyboardEvent(
+            input.Header.Device,
+            input.Data.Keyboard.VirtualKey,
+            input.Data.Keyboard.MakeCode,
+            input.Data.Keyboard.Flags,
+            input.Data.Keyboard.Message,
+            input.Data.Keyboard.ExtraInformation);
+        return true;
+    }
 
-            RAWINPUT input = Marshal.PtrToStructure<RAWINPUT>(buffer);
-            if (input.Header.Type != RimTypeKeyboard || input.Header.Device == 0)
-            {
-                return false;
-            }
-
-            keyboardEvent = new RawKeyboardEvent(
-                input.Header.Device,
-                input.Keyboard.VirtualKey,
-                input.Keyboard.MakeCode,
-                input.Keyboard.Flags,
-                input.Keyboard.Message);
-            return true;
-        }
-        finally
+    internal static KeyboardDeviceCapabilities? GetKeyboardDeviceCapabilities(nint device)
+    {
+        RawInputDeviceInfo info = new() { Size = (uint)Marshal.SizeOf<RawInputDeviceInfo>() };
+        uint size = info.Size;
+        uint result = GetRawInputDeviceInfo(device, RidiDeviceInfo, ref info, ref size);
+        if (result == uint.MaxValue || info.Type != RimTypeKeyboard)
         {
-            Marshal.FreeHGlobal(buffer);
+            return null;
         }
+
+        RawInputKeyboardInfo keyboard = info.Data.Keyboard;
+        return new KeyboardDeviceCapabilities(
+            keyboard.Type,
+            keyboard.SubType,
+            keyboard.KeyboardMode,
+            keyboard.NumberOfFunctionKeys,
+            keyboard.NumberOfIndicators,
+            keyboard.NumberOfKeysTotal);
     }
 
     internal static IReadOnlyList<RawInputDeviceList> GetKeyboardDevices()
@@ -174,7 +217,7 @@ internal static class API
         return layouts.Take(actualCount).ToArray();
     }
 
-    internal static string GetKeyboardLayoutName(nint keyboardLayout)
+    internal static (string LanguageName, string LayoutName) GetKeyboardLayoutDescription(nint keyboardLayout)
     {
         ushort languageId = unchecked((ushort)keyboardLayout.ToInt64());
         string languageName;
@@ -200,7 +243,7 @@ internal static class API
                 ? ReadLayoutDisplayName(identifier.ToString())
                 : $"Distribución 0x{keyboardLayout.ToInt64():X}";
 
-            return $"{languageName} / {layoutName}";
+            return (languageName, layoutName);
         }
         finally
         {
