@@ -9,7 +9,7 @@
 5. **Raw Input caliente:** no hacer I/O, enumeración SetupAPI, espera, logging síncrono ni trabajo UI en cada pulsación.
 6. **`DefWindowProc` recibe `WM_INPUT`:** `RawInputWindow.WndProc` debe llamar siempre a `base.WndProc` para liberar recursos internos de Windows.
 7. **Sin elevación:** manifiestos `asInvoker`; instalación y estado bajo usuario actual.
-8. **Bandeja beta 7:** solo Configuración y Salir. Limpieza global vive en Configuración.
+8. **Bandeja desde 1.5.0:** solo Configuración y Salir. Limpieza global vive en Configuración.
 9. **No topmost permanente:** el selector puede usar un pulso temporal para activación, nunca quedar «siempre visible».
 10. **Cambios de esquema:** validar, migrar explícitamente y escribir de forma atómica. Un esquema futuro se rechaza; no reinterpretarlo.
 

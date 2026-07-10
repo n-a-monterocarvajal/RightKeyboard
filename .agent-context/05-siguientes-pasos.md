@@ -2,21 +2,41 @@
 
 Este backlog sustituye para continuidad técnica el orden histórico de `ROADMAP.md` y `docs/continuacion-1.5.md`. No sustituye las matrices de aceptación externas.
 
-## P0 — antes de producir una candidata estable
+## P1 — mantenimiento recomendado para 1.5.1
 
-### 1. Separar diagnóstico del producto público
+### 1. Robustecer diagnóstico y logs
 
-**Trabajo:** crear una abstracción mínima en núcleo y mover implementación, acciones IPC y controles UI a un proyecto/componente opcional habilitado por propiedad de build. El build normal/instalador estable debe usar implementación nula y no contener controles, marcador ni carpeta de logs.
+**Trabajo:** revisar campos registrados, asegurar que no se registra contenido de teclas, añadir señales útiles para falsos positivos HID y separar mejor el modo diagnóstico del flujo normal.
 
 **Criterios:**
 
-- `build-installer.ps1` sin opción diagnóstica no empaqueta ensamblado/código/UI de diagnóstico;
-- un script o propiedad explícita produce build de host con capacidad equivalente;
 - no se usa una rama permanente para conservar diagnóstico;
 - retirar `VirtualKey` de los detalles registrados y agregar prueba de privacidad;
 - ambas variantes pasan la suite y la función Raw Input mantiene latencia.
 
-### 2. Completar la Configuración WinUI
+### 2. Mejorar detección preventiva de HID ambiguos
+
+**Trabajo:** usar los logs extendidos para modelar firmas HID parciales (`VID`, `PID`, interfaz, colección, enumerador y capacidades). Caso concreto: presentador Baseus detectado como `Dispositivo F7E55424`, diagnosticado con `VID=2571` y `PID=4104`.
+
+**Criterios:**
+
+- ignorar manualmente un HID ambiguo puede aplicar también a su firma cuando sea seguro;
+- cambiar de puerto no debe reabrir selector si la firma ignorada es inequívoca;
+- ningún teclado real se excluye solo por coincidencia débil;
+- el diagnóstico muestra por qué se aplicó o no la regla.
+
+### 3. Agrupar identidades del mismo dispositivo
+
+**Trabajo:** permitir que la UI anide/fusione manualmente identidades que el usuario reconoce como el mismo teclado conectado en distintos puertos.
+
+**Criterios:**
+
+- operación reversible;
+- una distribución/alias gobierna el grupo lógico;
+- los miembros del grupo siguen visibles como identidades técnicas secundarias;
+- no hay fusión automática en dispositivos ambiguos.
+
+### 4. Completar la Configuración WinUI
 
 **Trabajo:** migrar Exportar, Importar y «Iniciar con Windows» desde `SettingsDialog`. Añadir operaciones IPC; el núcleo ejecuta validación, respaldo, persistencia y registro.
 
@@ -29,37 +49,25 @@ Este backlog sustituye para continuidad técnica el orden histórico de `ROADMAP
 - fallback y WinUI tienen semántica equivalente;
 - pruebas de protocolo y núcleo cubren éxito/error.
 
-### 3. Resolver estado legal
+### 5. Resolver estado legal
 
 **Trabajo:** identificar licencia del upstream y añadir archivo/atribución compatibles antes de llamar estable al fork.
 
-## P1 — cierre de beta 7 / candidata
+## P2 — robustez y mantenimiento
 
-### 4. Validar los ajustes visuales/foco finales
-
-Ejecutar en dos equipos físicos al menos temas claro/oscuro, pasivo-hover-pressed de la X, fade-in/fade-out, selector desde Firefox/otra app, alias y dos teclados. Registrar commit exacto `c70b5d5` o el posterior que resulte.
-
-**Criterio:** cero crash; X visible y contenida; overlay no desaparece en seco; selector delante y alias con foco consistentemente.
-
-### 5. Medir rendimiento beta 7
+### 6. Medir rendimiento 1.5.x
 
 Seguir `docs/criterios-winui3-1.5.md`: diez aperturas frías/calientes, mediana/P95, mismo host y build Release. Comparar ReadyToRun y tamaño del instalador.
 
 **Criterio objetivo:** mediana ≤ 1500 ms frío / 750 ms caliente, P95 ≤ 2500 ms; si falla, documentar causa y decisión. No mantener UI residente como atajo sin aceptar coste en reposo.
 
-### 6. Ejecutar matriz física crítica
+### 7. Ejecutar matriz física ampliada
 
 Priorizar FIS-01 a FIS-08, FIS-10, FIS-11 y FIS-15 de `docs/calidad-1.5.md`, actualizando resultados reales, no los estados de beta 1. Incluir Windows 10/11, cuenta estándar, dos teclados, cambio de puerto, MX Master 3S, actualización y desinstalación.
 
-### 7. Revisar microcopia
+### 8. Revisar microcopia
 
 Reducir textos «tipo máquina» en Configuración, selector, errores e instalador. Conservar identificador técnico como información secundaria y nombres accesibles completos.
-
-### 8. Alinear documentación humana
-
-Actualizar README (bandeja y funciones realmente accesibles), CHANGELOG beta 7, ROADMAP vigente, matrices y borrador RC. No hacer esto hasta decidir/migrar las funciones WinUI para evitar otra contradicción.
-
-## P2 — robustez y mantenimiento
 
 ### 9. Ampliar pruebas automatizadas
 
@@ -85,4 +93,4 @@ Probar equipo A→B, layout ausente y dispositivo desconectado. Decidir si una a
 
 ## Puerta propuesta
 
-No preparar `1.5.0-rc.1` hasta completar P0. No publicar `1.5.0` hasta al menos 72 horas de RC, matriz física obligatoria aprobada, documentación humana coherente, hash reproducible y aprobación humana explícita.
+Para `1.5.1`, priorizar diagnóstico/detección preventiva antes que nuevas superficies UI grandes. Para `1.6`, considerar exportación/importación completa y refactor de contratos compartidos si no se resolvió en 1.5.x.

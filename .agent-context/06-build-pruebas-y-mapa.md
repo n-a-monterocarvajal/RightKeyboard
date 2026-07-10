@@ -45,14 +45,14 @@ No ejecutar solo `RightKeyboard.WinUI.exe` como prueba funcional completa: neces
 ## Construir instalador reproducible
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\build-installer.ps1 -Version 1.5.0-beta.7
+powershell -ExecutionPolicy Bypass -File .\scripts\build-installer.ps1 -Version 1.5.0
 ```
 
 Si Inno Setup no está en una ruta detectada:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\build-installer.ps1 `
-  -Version 1.5.0-beta.7 `
+  -Version 1.5.0 `
   -IsccPath 'C:\ruta\a\Inno Setup 6\ISCC.exe'
 ```
 

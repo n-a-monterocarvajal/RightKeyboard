@@ -1,19 +1,29 @@
 # Calidad y publicación de RightKeyboard 1.5
 
-Este documento es la fuente de verdad para certificar `1.5.0-rc.1` y `1.5.0`. Se actualiza con evidencia reproducible y no sustituye las especificaciones funcionales de [continuación](continuacion-1.5.md) ni de [distribución](distribucion-1.5.md).
+Este documento conserva la matriz de calidad usada para llevar la línea 1.5 hasta `1.5.0`. Para el estado final resumido de la versión estable, consultar [releases/1.5.0.md](releases/1.5.0.md). La matriz sigue siendo útil para mantenimiento 1.5.x, especialmente rendimiento, accesibilidad, diagnóstico y detección preventiva.
 
-La migración posterior de las ventanas a WinUI 3 tiene un contrato separado de [criterios, presupuestos y medición](criterios-winui3-1.5.md). Ese contrato debe entregarse al frente Interfaz antes de evaluar su implementación.
+La migración de ventanas a WinUI 3 quedó integrada en 1.5.0 mediante un frontend separado bajo demanda. El contrato de [criterios, presupuestos y medición](criterios-winui3-1.5.md) queda como referencia para mantenimiento y mediciones posteriores.
 
-## Estado integrado de beta 1
+## Estado de 1.5.0 estable
 
-Integración auditada el 30 de junio de 2026 sobre la etiqueta pública `v1.5.0-beta.1` (`dfb1556`). Los frentes de trabajo están combinados y la certificación física continúa.
+`1.5.0` se promueve como estable inicial el 9 de julio de 2026, tras pruebas físicas iterativas de las betas 6 y 7. Los pendientes aceptados para la línea 1.5.x son:
+
+- robustecer logs y diagnóstico sin convertirlos en flujo principal de usuario;
+- mejorar la detección preventiva de periféricos HID ambiguos;
+- estudiar agrupación manual de identidades cuando el mismo teclado cambia de puerto USB;
+- completar funciones de exportación/importación e inicio con Windows en la Configuración WinUI;
+- revisar microtextos de interfaz.
+
+## Estado histórico de beta 1
+
+Integración auditada el 30 de junio de 2026 sobre la etiqueta pública `v1.5.0-beta.1` (`dfb1556`). Se conserva como línea base histórica para entender la evolución de calidad, no como estado actual de `1.5.0`.
 
 | Área | Resultado | Evidencia o brecha |
 |---|---|---|
 | Restauración | Correcta | `dotnet restore RightKeyboard.sln` con SDK 10.0.301. |
 | Compilación Release | Correcta | 0 errores y 0 advertencias. |
 | Pruebas automatizadas | Correcta | 81 pruebas NUnit sobre el código integrado. |
-| Versionado | Coherente para beta | Proyecto e instalador `1.5.0-beta.1`; manifiesto `1.5.0.0`. |
+| Versionado | Coherente para beta histórica | Proyecto e instalador `1.5.0-beta.1`; manifiesto `1.5.0.0`. |
 | Elevación de la aplicación | Correcta en código | El manifiesto declara `asInvoker`; falta comprobar el instalador. |
 | Documentación | Revisada | README, CHANGELOG y ROADMAP enlazan este estado. `continuacion-1.5.md` conserva el registro histórico de alpha 1. |
 | Notas de versión | Borrador | Existe un borrador para `1.5.0-rc.1`; no debe presentarse como publicación. |

@@ -1,6 +1,6 @@
 # Contexto autónomo para agentes de IA
 
-Fecha del snapshot: **2026-07-05**. Revisión auditada: `c70b5d5` (`codex/version-1.5`), versión de proyecto `1.5.0-beta.7`.
+Fecha del snapshot: **2026-07-09**. Rama: `codex/version-1.5`, versión de proyecto `1.5.0`.
 
 Esta carpeta contiene continuidad técnica, no documentación de usuario. Un agente que llega sin memoria previa debe leerla completa antes de cambiar código. Después debe contrastar el estado de Git y volver a ejecutar las comprobaciones indicadas: este snapshot no sustituye la evidencia del checkout actual.
 

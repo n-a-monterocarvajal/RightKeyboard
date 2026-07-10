@@ -1,16 +1,54 @@
 # Hoja de ruta
 
-Los defectos visuales y de activación detectados después de preparar beta 2 están registrados en [docs/beta-3-pendientes.md](docs/beta-3-pendientes.md).
+`1.5.0` es la versión estable inicial de la línea 1.5. Los documentos históricos de alpha/beta se conservan en `docs/`, pero este archivo resume el backlog vigente.
 
-## Versión 1.5.0 — en desarrollo
+## 1.5.1 — robustez de detección y mantenimiento
 
-La versión 1.5 se concentrará en identificar mejor cada teclado, conservar sus preferencias tras una reconexión y mejorar el selector sin aumentar innecesariamente el consumo del proceso en segundo plano.
+La siguiente actualización debería concentrarse en mejorar los casos donde un periférico HID se presenta como teclado sin serlo y en reducir trabajo de diagnóstico manual.
 
-La primera prueba host de `1.5.0-alpha.1` confirmó el funcionamiento y aportó observaciones visuales y de administración. La especificación detallada para continuar está en [docs/continuacion-1.5.md](docs/continuacion-1.5.md).
+### Robustecer diagnóstico y logs
 
-El alcance incluye además un [instalador por usuario](docs/distribucion-1.5.md) sin elevación, inicio automático activado por defecto, una única raíz de archivos administrados por RightKeyboard y exportación/importación de preferencias.
+- Revisar qué campos se registran para que el diagnóstico siga siendo útil sin exponer contenido de teclas.
+- Añadir señales suficientes para entender falsos positivos de periféricos como presentadores USB, mouse avanzados o interfaces virtuales.
+- Mantener el diagnóstico como herramienta opcional y local, no como flujo prominente para usuarios finales.
 
-La promoción a candidata y estable se rige por la [matriz de calidad y criterios de publicación](docs/calidad-1.5.md).
+### Mejorar detección preventiva de no-teclados
+
+- Evaluar reglas conservadoras por firma HID parcial: `VID`, `PID`, interfaz, colección, enumerador y capacidades Raw Input.
+- No bloquear automáticamente teclados reales por coincidencias débiles.
+- Si una firma se ignora manualmente, estudiar que esa decisión sobreviva a cambios de ruta o puerto USB cuando sea seguro.
+
+### Agrupar identidades del mismo dispositivo
+
+Cuando Windows entrega identidades distintas para el mismo teclado al cambiar de puerto USB, la UI podría permitir anidar o fusionar manualmente esas identidades bajo un mismo dispositivo lógico.
+
+**Criterios iniciales:**
+
+- El usuario puede seleccionar dos o más identidades conocidas y tratarlas como el mismo teclado.
+- La asociación de distribución, alias e ignorado se administra en el dispositivo lógico.
+- La operación es reversible.
+- La app nunca fusiona automáticamente dispositivos ambiguos sin intervención del usuario.
+
+## Pendientes funcionales de la línea 1.5
+
+- Migrar exportación/importación de preferencias a la Configuración WinUI.
+- Permitir administrar el inicio con Windows desde la Configuración WinUI.
+- Medir de forma reproducible la latencia de apertura de Configuración y del selector.
+- Revisar microtextos de la UI que aún suenan excesivamente técnicos.
+- Resolver/documentar la licencia heredada del fork antes de ampliar contribuciones externas.
+
+## Referencias históricas
+
+- [Continuación 1.5](docs/continuacion-1.5.md): especificación y observaciones iniciales de alpha.
+- [Criterios WinUI 3](docs/criterios-winui3-1.5.md): contrato técnico usado durante la migración.
+- [Calidad 1.5](docs/calidad-1.5.md): matriz de validación acumulada.
+- [Notas de releases](docs/releases/): bitácora beta y estable.
+
+## Alcance consolidado en 1.5.0
+
+La versión 1.5 se concentró en identificar mejor cada teclado, conservar sus preferencias tras una reconexión y mejorar el selector sin aumentar innecesariamente el consumo del proceso en segundo plano.
+
+El alcance incluyó además un [instalador por usuario](docs/distribucion-1.5.md) sin elevación, inicio automático activado por defecto, una única raíz de archivos administrados por RightKeyboard y una nueva Configuración WinUI.
 
 ### Identificación visible del teclado
 

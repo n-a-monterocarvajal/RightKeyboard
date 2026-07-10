@@ -1,8 +1,8 @@
 # Problemas conocidos y riesgos
 
-Prioridades: **P0** bloquea publicación estable o compromete privacidad/datos; **P1** debe resolverse o aceptarse antes de 1.5; **P2** mejora posterior o limitación asumida.
+Prioridades: **P0** compromete privacidad/datos o estabilidad crítica; **P1** debería resolverse en 1.5.x; **P2** mejora posterior o limitación asumida.
 
-## P0 — diagnóstico todavía incluido en el producto público
+## P1 — diagnóstico todavía incluido en el producto público
 
 **Síntoma:** Configuración muestra «Diagnóstico detallado» y «Abrir registros»; el núcleo siempre construye `DiagnosticLogger` y expone tres acciones IPC.
 
@@ -10,7 +10,7 @@ Prioridades: **P0** bloquea publicación estable o compromete privacidad/datos; 
 
 **Causa:** se añadió para investigar betas en hardware real y aún no se separó.
 
-**Resolución prevista:** extraer implementación y UI a componente/build diagnóstico opcional; el instalador estable no debe contener ni activar esos caminos. No borrar la capacidad de prueba ni mantenerla en una rama divergente.
+**Resolución prevista:** extraer implementación y UI a componente/build diagnóstico opcional o dejarlo como modo avanzado claramente separado. No borrar la capacidad de prueba ni mantenerla en una rama divergente.
 
 ## P0 — el diagnóstico registra una tecla concreta en un caso
 
@@ -22,7 +22,7 @@ Prioridades: **P0** bloquea publicación estable o compromete privacidad/datos; 
 
 **Acción:** retirar ese campo antes de cualquier build diagnóstico futuro; agregar una prueba que inspeccione el JSON/evento o encapsular detalles seguros en un DTO.
 
-## P1 — funciones anunciadas no accesibles desde WinUI
+## P1 — funciones disponibles solo en fallback, no en WinUI
 
 **Síntoma:** exportar, importar y cambiar inicio automático existen en `SettingsDialog` (fallback), pero no en `SettingsWindow` ni en el protocolo IPC. En una instalación normal el usuario no puede invocarlas.
 
@@ -30,19 +30,13 @@ Prioridades: **P0** bloquea publicación estable o compromete privacidad/datos; 
 
 **Acción:** diseñar comandos IPC validados para exportar/importar/startup, añadir controles WinUI y pruebas. No permitir que WinUI escriba archivos o registro directamente si rompe la autoridad del núcleo.
 
-## P1 — validación física incompleta del último beta 7
+## P1 — detección preventiva insuficiente para HID ambiguos
 
-**Elementos concretos pendientes:**
+**Síntoma:** presentadores USB, mouse avanzados o interfaces virtuales pueden reportarse ante Windows como teclados HID normales y abrir el selector.
 
-- X de borrado del alias visible en `Pressed`, sin desbordar, claro/oscuro;
-- selector al frente **y con foco** en Firefox y aplicaciones normales;
-- fade-out de la confirmación antes de retirar el overlay;
-- latencia fría/caliente tras ReadyToRun y eliminación del refresh SetupAPI;
-- DPI mixto, contraste alto, Windows 10, RDP, Narrador y texto 200 %.
+**Evidencia:** diagnóstico de presentador Baseus con `VID=2571`, `PID=4104`, interfaz `00`, colección `01`, capacidades de teclado y `clearlyNonKeyboard=false`. El identificador visible fue `Dispositivo F7E55424`, pero el log anonimiza identidad/ruta.
 
-**Ubicación frágil:** `SettingsWindow.ApplyRoundedTextBoxResources`, `SettingsWindow.AnimateOverlayAsync`, `LayoutSelectionWindow.ActivateSelectorWindow/RetryActivation`.
-
-**Causa:** estados de plantilla y restricciones de foreground de Windows no se prueban de forma fiable en VM ni mediante NUnit.
+**Acción:** estudiar exclusión persistente por firma HID parcial (`VID`, `PID`, interfaz, colección, enumerador y capacidades) después de ignorado manual, sin excluir automáticamente teclados reales por señales débiles.
 
 ## P1 — foco del selector depende de heurísticas Win32
 
@@ -55,6 +49,8 @@ Prioridades: **P0** bloquea publicación estable o compromete privacidad/datos; 
 ## P1 — identidad al cambiar puerto puede seguir siendo ambigua
 
 Si no hay `ContainerId` persistente, cambia `InstanceId` y existen dos dispositivos con igual huella o asociaciones conflictivas, RightKeyboard no recupera automáticamente. Es una decisión de seguridad de datos, no un bug simple. Cualquier mejora requiere propiedades adicionales estables; no «arreglar» eligiendo la primera coincidencia.
+
+Idea aprobada para 1.5.x: permitir que el usuario agrupe o anide manualmente identidades distintas del mismo teclado cuando Windows lo presenta como otro dispositivo al cambiar de puerto USB. Debe ser reversible y no automático.
 
 ## P1 — portabilidad sin certificar
 
@@ -71,10 +67,6 @@ El fork heredado no contiene `LICENSE`. No presentar 1.5 como jurídicamente lis
 ## P2 — cobertura automatizada limitada
 
 No hay pruebas de `SettingsIpcServer` extremo a extremo, StartupManager/registro, SetupAPI real, ventana foreground, WinUI, instalador o migración real de `config.txt`. `ConfigurationTests.Version2File_IsMigratedInMemory` no cubre el archivo legado 1.4. Tampoco hay CI ni advertencias como error.
-
-## P2 — documentos públicos contradictorios
-
-README, CHANGELOG, ROADMAP y matrices mezclan estados. Esta carpeta corrige continuidad, pero la documentación humana deberá auditarse separadamente después; no usar esa limpieza para ocultar pendientes funcionales.
 
 ## Limitaciones aceptadas
 

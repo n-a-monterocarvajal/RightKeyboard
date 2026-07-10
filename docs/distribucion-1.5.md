@@ -9,7 +9,7 @@ Este documento define el modelo de distribución previsto para la versión 1.5. 
 - No exigir que el usuario instale manualmente .NET.
 - Mantener binarios, preferencias y exportaciones bajo una sola raíz propiedad de RightKeyboard.
 - Activar por defecto el inicio con Windows, con control tanto desde RightKeyboard como desde Windows.
-- Permitir exportar, importar y respaldar preferencias.
+- Dejar preparada la base para exportar, importar y respaldar preferencias en una actualización posterior de la línea 1.5.
 
 ## Instalador recomendado
 
@@ -96,9 +96,9 @@ No se adoptará hasta resolver satisfactoriamente:
 - acceso y migración de preferencias existentes;
 - impacto sobre la simplicidad de compilación y contribución.
 
-## Exportación de configuración
+## Exportación de configuración futura
 
-La ventana **Configuración** incluirá una acción **Exportar**.
+La ventana **Configuración** deberá incluir una acción **Exportar** en una actualización posterior. En `1.5.0`, la Configuración WinUI no expone todavía exportación/importación.
 
 El archivo exportado:
 
@@ -109,9 +109,9 @@ El archivo exportado:
 - podrá guardarse en una ubicación elegida o en `exports\`;
 - no contendrá secretos ni datos ajenos a RightKeyboard.
 
-## Importación de configuración
+## Importación de configuración futura
 
-La acción **Importar** debe:
+La acción **Importar** debe implementarse posteriormente con estos criterios:
 
 - validar la estructura y versión antes de modificar datos;
 - mostrar un resumen previo de cambios;
@@ -141,5 +141,5 @@ Los ZIP autocontenido y dependiente del framework dejarán de ser descargas púb
 - Conservar preferencias durante una actualización.
 - Mostrar RightKeyboard como aplicación instalada.
 - Iniciar con Windows por defecto y permitir desactivarlo desde ambos lugares.
-- Exportar e importar configuración con vista previa y respaldo.
+- Exportar e importar configuración con vista previa y respaldo cuando esa función sea incorporada a la Configuración WinUI.
 - Desinstalar binarios sin borrar preferencias salvo confirmación expresa.

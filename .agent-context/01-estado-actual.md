@@ -1,10 +1,10 @@
 # Estado actual real
 
-Snapshot auditado el **2026-07-05** sobre `c70b5d5`, rama `codex/version-1.5`, proyecto `1.5.0-beta.7`. El árbol estaba limpio y sincronizado con `origin/codex/version-1.5` al iniciar la auditoría.
+Snapshot actualizado el **2026-07-09** para promover la rama `codex/version-1.5` a proyecto `1.5.0`. Contrastar siempre con `git status`, `git log -1 --oneline` y los metadatos de versión del checkout actual.
 
 ## Resumen ejecutivo
 
-La función central está implementada y las betas 6 y 7 se han usado en hardware real, pero **1.5 aún no debe considerarse estable**. El camino instalado normal usa un residente WinForms/Win32 (`RightKeyboard.exe`) y un frontend WinUI bajo demanda (`ui/RightKeyboard.WinUI.exe`). El fallback WinForms conserva funciones que todavía no se migraron a WinUI. La próxima etapa no es otra reescritura: es cerrar brechas de funcionalidad/UI, separar diagnóstico del producto público y ejecutar la matriz física antes de promover 1.5.
+`1.5.0` es la versión estable inicial de la línea 1.5, aprobada por validación física acumulada en VM y equipos host. El camino instalado normal usa un residente WinForms/Win32 (`RightKeyboard.exe`) y un frontend WinUI bajo demanda (`ui/RightKeyboard.WinUI.exe`). El fallback WinForms conserva funciones que todavía no se migraron a WinUI. La próxima etapa no es otra reescritura: es mantenimiento 1.5.x, robustecer diagnóstico, mejorar detección preventiva de periféricos HID ambiguos y evaluar agrupación manual de identidades del mismo dispositivo.
 
 ## Funciona en el código actual
 
@@ -18,11 +18,11 @@ La función central está implementada y las betas 6 y 7 se han usado en hardwar
 - Selector WinUI con alias, agrupación visual por idioma, distribución, ignorado y fallback WinForms.
 - Configuración WinUI para listar, ordenar, renombrar, cambiar distribución, ignorar, olvidar y limpiar.
 - Seguimiento del teclado pulsado con Configuración abierta; mientras el alias tiene foco no cambia la selección.
-- Menú nativo de bandeja limitado en beta 7 a **Configuración**, separador y **Salir** (`NativeTrayMenu`).
+- Menú nativo de bandeja limitado a **Configuración**, separador y **Salir** (`NativeTrayMenu`).
 - Detección conservadora de no-teclados por nombre y de la firma sintética observada al usar el historial del portapapeles.
-- Diagnóstico local, opcional, circular y asíncrono; sigue integrado durante las betas.
+- Diagnóstico local, opcional, circular y asíncrono; queda como herramienta de mantenimiento, no como flujo principal de usuario.
 - Instalador Inno Setup por usuario, autocontenido, sin UAC, acceso en Inicio, inicio automático en instalación nueva y conservación de datos al actualizar.
-- Frontend publicado ReadyToRun desde beta 7; el snapshot IPC ya no repite SetupAPI en cada apertura.
+- Frontend publicado ReadyToRun; el snapshot IPC ya no repite SetupAPI en cada apertura.
 
 ## Funciona solo en el fallback WinForms, no en la UI instalada normal
 
@@ -32,8 +32,7 @@ El fallback se abre únicamente si el frontend WinUI no existe o no puede inicia
 
 ## Parcial, no verificado o pendiente
 
-- La corrección final de beta 7 para la X interna del `TextBox`, el foco del selector y el fade-out modal compila, pasó pruebas y arrancó localmente, pero no hay evidencia versionada de una matriz física completa posterior a ese último binario.
-- La optimización de apertura (inventario residente + ReadyToRun) está implementada; faltan diez mediciones frías/calientes y percentiles según `docs/criterios-winui3-1.5.md`.
+- La optimización de apertura (inventario residente + ReadyToRun) está implementada; faltan mediciones frías/calientes reproducibles y percentiles según `docs/criterios-winui3-1.5.md`.
 - Exportación/importación existen en el modelo y fallback, pero no en WinUI; la portabilidad entre equipos no está certificada.
 - Inicio automático funciona en instalador y fallback, pero no se administra desde WinUI.
 - Reconexión/cambio de puerto funciona cuando Windows mantiene identidad o la huella es única; dos teclados idénticos siguen siendo deliberadamente ambiguos.
@@ -46,11 +45,9 @@ El fallback se abre únicamente si el frontend WinUI no existe o no puede inicia
 
 No hay servicios falsos en producción. `RightKeyboard.WinUI` usa IPC real, `Configuration` persiste en disco y las APIs Win32 operan contra Windows. Los dobles aparecen solo en pruebas mediante funciones inyectadas o archivos temporales.
 
-## Documentos públicos desactualizados que no deben tomarse como estado
+## Documentos históricos que no deben tomarse como estado
 
-- `README.md` aún enumera **Limpiar preferencias** en la bandeja y presenta exportación/importación/inicio como disponibles en Configuración WinUI.
-- `CHANGELOG.md` termina en beta 6; beta 7 solo está en `docs/releases/1.5.0-beta.7.md`.
-- `ROADMAP.md` y `docs/continuacion-1.5.md` describen etapas anteriores (incluyen mantener WinForms y no adoptar WinUI) ya superadas.
+- `docs/continuacion-1.5.md` describe etapas anteriores (incluye mantener WinForms y no adoptar WinUI) ya superadas.
 - `docs/calidad-1.5.md` conserva conteos y riesgos de beta 1; sirve como matriz, no como snapshot.
 - `docs/pruebas-visuales-interfaz-1.5.md` mezcla baseline WinForms y controles que no existen en WinUI.
 - `docs/arquitectura-fluent-1.5.md` es historia de la ruta WinForms; la arquitectura vigente está en `docs/arquitectura-winui-1.5.md` más el código actual.

@@ -60,7 +60,7 @@ Se descartó cambiar la distribución global con `ActivateKeyboardLayout` en cad
 
 ### Menú Win32 nativo
 
-Después de fallos de repintado acumulativo en `ContextMenuStrip` y flyouts propios que cerraban el panel de iconos ocultos, se eligió `CreatePopupMenu/TrackPopupMenuEx`. En beta 7 solo contiene Configuración y Salir. No reintroducir limpieza global allí.
+Después de fallos de repintado acumulativo en `ContextMenuStrip` y flyouts propios que cerraban el panel de iconos ocultos, se eligió `CreatePopupMenu/TrackPopupMenuEx`. En `1.5.0` solo contiene Configuración y Salir. No reintroducir limpieza global allí.
 
 ### Materiales reales; no Acrylic simulado sobre GDI
 
@@ -83,7 +83,7 @@ Se implementó una cola acotada y un escritor JSONL propio para no bloquear Raw 
 - «Mantener toda la UI en WinForms» de `ROADMAP.md`/`docs/continuacion-1.5.md`: superada por beta 2.
 - Renderer Fluent propio y DWM sobre WinForms: conservados solo como fallback, no dirección de producto.
 - Frontend WinUI framework-dependent: el instalador actual publica ambos ejecutables autocontenidos.
-- Acción **Limpiar preferencias** en bandeja: retirada en beta 7; queda en Configuración.
+- Acción **Limpiar preferencias** en bandeja: retirada antes de `1.5.0`; queda en Configuración.
 
 ## Dependencias frágiles entre componentes
 

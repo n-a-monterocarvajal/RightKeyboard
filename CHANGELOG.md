@@ -2,7 +2,15 @@
 
 Todos los cambios relevantes del proyecto se documentan en este archivo y se describen en español.
 
-## [1.5.0] - En desarrollo
+## [1.5.0] - 2026-07-09
+
+### Versión estable
+
+- Publicación estable inicial de la línea 1.5, basada en la validación física acumulada hasta beta 7.
+- Se consolida el núcleo liviano de Raw Input con Configuración y selector WinUI 3 bajo demanda.
+- El menú de bandeja queda reducido a **Configuración** y **Salir**; **Limpiar preferencias** vive en Configuración.
+- Se mantiene el diagnóstico detallado como herramienta local opcional para investigación de hardware, con deuda documentada para robustecerlo y separarlo mejor del flujo de usuario final.
+- Quedan planificadas para versiones posteriores la detección preventiva más robusta de periféricos HID ambiguos y la agrupación manual de identidades del mismo dispositivo cuando cambia de puerto USB.
 
 ### Beta 6
 
