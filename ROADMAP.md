@@ -10,7 +10,7 @@ La siguiente actualización debería concentrarse en mejorar los casos donde un 
 
 - Revisar qué campos se registran para que el diagnóstico siga siendo útil sin exponer contenido de teclas.
 - Añadir señales suficientes para entender falsos positivos de periféricos como presentadores USB, mouse avanzados o interfaces virtuales.
-- Mantener el diagnóstico como herramienta opcional y local, no como flujo prominente para usuarios finales.
+- Mantener el diagnóstico como herramienta de compilación de desarrollo, no como flujo de usuario final.
 
 ### Mejorar detección preventiva de no-teclados
 

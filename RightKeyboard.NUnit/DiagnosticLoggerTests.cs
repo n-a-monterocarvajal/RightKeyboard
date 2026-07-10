@@ -20,7 +20,7 @@ public sealed class DiagnosticLoggerTests
     [Test]
     public void Disabled_DoesNotCreateLog()
     {
-        DiagnosticLogger logger = new(directory);
+        DiagnosticLogger logger = new(directory, forceEnableForTests: true);
         logger.Write("entrada_recibida", CreateDevice());
         Assert.That(File.Exists(Path.Combine(directory, "rightkeyboard-diagnostico.log")), Is.False);
     }
@@ -28,7 +28,7 @@ public sealed class DiagnosticLoggerTests
     [Test]
     public void Enabled_AnonymizesDeviceIdentifiers()
     {
-        DiagnosticLogger logger = new(directory);
+        DiagnosticLogger logger = new(directory, forceEnableForTests: true);
         KeyboardDevice device = CreateDevice();
         logger.SetDetailedEnabled(true);
         logger.Write("entrada_recibida", device, new { decision = "prueba" });
@@ -50,7 +50,7 @@ public sealed class DiagnosticLoggerTests
     [Test]
     public void Disable_StopsSubsequentEvents()
     {
-        DiagnosticLogger logger = new(directory);
+        DiagnosticLogger logger = new(directory, forceEnableForTests: true);
         logger.SetDetailedEnabled(true);
         logger.SetDetailedEnabled(false);
         logger.FlushAsync().GetAwaiter().GetResult();

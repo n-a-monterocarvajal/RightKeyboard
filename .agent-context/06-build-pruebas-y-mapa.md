@@ -79,7 +79,7 @@ Datos:
 ```text
 %LOCALAPPDATA%\RightKeyboard\preferences.json
 %LOCALAPPDATA%\RightKeyboard\exports\
-%LOCALAPPDATA%\RightKeyboard\logs\      (solo diagnóstico de betas)
+%LOCALAPPDATA%\RightKeyboard\logs\      (solo variante RIGHTKEYBOARD_DIAGNOSTICS)
 ```
 
 Pruebas de instalación y parámetros silenciosos: `installer/PRUEBAS.md`. El script Inno usa `/MERGETASKS="!startup"` para instalación nueva sin inicio y `/SILENT /BORRARDATOS=1` para desinstalar eliminando datos.
@@ -108,7 +108,7 @@ No publicar por inferencia. Requiere solicitud humana explícita. Secuencia espe
 | `RightKeyboard/Configuration.cs` | Esquema, migración, validación y persistencia |
 | `RightKeyboard/SettingsIpcProtocol.cs` | DTO/acciones de pipe v1 |
 | `RightKeyboard/SettingsIpcServer.cs` | Autoridad IPC en núcleo |
-| `RightKeyboard/DiagnosticLogger.cs` | Diagnóstico temporal de betas |
+| `RightKeyboard/DiagnosticLogger.cs` | Diagnóstico de desarrollo tras `RIGHTKEYBOARD_DIAGNOSTICS` |
 | `RightKeyboard/SettingsDialog.cs` | Configuración WinForms fallback |
 | `RightKeyboard/LayoutSelectionDialog.cs` | Selector WinForms fallback |
 | `RightKeyboard.WinUI/SettingsWindow.xaml.cs` | Configuración WinUI normal |

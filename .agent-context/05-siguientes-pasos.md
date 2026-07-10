@@ -4,14 +4,14 @@ Este backlog sustituye para continuidad técnica el orden histórico de `ROADMAP
 
 ## P1 — mantenimiento recomendado para 1.5.1
 
-### 1. Robustecer diagnóstico y logs
+### 1. Robustecer diagnóstico de desarrollo y logs
 
-**Trabajo:** revisar campos registrados, asegurar que no se registra contenido de teclas, añadir señales útiles para falsos positivos HID y separar mejor el modo diagnóstico del flujo normal.
+**Trabajo:** revisar campos registrados, asegurar que no se registra contenido de teclas y añadir señales útiles para falsos positivos HID en la variante `RIGHTKEYBOARD_DIAGNOSTICS`.
 
 **Criterios:**
 
 - no se usa una rama permanente para conservar diagnóstico;
-- retirar `VirtualKey` de los detalles registrados y agregar prueba de privacidad;
+- agregar prueba de privacidad para impedir que vuelvan `VirtualKey`, rutas completas, alias o caracteres;
 - ambas variantes pasan la suite y la función Raw Input mantiene latencia.
 
 ### 2. Mejorar detección preventiva de HID ambiguos
@@ -93,4 +93,4 @@ Probar equipo A→B, layout ausente y dispositivo desconectado. Decidir si una a
 
 ## Puerta propuesta
 
-Para `1.5.1`, priorizar diagnóstico/detección preventiva antes que nuevas superficies UI grandes. Para `1.6`, considerar exportación/importación completa y refactor de contratos compartidos si no se resolvió en 1.5.x.
+Para `1.5.1`, priorizar diagnóstico de desarrollo/detección preventiva antes que nuevas superficies UI grandes. Para `1.6`, considerar exportación/importación completa y refactor de contratos compartidos si no se resolvió en 1.5.x.

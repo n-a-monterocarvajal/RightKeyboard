@@ -18,8 +18,26 @@ internal sealed class DiagnosticLogger : IDisposable
     private volatile bool detailedEnabled;
     private bool disposed;
 
-    internal DiagnosticLogger(string? directory = null)
+    internal static bool IsAvailable
     {
+        get
+        {
+#if RIGHTKEYBOARD_DIAGNOSTICS
+            return true;
+#else
+            return false;
+#endif
+        }
+    }
+
+    internal DiagnosticLogger(string? directory = null, bool forceEnableForTests = false)
+    {
+        if (!IsAvailable && !forceEnableForTests)
+        {
+            throw new InvalidOperationException(
+                "El diagnóstico detallado no está disponible en esta compilación.");
+        }
+
         this.directory = directory ?? GetDefaultDirectory();
         enabledMarker = Path.Combine(this.directory, "diagnostico-habilitado");
         currentLog = Path.Combine(this.directory, "rightkeyboard-diagnostico.log");

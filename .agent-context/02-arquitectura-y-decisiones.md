@@ -74,9 +74,9 @@ Inno Setup con `PrivilegesRequired=lowest` instala bajo `%LOCALAPPDATA%`, incluy
 
 Beta 7 activa `PublishReadyToRun=true` en restore/publish de WinUI para reducir arranque en frío; aumenta tamaño. No se mantiene un proceso UI caliente porque dañaría el objetivo de reposo liviano.
 
-### Diagnóstico sin Serilog durante betas
+### Diagnóstico sin Serilog y fuera del build normal
 
-Se implementó una cola acotada y un escritor JSONL propio para no bloquear Raw Input ni añadir dependencias. La estable 1.5 debe sacar controles, IPC y logger del producto público. La dirección acordada es un componente/proyecto opcional activado por build, no una rama diagnóstica permanente que diverja. Conservar un logger nulo o abstracción mínima en el núcleo; el artefacto público no debe incluir UI, marcador ni archivos de diagnóstico.
+Se implementó una cola acotada y un escritor JSONL propio para no bloquear Raw Input ni añadir dependencias. En `1.5.0` el build normal no instancia el logger, no muestra controles y no acepta acciones IPC de diagnóstico. La capacidad queda detrás del símbolo de compilación `RIGHTKEYBOARD_DIAGNOSTICS`; no mantener una rama diagnóstica permanente que diverja.
 
 ## Decisiones históricas, no vigentes
 
