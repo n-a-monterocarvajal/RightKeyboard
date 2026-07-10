@@ -12,7 +12,7 @@ internal sealed class SettingsIpcServer : IDisposable
     private readonly SynchronizationContext uiContext;
     private readonly CancellationTokenSource cancellation = new();
     private readonly Task serverTask;
-    private readonly DiagnosticLogger diagnostics;
+    private readonly DiagnosticLogger? diagnostics;
     private long activitySequence;
     private string? activeDeviceIdentity;
 
@@ -20,7 +20,7 @@ internal sealed class SettingsIpcServer : IDisposable
         Configuration configuration,
         KeyboardDevicesCollection devices,
         SynchronizationContext uiContext,
-        DiagnosticLogger diagnostics)
+        DiagnosticLogger? diagnostics)
     {
         this.configuration = configuration;
         this.devices = devices;
@@ -100,11 +100,26 @@ internal sealed class SettingsIpcServer : IDisposable
                     null,
                     new SettingsActivity(Interlocked.Read(ref activitySequence), activeDeviceIdentity));
             case SettingsIpcProtocol.DiagnosticsAction:
+                if (diagnostics is null)
+                {
+                    return new SettingsResponse(false, "El diagnóstico no está disponible en esta compilación.", null);
+                }
+
                 return DiagnosticsResponse();
             case SettingsIpcProtocol.SetDiagnosticsAction:
+                if (diagnostics is null)
+                {
+                    return new SettingsResponse(false, "El diagnóstico no está disponible en esta compilación.", null);
+                }
+
                 diagnostics.SetDetailedEnabled(request.DiagnosticsEnabled == true);
                 return DiagnosticsResponse();
             case SettingsIpcProtocol.OpenDiagnosticsAction:
+                if (diagnostics is null)
+                {
+                    return new SettingsResponse(false, "El diagnóstico no está disponible en esta compilación.", null);
+                }
+
                 Directory.CreateDirectory(diagnostics.DirectoryPath);
                 Process.Start(new ProcessStartInfo("explorer.exe", diagnostics.DirectoryPath)
                 {
@@ -144,7 +159,9 @@ internal sealed class SettingsIpcServer : IDisposable
         true,
         null,
         null,
-        Diagnostics: new SettingsDiagnostics(diagnostics.IsDetailedEnabled, diagnostics.DirectoryPath));
+        Diagnostics: diagnostics is null
+            ? new SettingsDiagnostics(false, string.Empty)
+            : new SettingsDiagnostics(diagnostics.IsDetailedEnabled, diagnostics.DirectoryPath));
 
     private SettingsSnapshot CreateSnapshot()
     {

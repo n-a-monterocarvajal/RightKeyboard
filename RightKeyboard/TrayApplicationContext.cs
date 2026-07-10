@@ -13,7 +13,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private readonly SynchronizationContext uiContext;
     private readonly System.Windows.Forms.Timer selectionTimer;
     private readonly SettingsIpcServer settingsIpc;
-    private readonly DiagnosticLogger diagnostics;
+    private readonly DiagnosticLogger? diagnostics;
     private KeyboardDevice? pendingDevice;
     private SettingsDialog? settingsDialog;
     private Process? settingsProcess;
@@ -28,9 +28,9 @@ internal sealed class TrayApplicationContext : ApplicationContext
         configuration = LoadConfiguration();
         selectionTimer = new System.Windows.Forms.Timer { Interval = 100 };
         selectionTimer.Tick += OnSelectionTimerTick;
-        diagnostics = new DiagnosticLogger();
+        diagnostics = DiagnosticLogger.IsAvailable ? new DiagnosticLogger() : null;
         settingsIpc = new SettingsIpcServer(configuration, devices, uiContext, diagnostics);
-        diagnostics.Write("aplicacion_iniciada", details: new
+        diagnostics?.Write("aplicacion_iniciada", details: new
         {
             os = Environment.OSVersion.VersionString,
             architecture = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString(),
@@ -91,7 +91,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         }
         catch (Exception error)
         {
-            diagnostics.Write("entrada_sin_dispositivo", details: new { error = error.GetType().Name });
+            diagnostics?.Write("entrada_sin_dispositivo", details: new { error = error.GetType().Name });
             return;
         }
 
@@ -99,7 +99,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         bool knownIdentity = configuration.Devices.ContainsKey(device.Identity);
         bool mappedIdentity = configuration.LayoutMappings.ContainsKey(device.Identity);
         bool ignoredIdentity = configuration.IgnoredDevices.Contains(device.Identity);
-        diagnostics.Write("entrada_recibida", device, new
+        diagnostics?.Write("entrada_recibida", device, new
         {
             keyCategory = keyboardEvent.CanStartMapping ? "asignable" : "auxiliar_o_modificadora",
             messageCategory = keyboardEvent.IsSystemKeyDown ? "sistema" : "normal",
@@ -116,10 +116,10 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
         if (!keyboardEvent.HasScanCode && DeviceClassifier.IsLikelySyntheticInputSource(device))
         {
-            diagnostics.Write("entrada_sintetica_excluida", device, new
+            diagnostics?.Write("entrada_sintetica_excluida", device, new
             {
                 reason = "sin_scan_code_y_capacidades",
-                keyboardEvent.VirtualKey
+                hasExtraInformation = keyboardEvent.HasExtraInformation
             });
             return;
         }
@@ -138,7 +138,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
         if (configuration.IsIgnored(device, matchingDevices, out bool learnedIgnoredIdentity))
         {
-            diagnostics.Write(learnedIgnoredIdentity ? "ignorado_recuperado_por_huella" : "entrada_ignorada", device);
+            diagnostics?.Write(learnedIgnoredIdentity ? "ignorado_recuperado_por_huella" : "entrada_ignorada", device);
             if (learnedIgnoredIdentity)
             {
                 SaveConfiguration();
@@ -149,7 +149,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
         if (device.IsClearlyNonKeyboard)
         {
-            diagnostics.Write("dispositivo_excluido_por_clasificacion", device);
+            diagnostics?.Write("dispositivo_excluido_por_clasificacion", device);
             configuration.Ignore(device);
             SaveConfiguration();
             return;
@@ -157,7 +157,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
         if (configuration.TryGetLayout(device, matchingDevices, out Layout? layout, out bool learnedLayoutIdentity))
         {
-            diagnostics.Write(learnedLayoutIdentity ? "distribucion_recuperada_por_huella" : "distribucion_aplicada", device, new
+            diagnostics?.Write(learnedLayoutIdentity ? "distribucion_recuperada_por_huella" : "distribucion_aplicada", device, new
             {
                 layout = layout!.Identifier.ToInt64().ToString("X")
             });
@@ -179,7 +179,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 configuration.TouchDevice(device);
             }
 
-            diagnostics.Write("selector_omitido_configuracion_abierta", device, new
+            diagnostics?.Write("selector_omitido_configuracion_abierta", device, new
             {
                 mappingCandidate = keyboardEvent.CanStartMapping
             });
@@ -193,7 +193,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         }
 
         pendingDevice = device;
-        diagnostics.Write("selector_programado", device, new
+        diagnostics?.Write("selector_programado", device, new
         {
             knownIdentity,
             matchingFingerprintDevices = matchingDevices
@@ -309,7 +309,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private void OnDevicesChanged()
     {
         devices.Refresh();
-        diagnostics.Write("inventario_dispositivos_actualizado", details: new
+        diagnostics?.Write("inventario_dispositivos_actualizado", details: new
         {
             connectedDevices = devices.Count(),
             identities = devices.Select(device => DiagnosticLogger.Anonymize(device.Identity)).Order().ToArray(),
@@ -416,7 +416,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         selectionTimer.Tick -= OnSelectionTimerTick;
         selectionTimer.Dispose();
         settingsIpc.Dispose();
-        diagnostics.Dispose();
+        diagnostics?.Dispose();
         settingsDialog?.Close();
         settingsDialog?.Dispose();
         if (settingsProcess is { HasExited: false })

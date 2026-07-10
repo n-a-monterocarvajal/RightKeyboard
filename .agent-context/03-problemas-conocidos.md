@@ -2,25 +2,19 @@
 
 Prioridades: **P0** compromete privacidad/datos o estabilidad crítica; **P1** debería resolverse en 1.5.x; **P2** mejora posterior o limitación asumida.
 
-## P1 — diagnóstico todavía incluido en el producto público
+## Resuelto en 1.5.0 — diagnóstico fuera del producto público
 
-**Síntoma:** Configuración muestra «Diagnóstico detallado» y «Abrir registros»; el núcleo siempre construye `DiagnosticLogger` y expone tres acciones IPC.
+**Estado:** el build normal ya no muestra «Diagnóstico detallado» ni «Abrir registros», el núcleo no construye `DiagnosticLogger` y las acciones IPC devuelven error si se invocan fuera de una compilación diagnóstica.
 
-**Ubicación:** `RightKeyboard/TrayApplicationContext.cs`, `DiagnosticLogger.cs`, `SettingsIpcProtocol.cs`, `SettingsIpcServer.cs`, `RightKeyboard.WinUI/SettingsIpcClient.cs` y `SettingsWindow.xaml.cs`.
+**Ubicación:** `RightKeyboard/TrayApplicationContext.cs`, `DiagnosticLogger.cs`, `SettingsIpcServer.cs` y `RightKeyboard.WinUI/SettingsWindow.xaml.cs`.
 
-**Causa:** se añadió para investigar betas en hardware real y aún no se separó.
+**Cómo reactivarlo:** compilar con el símbolo `RIGHTKEYBOARD_DIAGNOSTICS`. No publicar esa variante como release estable de usuario final.
 
-**Resolución prevista:** extraer implementación y UI a componente/build diagnóstico opcional o dejarlo como modo avanzado claramente separado. No borrar la capacidad de prueba ni mantenerla en una rama divergente.
+## Resuelto en 1.5.0 — el diagnóstico ya no registra una tecla concreta en el caso sintético
 
-## P0 — el diagnóstico registra una tecla concreta en un caso
+`entrada_sintetica_excluida` dejó de incluir `keyboardEvent.VirtualKey`; conserva solo señales booleanas o categóricas seguras. Mantener esta regla si se amplía la variante diagnóstica.
 
-**Síntoma:** la documentación promete no registrar la tecla, pero `entrada_sintetica_excluida` incluye `keyboardEvent.VirtualKey`.
-
-**Ubicación:** `RightKeyboard/TrayApplicationContext.cs`, bloque de `IsLikelySyntheticInputSource`, propiedad anónima `keyboardEvent.VirtualKey`.
-
-**Causa raíz:** se añadió al diagnosticar el dispositivo sintético `64B58A17` y contradice la política posterior de señales booleanas.
-
-**Acción:** retirar ese campo antes de cualquier build diagnóstico futuro; agregar una prueba que inspeccione el JSON/evento o encapsular detalles seguros en un DTO.
+Agregar una prueba directa sobre el evento JSON sería buena mejora, pero ya no es bloqueante de publicación.
 
 ## P1 — funciones disponibles solo en fallback, no en WinUI
 

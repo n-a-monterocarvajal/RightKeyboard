@@ -62,7 +62,7 @@ Mientras `AliasTextBox.FocusState != Unfocused`, `PollActivityAsync` puede actua
 
 ### Logging
 
-La cola es acotada y `DropWrite`: perder diagnóstico es preferible a frenar entrada. El logger no debe registrar alias, rutas completas, caracteres ni virtual keys. Revisar el P0 documentado antes de reutilizarlo.
+La cola es acotada y `DropWrite`: perder diagnóstico es preferible a frenar entrada. El logger no debe registrar alias, rutas completas, caracteres ni virtual keys. En build normal, no instanciar `DiagnosticLogger`; usar `RIGHTKEYBOARD_DIAGNOSTICS` para variantes de host.
 
 ### Fallback no es el producto visual principal
 

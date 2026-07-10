@@ -231,15 +231,18 @@ public sealed class SettingsWindow : Window
         buttons.Add(clear);
         clear.Click += ClearButton_Click;
         footerLeft.Children.Add(clear);
-        DiagnosticsCheckBox.Content = "Diagnóstico detallado";
-        DiagnosticsCheckBox.VerticalAlignment = VerticalAlignment.Center;
-        DiagnosticsCheckBox.Click += DiagnosticsCheckBox_Click;
-        footerLeft.Children.Add(DiagnosticsCheckBox);
-        Button openDiagnostics = new() { Content = "Abrir registros" };
-        openDiagnostics.CornerRadius = new CornerRadius(8);
-        openDiagnostics.Click += OpenDiagnostics_Click;
-        buttons.Add(openDiagnostics);
-        footerLeft.Children.Add(openDiagnostics);
+        if (DiagnosticLogger.IsAvailable)
+        {
+            DiagnosticsCheckBox.Content = "Diagnóstico detallado";
+            DiagnosticsCheckBox.VerticalAlignment = VerticalAlignment.Center;
+            DiagnosticsCheckBox.Click += DiagnosticsCheckBox_Click;
+            footerLeft.Children.Add(DiagnosticsCheckBox);
+            Button openDiagnostics = new() { Content = "Abrir registros" };
+            openDiagnostics.CornerRadius = new CornerRadius(8);
+            openDiagnostics.Click += OpenDiagnostics_Click;
+            buttons.Add(openDiagnostics);
+            footerLeft.Children.Add(openDiagnostics);
+        }
         footer.Children.Add(footerLeft);
         Button reload = new() { Content = "Recargar" };
         reload.CornerRadius = new CornerRadius(8);
@@ -338,7 +341,10 @@ public sealed class SettingsWindow : Window
             (int)Math.Ceiling(1020 * scale),
             (int)Math.Ceiling(760 * scale)));
         await ReloadAsync();
-        await ReloadDiagnosticsAsync();
+        if (DiagnosticLogger.IsAvailable)
+        {
+            await ReloadDiagnosticsAsync();
+        }
         activityTimer.Start();
     }
 

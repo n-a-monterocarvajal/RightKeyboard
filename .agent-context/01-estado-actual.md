@@ -4,7 +4,7 @@ Snapshot actualizado el **2026-07-09** para promover la rama `codex/version-1.5`
 
 ## Resumen ejecutivo
 
-`1.5.0` es la versión estable inicial de la línea 1.5, aprobada por validación física acumulada en VM y equipos host. El camino instalado normal usa un residente WinForms/Win32 (`RightKeyboard.exe`) y un frontend WinUI bajo demanda (`ui/RightKeyboard.WinUI.exe`). El fallback WinForms conserva funciones que todavía no se migraron a WinUI. La próxima etapa no es otra reescritura: es mantenimiento 1.5.x, robustecer diagnóstico, mejorar detección preventiva de periféricos HID ambiguos y evaluar agrupación manual de identidades del mismo dispositivo.
+`1.5.0` es la versión estable inicial de la línea 1.5, aprobada por validación física acumulada en VM y equipos host. El camino instalado normal usa un residente WinForms/Win32 (`RightKeyboard.exe`) y un frontend WinUI bajo demanda (`ui/RightKeyboard.WinUI.exe`). El fallback WinForms conserva funciones que todavía no se migraron a WinUI. La próxima etapa no es otra reescritura: es mantenimiento 1.5.x, robustecer la variante diagnóstica de desarrollo, mejorar detección preventiva de periféricos HID ambiguos y evaluar agrupación manual de identidades del mismo dispositivo.
 
 ## Funciona en el código actual
 
@@ -20,7 +20,7 @@ Snapshot actualizado el **2026-07-09** para promover la rama `codex/version-1.5`
 - Seguimiento del teclado pulsado con Configuración abierta; mientras el alias tiene foco no cambia la selección.
 - Menú nativo de bandeja limitado a **Configuración**, separador y **Salir** (`NativeTrayMenu`).
 - Detección conservadora de no-teclados por nombre y de la firma sintética observada al usar el historial del portapapeles.
-- Diagnóstico local, opcional, circular y asíncrono; queda como herramienta de mantenimiento, no como flujo principal de usuario.
+- Diagnóstico detallado fuera del build normal; el código del logger queda disponible para compilaciones de desarrollo con `RIGHTKEYBOARD_DIAGNOSTICS`.
 - Instalador Inno Setup por usuario, autocontenido, sin UAC, acceso en Inicio, inicio automático en instalación nueva y conservación de datos al actualizar.
 - Frontend publicado ReadyToRun; el snapshot IPC ya no repite SetupAPI en cada apertura.
 
@@ -54,4 +54,4 @@ No hay servicios falsos en producción. `RightKeyboard.WinUI` usa IPC real, `Con
 
 ## Evidencia automatizada
 
-En este snapshot hay **98 pruebas NUnit**. Cubren serialización/configuración, identidad y huella, clasificación básica, señales Raw Input, tamaños de interop, presentación WinForms, logger, IPC DTO, menú y versión. No cubren extremo a extremo el pipe, UI WinUI, foco/foreground, SetupAPI real, registro de inicio, instalador ni hardware.
+En este snapshot hay **98 pruebas NUnit**. Cubren serialización/configuración, identidad y huella, clasificación básica, señales Raw Input, tamaños de interop, presentación WinForms, logger en modo de prueba, IPC DTO, menú y versión. No cubren extremo a extremo el pipe, UI WinUI, foco/foreground, SetupAPI real, registro de inicio, instalador ni hardware.

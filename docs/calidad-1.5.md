@@ -8,7 +8,7 @@ La migración de ventanas a WinUI 3 quedó integrada en 1.5.0 mediante un fronte
 
 `1.5.0` se promueve como estable inicial el 9 de julio de 2026, tras pruebas físicas iterativas de las betas 6 y 7. Los pendientes aceptados para la línea 1.5.x son:
 
-- robustecer logs y diagnóstico sin convertirlos en flujo principal de usuario;
+- robustecer la variante de diagnóstico de desarrollo sin reincorporarla al flujo normal de usuario;
 - mejorar la detección preventiva de periféricos HID ambiguos;
 - estudiar agrupación manual de identidades cuando el mismo teclado cambia de puerto USB;
 - completar funciones de exportación/importación e inicio con Windows en la Configuración WinUI;
