@@ -6,6 +6,8 @@ using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Composition;
+using Windows.Storage;
+using Windows.Storage.Pickers;
 using Windows.UI;
 using Windows.UI.ViewManagement;
 
@@ -191,6 +193,18 @@ public sealed class SettingsWindow : Window
 
         // Acciones generales (no dependen del dispositivo seleccionado).
         StackPanel generalActions = new() { Spacing = 8 };
+        StackPanel backupRow = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
+        Button export = new() { Content = "Exportar" };
+        export.CornerRadius = new CornerRadius(8);
+        export.Click += ExportButton_Click;
+        buttons.Add(export);
+        backupRow.Children.Add(export);
+        Button import = new() { Content = "Importar" };
+        import.CornerRadius = new CornerRadius(8);
+        import.Click += ImportButton_Click;
+        buttons.Add(import);
+        backupRow.Children.Add(import);
+        generalActions.Children.Add(backupRow);
         Button clear = new()
         {
             Content = "Limpiar preferencias",
@@ -769,6 +783,87 @@ public sealed class SettingsWindow : Window
 
     private async void ReloadButton_Click(object sender, RoutedEventArgs e) => await ReloadAsync(SelectedRow?.Identity);
 
+    private async void ExportButton_Click(object sender, RoutedEventArgs e)
+    {
+        FileSavePicker picker = new()
+        {
+            SuggestedFileName = $"RightKeyboard-preferencias-{DateTime.Now:yyyy-MM-dd}",
+            SuggestedStartLocation = PickerLocationId.DocumentsLibrary
+        };
+        picker.FileTypeChoices.Add("Configuración JSON", [".json"]);
+        InitializeWithWindow(picker);
+        StorageFile? file = await picker.PickSaveFileAsync();
+        if (file is null)
+        {
+            return;
+        }
+
+        try
+        {
+            SetBusy(true);
+            await client.ExportAsync(file.Path);
+            SetActivityText("Las preferencias se exportaron correctamente.");
+        }
+        catch (Exception error)
+        {
+            await ShowErrorAsync("No se pudieron exportar las preferencias", error);
+        }
+        finally
+        {
+            SetBusy(false);
+        }
+    }
+
+    private async void ImportButton_Click(object sender, RoutedEventArgs e)
+    {
+        FileOpenPicker picker = new() { SuggestedStartLocation = PickerLocationId.DocumentsLibrary };
+        picker.FileTypeFilter.Add(".json");
+        InitializeWithWindow(picker);
+        StorageFile? file = await picker.PickSingleFileAsync();
+        if (file is null)
+        {
+            return;
+        }
+
+        SettingsImportPreview preview;
+        try
+        {
+            preview = await client.ImportPreviewAsync(file.Path);
+        }
+        catch (Exception error)
+        {
+            await ShowErrorAsync("No se pudo leer el archivo", error);
+            return;
+        }
+
+        bool? replace = await ShowImportChoiceAsync(preview);
+        if (replace is null)
+        {
+            return;
+        }
+
+        try
+        {
+            SetBusy(true);
+            ApplySnapshot(await client.ImportApplyAsync(file.Path, replace.Value));
+            SetActivityText("Las preferencias se importaron correctamente.");
+        }
+        catch (Exception error)
+        {
+            await ShowErrorAsync("No se pudo aplicar la importación", error);
+        }
+        finally
+        {
+            SetBusy(false);
+        }
+    }
+
+    private void InitializeWithWindow(object target)
+    {
+        nint hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+        WinRT.Interop.InitializeWithWindow.Initialize(target, hwnd);
+    }
+
     private async Task ShowErrorAsync(string title, Exception error)
     {
         await ShowOverlayAsync(title, error.Message, "Aceptar", showCancel: false);
@@ -894,6 +989,140 @@ public sealed class SettingsWindow : Window
         {
             args.Handled = true;
             Complete(false);
+        };
+        overlay.KeyboardAccelerators.Add(escape);
+
+        return completion.Task;
+    }
+
+    // Importar ofrece tres salidas (reemplazar / combinar / cancelar), por lo que
+    // no encaja en ShowOverlayAsync (primaria + cancelar). Devuelve true=reemplazar,
+    // false=combinar, null=cancelar.
+    private Task<bool?> ShowImportChoiceAsync(SettingsImportPreview preview)
+    {
+        if (contentRoot is null)
+        {
+            return Task.FromResult<bool?>(null);
+        }
+
+        string message = $"Se encontraron {preview.DeviceCount} dispositivos en el archivo.";
+        if (preview.Warnings.Count > 0)
+        {
+            message += "\n\nAdvertencias:\n- " + string.Join("\n- ", preview.Warnings);
+        }
+
+        message += "\n\nReemplazar sustituye la configuración actual. Combinar la fusiona con " +
+            "la existente. En ambos casos se crea un respaldo automático.";
+
+        TaskCompletionSource<bool?> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        bool dark = contentRoot.ActualTheme == ElementTheme.Dark;
+        Grid overlay = new()
+        {
+            Background = new SolidColorBrush(Color.FromArgb(0x99, 0, 0, 0)),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch,
+            Margin = new Thickness(-24, 0, -24, -24),
+            TabFocusNavigation = KeyboardNavigationMode.Cycle
+        };
+        Grid.SetRowSpan(overlay, 2);
+        Canvas.SetZIndex(overlay, 100);
+
+        StackPanel panelContent = new() { Spacing = 16 };
+        panelContent.Children.Add(new TextBlock
+        {
+            Text = "Importar preferencias",
+            FontSize = 24,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+        });
+        panelContent.Children.Add(new TextBlock
+        {
+            Text = message,
+            TextWrapping = TextWrapping.Wrap
+        });
+
+        Grid actions = new() { ColumnSpacing = 8 };
+        for (int column = 0; column < 3; column++)
+        {
+            actions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        }
+
+        Button replace = new()
+        {
+            Content = "Reemplazar",
+            CornerRadius = new CornerRadius(8),
+            MinHeight = 40,
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+        Button merge = new()
+        {
+            Content = "Combinar",
+            CornerRadius = new CornerRadius(8),
+            MinHeight = 40,
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+        if (Application.Current.Resources.TryGetValue("AccentButtonStyle", out object style) && style is Style accent)
+        {
+            merge.Style = accent;
+        }
+
+        Button cancel = new()
+        {
+            Content = "Cancelar",
+            CornerRadius = new CornerRadius(8),
+            MinHeight = 40,
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+        Grid.SetColumn(merge, 1);
+        Grid.SetColumn(cancel, 2);
+        actions.Children.Add(replace);
+        actions.Children.Add(merge);
+        actions.Children.Add(cancel);
+        panelContent.Children.Add(actions);
+
+        Border panel = new()
+        {
+            Width = 660,
+            MaxWidth = 660,
+            Padding = new Thickness(28),
+            CornerRadius = new CornerRadius(14),
+            BorderThickness = new Thickness(1),
+            BorderBrush = new SolidColorBrush(dark
+                ? Color.FromArgb(0x70, 0xFF, 0xFF, 0xFF)
+                : Color.FromArgb(0x38, 0, 0, 0)),
+            Background = new SolidColorBrush(dark
+                ? Color.FromArgb(0xFA, 0x20, 0x20, 0x20)
+                : Color.FromArgb(0xFA, 0xFF, 0xFF, 0xFF)),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Child = panelContent
+        };
+        overlay.Children.Add(panel);
+        contentRoot.Children.Add(overlay);
+        _ = AnimateOverlayAsync(overlay, panel, showing: true);
+
+        bool closing = false;
+        async void Complete(bool? result)
+        {
+            if (closing) return;
+            closing = true;
+            replace.IsEnabled = false;
+            merge.IsEnabled = false;
+            cancel.IsEnabled = false;
+            await AnimateOverlayAsync(overlay, panel, showing: false);
+            contentRoot.Children.Remove(overlay);
+            completion.TrySetResult(result);
+        }
+
+        replace.Click += (_, _) => Complete(true);
+        merge.Click += (_, _) => Complete(false);
+        cancel.Click += (_, _) => Complete(null);
+        merge.Focus(FocusState.Programmatic);
+
+        KeyboardAccelerator escape = new() { Key = Windows.System.VirtualKey.Escape };
+        escape.Invoked += (_, args) =>
+        {
+            args.Handled = true;
+            Complete(null);
         };
         overlay.KeyboardAccelerators.Add(escape);
 

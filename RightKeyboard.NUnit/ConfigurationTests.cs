@@ -359,6 +359,47 @@ public sealed class ConfigurationTests
         Assert.That(configuration.Devices.ContainsKey("device:keyboard"), Is.True);
     }
 
+    [Test]
+    public void Import_FromAnotherMachine_ResolvesAvailableLayoutsAndReportsMissing()
+    {
+        // AUT-12: importar preferencias de otro equipo con una distribución
+        // ausente. Se resuelve lo posible, se conservan los dispositivos no
+        // resueltos como pendientes, se informa lo no resuelto y se persiste sin
+        // corrupción, con respaldo previo.
+        string path = WriteJson("otro-equipo.json", """
+        {
+          "version": 3,
+          "devices": [
+            { "identity": "container:kbd-es", "fingerprint": "MODEL-ES", "detectedName": "Teclado ES", "customName": "Oficina" },
+            { "identity": "container:kbd-us", "fingerprint": "MODEL-US", "detectedName": "Teclado US" }
+          ],
+          "mappings": [
+            { "identity": "container:kbd-es", "layout": "000000000000040A", "languageName": "español (Chile)", "layoutName": "Latinoamericano" },
+            { "identity": "container:kbd-us", "layout": "0000000000000409", "languageName": "inglés", "layoutName": "US" }
+          ],
+          "ignoredDeviceIds": []
+        }
+        """);
+        string preferences = Path.Combine(temporaryDirectory, "preferences.json");
+        string backups = Path.Combine(temporaryDirectory, "exports");
+        Configuration current = new();
+
+        ConfigurationImportResult import = Configuration.LoadImport(path, [spanish]);
+        string backup = current.ApplyImport(import.Configuration, replace: true, preferences, backups);
+        Configuration persisted = Configuration.LoadConfiguration(new KeyboardDevicesCollection(), preferences, [spanish]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(import.Warnings, Has.Count.EqualTo(1));
+            Assert.That(import.Warnings.Single(), Does.Contain("container:kbd-us"));
+            Assert.That(persisted.LayoutMappings["container:kbd-es"].Identifier, Is.EqualTo(spanish.Identifier));
+            Assert.That(persisted.Devices["container:kbd-es"].CustomName, Is.EqualTo("Oficina"));
+            Assert.That(persisted.Devices.ContainsKey("container:kbd-us"), Is.True);
+            Assert.That(persisted.LayoutMappings.ContainsKey("container:kbd-us"), Is.False);
+            Assert.That(File.Exists(backup), Is.True);
+        });
+    }
+
     private static KeyboardDevice Device(
         string identity,
         string fingerprint,

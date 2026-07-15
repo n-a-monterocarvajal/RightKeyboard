@@ -148,6 +148,20 @@ internal sealed class SettingsIpcServer : IDisposable
             case SettingsIpcProtocol.ClearAction:
                 configuration.Clear();
                 break;
+            case SettingsIpcProtocol.ExportAction:
+                configuration.Export(RequireFilePath(request));
+                return new SettingsResponse(true, null, null);
+            case SettingsIpcProtocol.ImportPreviewAction:
+                ConfigurationImportResult preview = Configuration.LoadImport(RequireFilePath(request));
+                return new SettingsResponse(
+                    true,
+                    null,
+                    null,
+                    ImportPreview: new SettingsImportPreview(preview.Configuration.Devices.Count, preview.Warnings));
+            case SettingsIpcProtocol.ImportApplyAction:
+                ConfigurationImportResult import = Configuration.LoadImport(RequireFilePath(request));
+                configuration.ApplyImport(import.Configuration, request.Replace == true);
+                break;
             default:
                 return new SettingsResponse(false, "La acción solicitada no existe.", null);
         }
@@ -206,6 +220,16 @@ internal sealed class SettingsIpcServer : IDisposable
         {
             throw new InvalidOperationException("No se indicó un dispositivo.");
         }
+    }
+
+    private static string RequireFilePath(SettingsRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.FilePath))
+        {
+            throw new InvalidOperationException("No se indicó un archivo.");
+        }
+
+        return request.FilePath;
     }
 
     private Task<T> InvokeOnUiThreadAsync<T>(Func<T> action)
