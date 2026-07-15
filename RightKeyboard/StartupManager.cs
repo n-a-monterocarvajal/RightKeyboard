@@ -9,34 +9,49 @@ internal static class StartupManager
         @"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run";
     private const string ValueName = "RightKeyboard";
 
-    public static bool IsEnabled
-    {
-        get
-        {
-            using RegistryKey? key = Registry.CurrentUser.OpenSubKey(RunKeyPath);
-            string? command = key?.GetValue(ValueName) as string;
-            if (!string.Equals(command, BuildCommand(), StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
+    public static bool IsEnabled =>
+        IsEnabledCore(RunKeyPath, StartupApprovedKeyPath, ValueName, BuildCommand());
 
-            using RegistryKey? approvalKey = Registry.CurrentUser.OpenSubKey(StartupApprovedKeyPath);
-            return approvalKey?.GetValue(ValueName) is not byte[] approval || IsApproved(approval);
+    public static void SetEnabled(bool enabled) =>
+        SetEnabledCore(RunKeyPath, StartupApprovedKeyPath, ValueName, BuildCommand(), enabled);
+
+    // Núcleo verificable: opera sobre HKCU con rutas/valor/comando explícitos para
+    // poder aislarlo en pruebas sin tocar la clave Run real del usuario. Los miembros
+    // públicos delegan aquí con las constantes reales.
+    internal static bool IsEnabledCore(
+        string runKeyPath,
+        string approvedKeyPath,
+        string valueName,
+        string command)
+    {
+        using RegistryKey? key = Registry.CurrentUser.OpenSubKey(runKeyPath);
+        if (key?.GetValue(valueName) is not string stored ||
+            !string.Equals(stored, command, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
         }
+
+        using RegistryKey? approvalKey = Registry.CurrentUser.OpenSubKey(approvedKeyPath);
+        return approvalKey?.GetValue(valueName) is not byte[] approval || IsApproved(approval);
     }
 
-    public static void SetEnabled(bool enabled)
+    internal static void SetEnabledCore(
+        string runKeyPath,
+        string approvedKeyPath,
+        string valueName,
+        string command,
+        bool enabled)
     {
-        using RegistryKey key = Registry.CurrentUser.CreateSubKey(RunKeyPath, true);
+        using RegistryKey key = Registry.CurrentUser.CreateSubKey(runKeyPath, true);
         if (enabled)
         {
-            using RegistryKey? approvalKey = Registry.CurrentUser.OpenSubKey(StartupApprovedKeyPath, true);
-            approvalKey?.DeleteValue(ValueName, false);
-            key.SetValue(ValueName, BuildCommand(), RegistryValueKind.String);
+            using RegistryKey? approvalKey = Registry.CurrentUser.OpenSubKey(approvedKeyPath, true);
+            approvalKey?.DeleteValue(valueName, false);
+            key.SetValue(valueName, command, RegistryValueKind.String);
         }
         else
         {
-            key.DeleteValue(ValueName, false);
+            key.DeleteValue(valueName, false);
         }
     }
 

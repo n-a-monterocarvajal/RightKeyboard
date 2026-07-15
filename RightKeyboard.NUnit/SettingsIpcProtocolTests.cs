@@ -80,4 +80,26 @@ public sealed class SettingsIpcProtocolTests
             Assert.That(restored?.ImportPreview?.Warnings.Single(), Does.Contain("device:9"));
         });
     }
+
+    [Test]
+    public void RoundTrip_PreservesStartupFields()
+    {
+        SettingsRequest request = new(
+            SettingsIpcProtocol.Version,
+            SettingsIpcProtocol.SetStartupAction,
+            StartupEnabled: true);
+        SettingsResponse response = new(true, null, null, Startup: new SettingsStartup(true));
+        JsonSerializerOptions options = new(JsonSerializerDefaults.Web);
+
+        SettingsRequest? restoredRequest = JsonSerializer.Deserialize<SettingsRequest>(
+            JsonSerializer.Serialize(request, options), options);
+        SettingsResponse? restoredResponse = JsonSerializer.Deserialize<SettingsResponse>(
+            JsonSerializer.Serialize(response, options), options);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(restoredRequest, Is.EqualTo(request));
+            Assert.That(restoredResponse?.Startup?.Enabled, Is.True);
+        });
+    }
 }

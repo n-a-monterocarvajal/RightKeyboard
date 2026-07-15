@@ -162,6 +162,11 @@ internal sealed class SettingsIpcServer : IDisposable
                 ConfigurationImportResult import = Configuration.LoadImport(RequireFilePath(request));
                 configuration.ApplyImport(import.Configuration, request.Replace == true);
                 break;
+            case SettingsIpcProtocol.StartupAction:
+                return new SettingsResponse(true, null, null, Startup: new SettingsStartup(StartupManager.IsEnabled));
+            case SettingsIpcProtocol.SetStartupAction:
+                StartupManager.SetEnabled(request.StartupEnabled == true);
+                return new SettingsResponse(true, null, null, Startup: new SettingsStartup(StartupManager.IsEnabled));
             default:
                 return new SettingsResponse(false, "La acción solicitada no existe.", null);
         }

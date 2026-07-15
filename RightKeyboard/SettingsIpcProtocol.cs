@@ -15,6 +15,8 @@ internal static class SettingsIpcProtocol
     internal const string ExportAction = "export";
     internal const string ImportPreviewAction = "import-preview";
     internal const string ImportApplyAction = "import-apply";
+    internal const string StartupAction = "startup";
+    internal const string SetStartupAction = "set-startup";
 }
 
 internal sealed record SettingsRequest(
@@ -26,7 +28,8 @@ internal sealed record SettingsRequest(
     bool? Ignored = null,
     bool? DiagnosticsEnabled = null,
     string? FilePath = null,
-    bool? Replace = null);
+    bool? Replace = null,
+    bool? StartupEnabled = null);
 
 internal sealed record SettingsResponse(
     bool Success,
@@ -34,9 +37,12 @@ internal sealed record SettingsResponse(
     SettingsSnapshot? Snapshot,
     SettingsActivity? Activity = null,
     SettingsDiagnostics? Diagnostics = null,
-    SettingsImportPreview? ImportPreview = null);
+    SettingsImportPreview? ImportPreview = null,
+    SettingsStartup? Startup = null);
 
 internal sealed record SettingsImportPreview(int DeviceCount, IReadOnlyList<string> Warnings);
+
+internal sealed record SettingsStartup(bool Enabled);
 
 internal sealed record SettingsActivity(long Sequence, string? Identity);
 
