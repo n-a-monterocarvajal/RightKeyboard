@@ -17,10 +17,19 @@ public static class DeviceClassifier
         "mx anywhere"
     ];
 
-    public static bool IsClearlyNonKeyboard(string displayName)
+    public static bool IsClearlyNonKeyboard(string displayName) =>
+        DescribeNonKeyboardMatch(displayName) is not null;
+
+    // Devuelve el término de NonKeyboardTerms que provocó la clasificación como
+    // no-teclado, o null si el dispositivo no se clasifica así. Sirve para explicar
+    // falsos positivos en el diagnóstico; el término proviene de un vocabulario fijo,
+    // por lo que es seguro registrarlo (no expone el nombre crudo del dispositivo).
+    public static string? DescribeNonKeyboardMatch(string displayName)
     {
         string normalized = displayName.Trim().ToLowerInvariant();
-        return !KeyboardTerms.Any(normalized.Contains) && NonKeyboardTerms.Any(normalized.Contains);
+        return KeyboardTerms.Any(normalized.Contains)
+            ? null
+            : Array.Find(NonKeyboardTerms, normalized.Contains);
     }
 
     public static bool IsLikelySyntheticInputSource(KeyboardDevice device)
