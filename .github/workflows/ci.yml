@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: Build y pruebas (Windows)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restaurar dependencias
+        run: dotnet restore RightKeyboard.sln
+
+      # La solución mapea Release|Any CPU -> Release|x64 para el proyecto WinUI,
+      # por lo que compilar la solución completa cubre núcleo, WinUI y pruebas.
+      # Directory.Build.props activa TreatWarningsAsErrors (AUT-15).
+      - name: Compilar (Release, advertencias como errores)
+        run: dotnet build RightKeyboard.sln -c Release --no-restore
+
+      - name: Ejecutar pruebas
+        run: dotnet test RightKeyboard.NUnit/RightKeyboard.NUnit.csproj -c Release --no-restore
