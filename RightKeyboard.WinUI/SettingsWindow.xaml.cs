@@ -50,7 +50,7 @@ public sealed class SettingsWindow : Window
         ConfigureCaptionButtons();
         ApplyFluentResources();
         TryEnableBackdrop();
-        AppWindow.Resize(new Windows.Graphics.SizeInt32(1020, 760));
+        AppWindow.Resize(new Windows.Graphics.SizeInt32(1020, 640));
         activityTimer = DispatcherQueue.CreateTimer();
         activityTimer.Interval = TimeSpan.FromMilliseconds(500);
         activityTimer.Tick += PollActivityAsync;
@@ -74,9 +74,7 @@ public sealed class SettingsWindow : Window
         root.Background = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
         root.ActualThemeChanged += (_, _) => ApplyFluentResources();
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(56) });
-        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
         Grid titleBar = new() { Padding = new Thickness(0, 0, 150, 0), ColumnSpacing = 10 };
         titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -110,12 +108,27 @@ public sealed class SettingsWindow : Window
         root.Children.Add(titleBar);
         SetTitleBar(titleBar);
 
+        // Cuerpo en dos columnas. La columna derecha (editor) asciende hasta el nivel
+        // del título para aprovechar el espacio libre a su derecha; la botonera inferior
+        // desaparece y sus acciones se reubican para reducir la altura total.
+        Grid body = new() { ColumnSpacing = 20 };
+        body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(340) });
+        body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        Grid.SetRow(body, 1);
+
+        // ---- Columna izquierda: título, lista de dispositivos y acciones generales ----
+        Grid leftColumn = new() { RowSpacing = 12 };
+        leftColumn.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        leftColumn.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        leftColumn.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
         StackPanel heading = new() { Spacing = 4 };
         heading.Children.Add(new TextBlock
         {
             Text = "Teclados y preferencias",
-            FontSize = 28,
-            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+            FontSize = 24,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            TextWrapping = TextWrapping.Wrap
         });
         TextBlock subtitle = new()
         {
@@ -127,31 +140,39 @@ public sealed class SettingsWindow : Window
         activityText.Text = "Pulsa una tecla para identificar su dispositivo.";
         activityText.FontSize = 12;
         activityText.Opacity = 1;
+        activityText.TextWrapping = TextWrapping.Wrap;
         secondaryText.Add(activityText);
         activityHintText.Text = "· La identificación se reanudará al dejar de escribir.";
         activityHintText.FontSize = 12;
         activityHintText.Opacity = 1;
+        activityHintText.TextWrapping = TextWrapping.Wrap;
+        // Oculto salvo durante la edición del alias: colapsado para no reservar altura.
+        activityHintText.Visibility = Visibility.Collapsed;
         secondaryText.Add(activityHintText);
-        StackPanel activityLine = new() { Orientation = Orientation.Horizontal, Spacing = 4 };
-        activityLine.Children.Add(activityText);
-        activityLine.Children.Add(activityHintText);
-        heading.Children.Add(activityLine);
-        Grid.SetRow(heading, 1);
-        root.Children.Add(heading);
-
-        Grid body = new() { ColumnSpacing = 20 };
-        body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(300) });
-        body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        Grid.SetRow(body, 2);
+        heading.Children.Add(activityText);
+        heading.Children.Add(activityHintText);
+        Grid.SetRow(heading, 0);
+        leftColumn.Children.Add(heading);
 
         Grid devicesPanel = new() { RowSpacing = 10 };
         devicesPanel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         devicesPanel.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        devicesPanel.Children.Add(new TextBlock
+        Grid devicesHeader = new() { ColumnSpacing = 8 };
+        devicesHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        devicesHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        devicesHeader.Children.Add(new TextBlock
         {
             Text = "Dispositivos conocidos",
-            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            VerticalAlignment = VerticalAlignment.Center
         });
+        Button reload = new() { Content = "Recargar", VerticalAlignment = VerticalAlignment.Center };
+        reload.CornerRadius = new CornerRadius(8);
+        buttons.Add(reload);
+        reload.Click += ReloadButton_Click;
+        Grid.SetColumn(reload, 1);
+        devicesHeader.Children.Add(reload);
+        devicesPanel.Children.Add(devicesHeader);
         Grid.SetRow(DeviceList, 1);
         DeviceList.Background = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
         DeviceList.BorderThickness = new Thickness(0);
@@ -165,8 +186,41 @@ public sealed class SettingsWindow : Window
             Child = devicesPanel
         };
         cards.Add(devicesCard);
-        body.Children.Add(devicesCard);
+        Grid.SetRow(devicesCard, 1);
+        leftColumn.Children.Add(devicesCard);
 
+        // Acciones generales (no dependen del dispositivo seleccionado).
+        StackPanel generalActions = new() { Spacing = 8 };
+        Button clear = new()
+        {
+            Content = "Limpiar preferencias",
+            HorizontalAlignment = HorizontalAlignment.Left
+        };
+        clear.CornerRadius = new CornerRadius(8);
+        buttons.Add(clear);
+        clear.Click += ClearButton_Click;
+        generalActions.Children.Add(clear);
+        if (DiagnosticLogger.IsAvailable)
+        {
+            StackPanel diagnosticsRow = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
+            DiagnosticsCheckBox.Content = "Diagnóstico detallado";
+            DiagnosticsCheckBox.VerticalAlignment = VerticalAlignment.Center;
+            DiagnosticsCheckBox.Click += DiagnosticsCheckBox_Click;
+            diagnosticsRow.Children.Add(DiagnosticsCheckBox);
+            Button openDiagnostics = new() { Content = "Abrir registros" };
+            openDiagnostics.CornerRadius = new CornerRadius(8);
+            openDiagnostics.Click += OpenDiagnostics_Click;
+            buttons.Add(openDiagnostics);
+            diagnosticsRow.Children.Add(openDiagnostics);
+            generalActions.Children.Add(diagnosticsRow);
+        }
+        Grid.SetRow(generalActions, 2);
+        leftColumn.Children.Add(generalActions);
+
+        Grid.SetColumn(leftColumn, 0);
+        body.Children.Add(leftColumn);
+
+        // ---- Columna derecha: editor del dispositivo seleccionado ----
         StackPanel editor = new() { Spacing = 12 };
         AliasTextBox.Header = "Nombre para este teclado";
         AliasTextBox.PlaceholderText = "Nombre reconocible";
@@ -220,44 +274,6 @@ public sealed class SettingsWindow : Window
         Grid.SetColumn(editorCard, 1);
         body.Children.Add(editorCard);
         root.Children.Add(body);
-
-        Grid footer = new() { ColumnSpacing = 8 };
-        footer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        StackPanel footerLeft = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
-        Button clear = new() { Content = "Limpiar preferencias" };
-        clear.CornerRadius = new CornerRadius(8);
-        buttons.Add(clear);
-        clear.Click += ClearButton_Click;
-        footerLeft.Children.Add(clear);
-        if (DiagnosticLogger.IsAvailable)
-        {
-            DiagnosticsCheckBox.Content = "Diagnóstico detallado";
-            DiagnosticsCheckBox.VerticalAlignment = VerticalAlignment.Center;
-            DiagnosticsCheckBox.Click += DiagnosticsCheckBox_Click;
-            footerLeft.Children.Add(DiagnosticsCheckBox);
-            Button openDiagnostics = new() { Content = "Abrir registros" };
-            openDiagnostics.CornerRadius = new CornerRadius(8);
-            openDiagnostics.Click += OpenDiagnostics_Click;
-            buttons.Add(openDiagnostics);
-            footerLeft.Children.Add(openDiagnostics);
-        }
-        footer.Children.Add(footerLeft);
-        Button reload = new() { Content = "Recargar" };
-        reload.CornerRadius = new CornerRadius(8);
-        buttons.Add(reload);
-        reload.Click += ReloadButton_Click;
-        Grid.SetColumn(reload, 1);
-        footer.Children.Add(reload);
-        Button close = new() { Content = "Cerrar" };
-        close.CornerRadius = new CornerRadius(8);
-        buttons.Add(close);
-        close.Click += CloseButton_Click;
-        Grid.SetColumn(close, 2);
-        footer.Children.Add(close);
-        Grid.SetRow(footer, 3);
-        root.Children.Add(footer);
         return root;
     }
 
@@ -339,7 +355,7 @@ public sealed class SettingsWindow : Window
         double scale = (Content as FrameworkElement)?.XamlRoot?.RasterizationScale ?? 1;
         AppWindow.Resize(new Windows.Graphics.SizeInt32(
             (int)Math.Ceiling(1020 * scale),
-            (int)Math.Ceiling(760 * scale)));
+            (int)Math.Ceiling(640 * scale)));
         await ReloadAsync();
         if (DiagnosticLogger.IsAvailable)
         {
@@ -452,6 +468,7 @@ public sealed class SettingsWindow : Window
         }
 
         activityHintVisible = true;
+        activityHintText.Visibility = Visibility.Visible;
         AnimateOpacity(GetActivityVisual(), 0.78f, 0.52f, 180);
         AnimateOpacity(GetActivityHintVisual(), 0, 0.78f, 180);
     }
@@ -469,6 +486,7 @@ public sealed class SettingsWindow : Window
         activityHintVisible = false;
         AnimateOpacity(GetActivityVisual(), 0.52f, 0.78f, 500);
         AnimateOpacity(GetActivityHintVisual(), 0.78f, 0, 500);
+        activityHintText.Visibility = Visibility.Collapsed;
     }
 
     private void SetActivityText(string text)
@@ -750,7 +768,6 @@ public sealed class SettingsWindow : Window
     }
 
     private async void ReloadButton_Click(object sender, RoutedEventArgs e) => await ReloadAsync(SelectedRow?.Identity);
-    private void CloseButton_Click(object sender, RoutedEventArgs e) => Close();
 
     private async Task ShowErrorAsync(string title, Exception error)
     {
@@ -778,7 +795,7 @@ public sealed class SettingsWindow : Window
             Margin = new Thickness(-24, 0, -24, -24),
             TabFocusNavigation = KeyboardNavigationMode.Cycle
         };
-        Grid.SetRowSpan(overlay, 4);
+        Grid.SetRowSpan(overlay, 2);
         Canvas.SetZIndex(overlay, 100);
 
         StackPanel panelContent = new() { Spacing = 16 };
