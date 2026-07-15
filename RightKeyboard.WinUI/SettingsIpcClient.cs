@@ -42,6 +42,22 @@ public sealed class SettingsIpcClient
         _ = await SendResponseAsync(new SettingsRequest(
             SettingsIpcProtocol.Version, SettingsIpcProtocol.OpenDiagnosticsAction));
 
+    internal async Task ExportAsync(string path) =>
+        _ = await SendResponseAsync(new SettingsRequest(
+            SettingsIpcProtocol.Version, SettingsIpcProtocol.ExportAction, FilePath: path));
+
+    internal async Task<SettingsImportPreview> ImportPreviewAsync(string path)
+    {
+        SettingsResponse response = await SendResponseAsync(new SettingsRequest(
+            SettingsIpcProtocol.Version, SettingsIpcProtocol.ImportPreviewAction, FilePath: path));
+        return response.ImportPreview
+            ?? throw new InvalidOperationException("El núcleo no devolvió la vista previa de la importación.");
+    }
+
+    internal Task<SettingsSnapshot> ImportApplyAsync(string path, bool replace) =>
+        SendAsync(new SettingsRequest(
+            SettingsIpcProtocol.Version, SettingsIpcProtocol.ImportApplyAction, FilePath: path, Replace: replace));
+
     private static async Task<SettingsSnapshot> SendAsync(SettingsRequest request)
     {
         SettingsResponse response = await SendResponseAsync(request);

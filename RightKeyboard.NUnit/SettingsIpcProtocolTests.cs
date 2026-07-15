@@ -44,4 +44,40 @@ public sealed class SettingsIpcProtocolTests
             Assert.That(restored?.Activity, Is.EqualTo(new SettingsActivity(7, "device:1")));
         });
     }
+
+    [Test]
+    public void Request_RoundTrip_PreservesImportFields()
+    {
+        SettingsRequest request = new(
+            SettingsIpcProtocol.Version,
+            SettingsIpcProtocol.ImportApplyAction,
+            FilePath: @"C:\ruta con espacios\preferencias.json",
+            Replace: true);
+
+        string json = JsonSerializer.Serialize(request, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        SettingsRequest? restored = JsonSerializer.Deserialize<SettingsRequest>(
+            json, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        Assert.That(restored, Is.EqualTo(request));
+    }
+
+    [Test]
+    public void Response_RoundTrip_PreservesImportPreview()
+    {
+        SettingsResponse response = new(
+            true,
+            null,
+            null,
+            ImportPreview: new SettingsImportPreview(3, ["No se encontró la distribución de 'device:9'."]));
+
+        string json = JsonSerializer.Serialize(response, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        SettingsResponse? restored = JsonSerializer.Deserialize<SettingsResponse>(
+            json, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(restored?.ImportPreview?.DeviceCount, Is.EqualTo(3));
+            Assert.That(restored?.ImportPreview?.Warnings.Single(), Does.Contain("device:9"));
+        });
+    }
 }
