@@ -1,0 +1,19 @@
+<Project>
+
+  <!--
+    Política de calidad de compilación (AUT-15).
+
+    La solución debe compilar sin advertencias. Se aplica a los tres proyectos
+    (núcleo WinForms, frontend WinUI y pruebas NUnit) desde una única raíz.
+
+    Si algún generador externo (p. ej. Windows App SDK) emitiera una advertencia
+    genuinamente inevitable, documentarla y añadir su código a
+    <WarningsNotAsErrors> en lugar de desactivar la política completa.
+  -->
+  <PropertyGroup>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- No convertir en error las reglas de estilo del IDE (IDExxxx). -->
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+</Project>
