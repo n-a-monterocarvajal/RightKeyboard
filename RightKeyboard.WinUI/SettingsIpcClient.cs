@@ -58,6 +58,16 @@ public sealed class SettingsIpcClient
         SendAsync(new SettingsRequest(
             SettingsIpcProtocol.Version, SettingsIpcProtocol.ImportApplyAction, FilePath: path, Replace: replace));
 
+    internal async Task<SettingsStartup> GetStartupAsync() =>
+        (await SendResponseAsync(new SettingsRequest(
+            SettingsIpcProtocol.Version, SettingsIpcProtocol.StartupAction))).Startup
+        ?? throw new InvalidOperationException("El núcleo no devolvió el estado de inicio con Windows.");
+
+    internal async Task<SettingsStartup> SetStartupAsync(bool enabled) =>
+        (await SendResponseAsync(new SettingsRequest(
+            SettingsIpcProtocol.Version, SettingsIpcProtocol.SetStartupAction, StartupEnabled: enabled))).Startup
+        ?? throw new InvalidOperationException("El núcleo no devolvió el estado de inicio con Windows.");
+
     private static async Task<SettingsSnapshot> SendAsync(SettingsRequest request)
     {
         SettingsResponse response = await SendResponseAsync(request);

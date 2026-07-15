@@ -27,6 +27,7 @@ public sealed class SettingsWindow : Window
     private readonly Button SaveButton = new();
     private readonly Button ForgetButton = new();
     private readonly CheckBox DiagnosticsCheckBox = new();
+    private readonly CheckBox StartupCheckBox = new();
     private readonly List<Button> buttons = [];
     private readonly List<Border> cards = [];
     private readonly List<TextBlock> secondaryText = [];
@@ -205,6 +206,9 @@ public sealed class SettingsWindow : Window
         buttons.Add(import);
         backupRow.Children.Add(import);
         generalActions.Children.Add(backupRow);
+        StartupCheckBox.Content = "Iniciar con Windows";
+        StartupCheckBox.Click += StartupCheckBox_Click;
+        generalActions.Children.Add(StartupCheckBox);
         Button clear = new()
         {
             Content = "Limpiar preferencias",
@@ -371,6 +375,7 @@ public sealed class SettingsWindow : Window
             (int)Math.Ceiling(1020 * scale),
             (int)Math.Ceiling(640 * scale)));
         await ReloadAsync();
+        await ReloadStartupAsync();
         if (DiagnosticLogger.IsAvailable)
         {
             await ReloadDiagnosticsAsync();
@@ -665,6 +670,35 @@ public sealed class SettingsWindow : Window
         catch
         {
             DiagnosticsCheckBox.IsEnabled = false;
+        }
+    }
+
+    private async Task ReloadStartupAsync()
+    {
+        try
+        {
+            StartupCheckBox.IsChecked = (await client.GetStartupAsync()).Enabled;
+        }
+        catch
+        {
+            StartupCheckBox.IsEnabled = false;
+        }
+    }
+
+    private async void StartupCheckBox_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            SettingsStartup state = await client.SetStartupAsync(StartupCheckBox.IsChecked == true);
+            StartupCheckBox.IsChecked = state.Enabled;
+            SetActivityText(state.Enabled
+                ? "RightKeyboard se iniciará con Windows."
+                : "RightKeyboard no se iniciará con Windows.");
+        }
+        catch (Exception error)
+        {
+            await ShowErrorAsync("No se pudo cambiar el inicio con Windows", error);
+            await ReloadStartupAsync();
         }
     }
 
