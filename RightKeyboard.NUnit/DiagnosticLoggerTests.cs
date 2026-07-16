@@ -48,6 +48,27 @@ public sealed class DiagnosticLoggerTests
     }
 
     [Test]
+    public void Enabled_DoesNotLeakDisplayNameOrRawFingerprint()
+    {
+        DiagnosticLogger logger = new(directory, forceEnableForTests: true);
+        KeyboardDevice device = CreateDevice();
+        logger.SetDetailedEnabled(true);
+        logger.Write("entrada_recibida", device, new { keyCategory = "asignable", messageCategory = "normal" });
+        logger.FlushAsync().GetAwaiter().GetResult();
+
+        string[] lines = File.ReadAllLines(Path.Combine(directory, "rightkeyboard-diagnostico.log"));
+        string log = string.Join('\n', lines);
+        using JsonDocument document = JsonDocument.Parse(lines[1]);
+        JsonElement loggedDevice = document.RootElement.GetProperty("device");
+        Assert.Multiple(() =>
+        {
+            Assert.That(log, Does.Not.Contain(device.DisplayName));
+            Assert.That(log, Does.Not.Contain(device.Fingerprint));
+            Assert.That(loggedDevice.GetProperty("fingerprint").GetString(), Has.Length.EqualTo(16));
+        });
+    }
+
+    [Test]
     public void Disable_StopsSubsequentEvents()
     {
         DiagnosticLogger logger = new(directory, forceEnableForTests: true);

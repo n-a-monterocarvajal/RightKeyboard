@@ -149,7 +149,10 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
         if (device.IsClearlyNonKeyboard)
         {
-            diagnostics?.Write("dispositivo_excluido_por_clasificacion", device);
+            diagnostics?.Write("dispositivo_excluido_por_clasificacion", device, new
+            {
+                matchedTerm = DeviceClassifier.DescribeNonKeyboardMatch(device.DisplayName)
+            });
             configuration.Ignore(device);
             SaveConfiguration();
             return;

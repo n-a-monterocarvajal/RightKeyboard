@@ -47,4 +47,21 @@ public sealed class DeviceClassifierTests
     {
         Assert.That(DeviceClassifier.IsClearlyNonKeyboard(name), Is.False);
     }
+
+    [TestCase("Logitech MX Master 3S", "mx master")]
+    [TestCase("USB Optical Mouse", "mouse")]
+    [TestCase("Precision Touchpad", "touchpad")]
+    [TestCase("Ratón compatible con HID", "ratón")]
+    public void DescribeNonKeyboardMatch_ReturnsMatchedTerm(string name, string expected)
+    {
+        Assert.That(DeviceClassifier.DescribeNonKeyboardMatch(name), Is.EqualTo(expected));
+    }
+
+    [TestCase("Logitech MX Keys Keyboard")]
+    [TestCase("Dispositivo desconocido")]
+    [TestCase("Logitech MX Master 3S Keyboard")]
+    public void DescribeNonKeyboardMatch_ReturnsNullForKeyboardOrAmbiguous(string name)
+    {
+        Assert.That(DeviceClassifier.DescribeNonKeyboardMatch(name), Is.Null);
+    }
 }
