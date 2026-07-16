@@ -5,7 +5,7 @@ namespace RightKeyboard;
 
 public sealed class Configuration
 {
-    public const int CurrentSchemaVersion = 3;
+    public const int CurrentSchemaVersion = 4;
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -18,6 +18,14 @@ public sealed class Configuration
     public Dictionary<string, Layout> LayoutMappings { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     public HashSet<string> IgnoredDevices { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Firmas HID parciales (canónicas) cuyos portadores fueron ignorados
+    /// manualmente. Solo se aplican a dispositivos con huella vacía; el
+    /// invariante persistido es que toda firma tiene al menos un dispositivo
+    /// ignorado portador.
+    /// </summary>
+    public HashSet<string> IgnoredSignatures { get; } = new(StringComparer.Ordinal);
 
     public static Configuration LoadConfiguration(
         KeyboardDevicesCollection devices,
@@ -62,6 +70,7 @@ public sealed class Configuration
         }
 
         preference.Fingerprint = device.Fingerprint;
+        preference.Signature = device.Signature;
         preference.DetectedName = device.DisplayName;
         preference.TechnicalId = device.TechnicalId;
         preference.LastSeenUtc = DateTimeOffset.UtcNow;
@@ -119,12 +128,13 @@ public sealed class Configuration
     public bool IsIgnored(
         KeyboardDevice device,
         int connectedDevicesWithSameFingerprint,
-        out bool learnedIdentity)
+        int connectedDevicesWithSameSignature,
+        out IgnoreEvaluation evaluation)
     {
-        learnedIdentity = false;
         TouchDevice(device);
         if (IgnoredDevices.Contains(device.Identity))
         {
+            evaluation = new IgnoreEvaluation(IgnoreSource.Identity, false, null);
             return true;
         }
 
@@ -132,37 +142,105 @@ public sealed class Configuration
             .Where(preference => preference.Fingerprint == device.Fingerprint && IgnoredDevices.Contains(preference.Identity))
             .Select(preference => preference.Identity)
             .ToArray();
-        if (string.IsNullOrEmpty(device.Fingerprint) || connectedDevicesWithSameFingerprint != 1 ||
-            candidates.Length != 1 ||
-            Devices.Values.Any(preference =>
+        if (!string.IsNullOrEmpty(device.Fingerprint) && connectedDevicesWithSameFingerprint == 1 &&
+            candidates.Length == 1 &&
+            !Devices.Values.Any(preference =>
                 preference.Fingerprint == device.Fingerprint && LayoutMappings.ContainsKey(preference.Identity)))
         {
+            LearnIgnoredIdentity(device, Devices[candidates[0]]);
+            evaluation = new IgnoreEvaluation(IgnoreSource.Fingerprint, true, null);
+            return true;
+        }
+
+        // Recuperación por firma HID parcial: solo para dispositivos débilmente
+        // identificados (huella vacía) cuya firma quedó registrada por un
+        // ignorado manual, y solo cuando la coincidencia es inequívoca.
+        if (device.Signature is null || !IgnoredSignatures.Contains(device.Signature))
+        {
+            evaluation = new IgnoreEvaluation(IgnoreSource.None, false, null);
             return false;
         }
 
-        DevicePreference previous = Devices[candidates[0]];
-        DevicePreference current = TouchDevice(device, previous.CustomName);
-        current.CustomName = previous.CustomName;
-        IgnoredDevices.Add(device.Identity);
-        learnedIdentity = true;
+        string? blockedReason = null;
+        if (!string.IsNullOrEmpty(device.Fingerprint))
+        {
+            blockedReason = "huella_presente";
+        }
+        else if (connectedDevicesWithSameSignature != 1)
+        {
+            blockedReason = "varias_coincidencias_conectadas";
+        }
+        else if (Devices.Values.Any(preference =>
+                     string.Equals(preference.Signature, device.Signature, StringComparison.Ordinal) &&
+                     LayoutMappings.ContainsKey(preference.Identity)))
+        {
+            blockedReason = "firma_con_distribucion";
+        }
+
+        if (blockedReason is not null)
+        {
+            evaluation = new IgnoreEvaluation(IgnoreSource.None, false, blockedReason);
+            return false;
+        }
+
+        DevicePreference? carrier = Devices.Values
+            .Where(preference => string.Equals(preference.Signature, device.Signature, StringComparison.Ordinal) &&
+                                 IgnoredDevices.Contains(preference.Identity))
+            .OrderByDescending(preference => preference.LastSeenUtc)
+            .FirstOrDefault();
+        LearnIgnoredIdentity(device, carrier);
+        evaluation = new IgnoreEvaluation(IgnoreSource.Signature, true, null);
         return true;
+    }
+
+    private void LearnIgnoredIdentity(KeyboardDevice device, DevicePreference? previous)
+    {
+        DevicePreference current = TouchDevice(device, previous?.CustomName);
+        current.CustomName = previous?.CustomName;
+        IgnoredDevices.Add(device.Identity);
     }
 
     public void SetLayout(KeyboardDevice device, Layout layout, string? customName = null)
     {
-        TouchDevice(device, customName);
+        DevicePreference preference = TouchDevice(device, customName);
         IgnoredDevices.Remove(device.Identity);
         LayoutMappings[device.Identity] = layout;
+        RemoveSignature(preference.Signature ?? device.Signature);
     }
 
-    public void Ignore(KeyboardDevice device, string? customName = null)
+    /// <summary>
+    /// Ignora el dispositivo y, si <paramref name="extendToSignature"/> lo pide
+    /// y es seguro (huella vacía y firma disponible), registra también su firma
+    /// HID parcial. Devuelve si la firma quedó registrada.
+    /// </summary>
+    public bool Ignore(KeyboardDevice device, string? customName = null, bool extendToSignature = false)
     {
         TouchDevice(device, customName);
         LayoutMappings.Remove(device.Identity);
         IgnoredDevices.Add(device.Identity);
+        if (extendToSignature && string.IsNullOrEmpty(device.Fingerprint) && device.Signature is not null)
+        {
+            IgnoredSignatures.Add(device.Signature);
+            return true;
+        }
+
+        return false;
     }
 
-    public void UpdatePreference(string identity, string? customName, Layout? layout, bool ignored)
+    public void UpdatePreference(string identity, string? customName, Layout? layout, bool ignored) =>
+        UpdatePreference(identity, customName, layout, ignored, connectedDevice: null);
+
+    /// <summary>
+    /// Variante para el camino IPC: si el dispositivo está conectado, ignorarlo
+    /// puede extender la exclusión a su firma HID parcial cuando sea seguro.
+    /// Devuelve si la firma quedó registrada.
+    /// </summary>
+    public bool UpdatePreference(
+        string identity,
+        string? customName,
+        Layout? layout,
+        bool ignored,
+        KeyboardDevice? connectedDevice)
     {
         if (!Devices.TryGetValue(identity, out DevicePreference? preference))
         {
@@ -174,27 +252,54 @@ public sealed class Configuration
         {
             IgnoredDevices.Add(identity);
             LayoutMappings.Remove(identity);
+            if (connectedDevice is KeyboardDevice device &&
+                string.IsNullOrEmpty(device.Fingerprint) && device.Signature is not null)
+            {
+                IgnoredSignatures.Add(device.Signature);
+                return true;
+            }
+
+            return false;
+        }
+
+        IgnoredDevices.Remove(identity);
+        if (layout is null)
+        {
+            LayoutMappings.Remove(identity);
         }
         else
         {
-            IgnoredDevices.Remove(identity);
-            if (layout is null)
-            {
-                LayoutMappings.Remove(identity);
-            }
-            else
-            {
-                LayoutMappings[identity] = layout;
-            }
+            LayoutMappings[identity] = layout;
         }
+
+        // Reactivar un dispositivo desactiva la regla de firma completa: es la
+        // única forma de deshacerla desde la UI actual.
+        RemoveSignature(preference.Signature);
+        return false;
     }
 
     public void Forget(string identity)
     {
-        Devices.Remove(identity);
+        Devices.Remove(identity, out DevicePreference? preference);
         LayoutMappings.Remove(identity);
         IgnoredDevices.Remove(identity);
+        if (preference?.Signature is string signature && !HasIgnoredCarrier(signature))
+        {
+            IgnoredSignatures.Remove(signature);
+        }
     }
+
+    private void RemoveSignature(string? signature)
+    {
+        if (signature is not null)
+        {
+            IgnoredSignatures.Remove(signature);
+        }
+    }
+
+    private bool HasIgnoredCarrier(string signature) => Devices.Values.Any(preference =>
+        string.Equals(preference.Signature, signature, StringComparison.Ordinal) &&
+        IgnoredDevices.Contains(preference.Identity));
 
     public void MergeFrom(Configuration imported, bool replace)
     {
@@ -206,6 +311,7 @@ public sealed class Configuration
             Devices.Clear();
             LayoutMappings.Clear();
             IgnoredDevices.Clear();
+            IgnoredSignatures.Clear();
         }
 
         foreach ((string identity, DevicePreference preference) in imported.Devices)
@@ -226,7 +332,18 @@ public sealed class Configuration
             IgnoredDevices.Add(identity);
             LayoutMappings.Remove(identity);
         }
+
+        IgnoredSignatures.UnionWith(imported.IgnoredSignatures);
+        PruneOrphanSignatures();
     }
+
+    /// <summary>
+    /// Mantiene el invariante de que toda firma ignorada tiene al menos un
+    /// dispositivo ignorado portador; una firma huérfana suprimiría entradas
+    /// sin forma de deshacerlo desde la interfaz.
+    /// </summary>
+    private void PruneOrphanSignatures() =>
+        IgnoredSignatures.RemoveWhere(signature => !HasIgnoredCarrier(signature));
 
     public void Save(string? configurationFile = null) =>
         SaveToPath(configurationFile ?? GetConfigFilePath());
@@ -292,7 +409,7 @@ public sealed class Configuration
         ValidateState();
         string fullPath = Path.GetFullPath(path);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-        StoredConfigurationV3 stored = new()
+        StoredConfigurationV4 stored = new()
         {
             Devices = Devices.Values
                 .OrderBy(preference => preference.DisplayName)
@@ -303,7 +420,12 @@ public sealed class Configuration
                 .OrderBy(pair => pair.Key)
                 .Select(pair => StoredMappingV3.From(pair.Key, pair.Value))
                 .ToList(),
-            IgnoredDeviceIds = IgnoredDevices.Order(StringComparer.OrdinalIgnoreCase).ToList()
+            IgnoredDeviceIds = IgnoredDevices.Order(StringComparer.OrdinalIgnoreCase).ToList(),
+            // Filtrado defensivo: nunca persistir una firma sin portador ignorado.
+            IgnoredSignatures = IgnoredSignatures
+                .Where(HasIgnoredCarrier)
+                .Order(StringComparer.Ordinal)
+                .ToList()
         };
 
         string temporaryPath = fullPath + $".{Guid.NewGuid():N}.tmp";
@@ -359,7 +481,8 @@ public sealed class Configuration
         return version switch
         {
             2 => LoadV2(json, layouts, warnings),
-            CurrentSchemaVersion => LoadV3(json, layouts, warnings),
+            3 => LoadV3(json, layouts, warnings),
+            CurrentSchemaVersion => LoadV4(json, layouts, warnings),
             > CurrentSchemaVersion => throw InvalidData(
                 $"El esquema {version} fue creado por una versión más reciente de RightKeyboard. " +
                 $"Esta versión admite hasta el esquema {CurrentSchemaVersion}."),
@@ -372,11 +495,43 @@ public sealed class Configuration
         IReadOnlyList<Layout> layouts,
         List<string>? warnings)
     {
-        StoredConfigurationV3 stored = JsonSerializer.Deserialize<StoredConfigurationV3>(json, JsonOptions)
+        StoredConfigurationV4 stored = DeserializeStored(json);
+        // El esquema 3 no porta firmas; se migra en memoria y el siguiente
+        // guardado escribe el esquema 4.
+        stored.IgnoredSignatures = [];
+        foreach (StoredDevice? device in stored.Devices)
+        {
+            if (device is not null)
+            {
+                device.Signature = null;
+            }
+        }
+
+        return BuildFromStored(stored, layouts, warnings);
+    }
+
+    private static Configuration LoadV4(
+        string json,
+        IReadOnlyList<Layout> layouts,
+        List<string>? warnings) =>
+        BuildFromStored(DeserializeStored(json), layouts, warnings);
+
+    private static StoredConfigurationV4 DeserializeStored(string json)
+    {
+        StoredConfigurationV4 stored = JsonSerializer.Deserialize<StoredConfigurationV4>(json, JsonOptions)
             ?? throw InvalidData("El documento JSON no contiene preferencias.");
         stored.Devices ??= [];
         stored.Mappings ??= [];
         stored.IgnoredDeviceIds ??= [];
+        stored.IgnoredSignatures ??= [];
+        return stored;
+    }
+
+    private static Configuration BuildFromStored(
+        StoredConfigurationV4 stored,
+        IReadOnlyList<Layout> layouts,
+        List<string>? warnings)
+    {
         Configuration configuration = new();
         HashSet<string> deviceIds = new(StringComparer.OrdinalIgnoreCase);
         foreach (StoredDevice? device in stored.Devices)
@@ -392,7 +547,11 @@ public sealed class Configuration
                 throw InvalidData($"El dispositivo '{identity}' está duplicado.");
             }
 
-            configuration.Devices[identity] = device.ToPreference(identity);
+            DevicePreference preference = device.ToPreference(identity);
+            preference.Signature = device.Signature is null
+                ? null
+                : RequireCanonicalSignature(device.Signature, $"devices ('{identity}')");
+            configuration.Devices[identity] = preference;
         }
 
         HashSet<string> mappingIds = new(StringComparer.OrdinalIgnoreCase);
@@ -446,7 +605,34 @@ public sealed class Configuration
             configuration.IgnoredDevices.Add(identity);
         }
 
+        foreach (string storedSignature in stored.IgnoredSignatures)
+        {
+            string signature = RequireCanonicalSignature(storedSignature, "ignoredSignatures");
+            if (!configuration.IgnoredSignatures.Add(signature))
+            {
+                throw InvalidData($"La firma ignorada '{signature}' está duplicada.");
+            }
+
+            if (!configuration.HasIgnoredCarrier(signature))
+            {
+                throw InvalidData(
+                    $"La firma ignorada '{signature}' no corresponde a ningún dispositivo ignorado.");
+            }
+        }
+
         return configuration;
+    }
+
+    private static string RequireCanonicalSignature(string? value, string collection)
+    {
+        if (string.IsNullOrWhiteSpace(value) ||
+            !HidSignature.TryParseCanonical(value, out HidSignature? signature) ||
+            !string.Equals(signature!.ToCanonicalString(), value, StringComparison.Ordinal))
+        {
+            throw InvalidData($"La colección '{collection}' contiene una firma HID que no es canónica.");
+        }
+
+        return value;
     }
 
     private static Configuration LoadV2(
@@ -568,6 +754,7 @@ public sealed class Configuration
         Devices.Clear();
         LayoutMappings.Clear();
         IgnoredDevices.Clear();
+        IgnoredSignatures.Clear();
 
         foreach ((string identity, DevicePreference preference) in source.Devices)
         {
@@ -580,6 +767,7 @@ public sealed class Configuration
         }
 
         IgnoredDevices.UnionWith(source.IgnoredDevices);
+        IgnoredSignatures.UnionWith(source.IgnoredSignatures);
     }
 
     private void ValidateState()
@@ -699,18 +887,20 @@ public sealed class Configuration
         return string.Equals(normalized, detectedName, StringComparison.CurrentCultureIgnoreCase) ? null : normalized;
     }
 
-    private sealed class StoredConfigurationV3
+    private sealed class StoredConfigurationV4
     {
         public int Version { get; set; } = CurrentSchemaVersion;
         public List<StoredDevice> Devices { get; set; } = [];
         public List<StoredMappingV3> Mappings { get; set; } = [];
         public List<string> IgnoredDeviceIds { get; set; } = [];
+        public List<string> IgnoredSignatures { get; set; } = [];
     }
 
     private sealed class StoredDevice
     {
         public string Identity { get; set; } = string.Empty;
         public string Fingerprint { get; set; } = string.Empty;
+        public string? Signature { get; set; }
         public string DetectedName { get; set; } = string.Empty;
         public string? CustomName { get; set; }
         public string TechnicalId { get; set; } = string.Empty;
@@ -720,6 +910,7 @@ public sealed class Configuration
         {
             Identity = preference.Identity,
             Fingerprint = preference.Fingerprint,
+            Signature = preference.Signature,
             DetectedName = preference.DetectedName,
             CustomName = preference.CustomName,
             TechnicalId = preference.TechnicalId,
@@ -783,6 +974,7 @@ public sealed class DevicePreference
 {
     public required string Identity { get; init; }
     public string Fingerprint { get; set; } = string.Empty;
+    public string? Signature { get; set; }
     public string DetectedName { get; set; } = string.Empty;
     public string? CustomName { get; set; }
     public string TechnicalId { get; set; } = string.Empty;
@@ -793,12 +985,31 @@ public sealed class DevicePreference
     {
         Identity = Identity,
         Fingerprint = Fingerprint,
+        Signature = Signature,
         DetectedName = DetectedName,
         CustomName = CustomName,
         TechnicalId = TechnicalId,
         LastSeenUtc = LastSeenUtc
     };
 }
+
+public enum IgnoreSource
+{
+    None,
+    Identity,
+    Fingerprint,
+    Signature
+}
+
+/// <summary>
+/// Resultado estructurado de <see cref="Configuration.IsIgnored"/>. Cuando el
+/// dispositivo portaba una firma registrada pero una condición la bloqueó,
+/// <see cref="BlockedSignatureReason"/> explica cuál (para el diagnóstico).
+/// </summary>
+public sealed record IgnoreEvaluation(
+    IgnoreSource Source,
+    bool LearnedIdentity,
+    string? BlockedSignatureReason);
 
 public sealed record ConfigurationImportResult(
     Configuration Configuration,

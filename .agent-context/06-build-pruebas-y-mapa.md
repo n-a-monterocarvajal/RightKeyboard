@@ -27,7 +27,7 @@ dotnet build .\RightKeyboard.sln --configuration Release
 dotnet test .\RightKeyboard.sln --configuration Release --no-build
 ```
 
-Snapshot auditado: 98/98 pruebas. Si se omite `--no-build`, `dotnet test` recompila.
+Tras la Etapa 5: 149/149 pruebas. Si se omite `--no-build`, `dotnet test` recompila.
 
 ## Ejecutar en desarrollo
 
@@ -106,6 +106,7 @@ No publicar por inferencia. Requiere solicitud humana explícita. Secuencia espe
 | `RightKeyboard/DeviceIdentityResolver.cs` | SetupAPI, identidad, nombre y huella |
 | `RightKeyboard/KeyboardDevicesCollection.cs` | Inventario handle/path/identidad |
 | `RightKeyboard/Configuration.cs` | Esquema, migración, validación y persistencia |
+| `RightKeyboard/HidSignature.cs` | Firma HID parcial: tokens públicos del path y forma canónica |
 | `RightKeyboard/SettingsIpcProtocol.cs` | DTO/acciones de pipe v1 |
 | `RightKeyboard/SettingsIpcServer.cs` | Autoridad IPC en núcleo |
 | `RightKeyboard/DiagnosticLogger.cs` | Diagnóstico de desarrollo tras `RIGHTKEYBOARD_DIAGNOSTICS` |
@@ -114,7 +115,7 @@ No publicar por inferencia. Requiere solicitud humana explícita. Secuencia espe
 | `RightKeyboard.WinUI/SettingsWindow.xaml.cs` | Configuración WinUI normal |
 | `RightKeyboard.WinUI/LayoutSelectionWindow.cs` | Selector WinUI normal y foco |
 | `RightKeyboard.WinUI/SettingsIpcClient.cs` | Cliente named pipe |
-| `RightKeyboard.NUnit/` | 98 pruebas unitarias/interop/DTO |
+| `RightKeyboard.NUnit/` | 149 pruebas unitarias/interop/DTO |
 | `installer/RightKeyboard.iss` | Instalación/actualización/desinstalación por usuario |
 | `scripts/` | Publicación, instalador, SHA-256, prototipo histórico |
 | `docs/` | Arquitectura, matrices, historia y notas humanas; varias están desactualizadas |

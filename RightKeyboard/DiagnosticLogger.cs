@@ -111,12 +111,12 @@ internal sealed class DiagnosticLogger : IDisposable
                 identityKind = value.Identity.Split(':', 2)[0],
                 fingerprint = Anonymize(value.Fingerprint),
                 path = Anonymize(value.DevicePath),
-                vendorId = ReadHexToken(value.DevicePath, "VID_", 4),
-                productId = ReadHexToken(value.DevicePath, "PID_", 4),
-                interfaceNumber = ReadHexToken(value.DevicePath, "MI_", 2),
-                collectionNumber = ReadHexToken(value.DevicePath, "COL", 2),
-                pathEnumerator = ReadPathEnumerator(value.DevicePath),
-                virtualPathHint = HasVirtualPathHint(value.DevicePath),
+                vendorId = HidSignature.ReadHexToken(value.DevicePath, "VID_", 4),
+                productId = HidSignature.ReadHexToken(value.DevicePath, "PID_", 4),
+                interfaceNumber = HidSignature.ReadHexToken(value.DevicePath, "MI_", 2),
+                collectionNumber = HidSignature.ReadHexToken(value.DevicePath, "COL", 2),
+                pathEnumerator = HidSignature.ReadPathEnumerator(value.DevicePath),
+                virtualPathHint = HidSignature.HasVirtualPathHint(value.DevicePath),
                 capabilities = value.Capabilities,
                 clearlyNonKeyboard = value.IsClearlyNonKeyboard
             } : null,
@@ -159,31 +159,6 @@ internal sealed class DiagnosticLogger : IDisposable
             batch.Clear();
         }
     }
-
-    private static string? ReadHexToken(string value, string marker, int length)
-    {
-        int markerIndex = value.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
-        if (markerIndex < 0 || markerIndex + marker.Length + length > value.Length) return null;
-        string token = value.Substring(markerIndex + marker.Length, length);
-        return token.All(Uri.IsHexDigit) ? token.ToUpperInvariant() : null;
-    }
-
-    internal static string ReadPathEnumerator(string value)
-    {
-        string normalized = value.TrimStart('\\', '?', '.');
-        int separator = normalized.IndexOf('#');
-        string candidate = (separator < 0 ? normalized : normalized[..separator]).ToUpperInvariant();
-        return candidate.Length is > 0 and <= 16 && candidate.All(character =>
-            char.IsAsciiLetterOrDigit(character) || character is '_' or '-')
-            ? candidate
-            : "OTRO";
-    }
-
-    internal static bool HasVirtualPathHint(string value) =>
-        value.Contains("RDP_KBD", StringComparison.OrdinalIgnoreCase) ||
-        value.Contains("TERMSRV", StringComparison.OrdinalIgnoreCase) ||
-        value.Contains("VIRTUAL", StringComparison.OrdinalIgnoreCase) ||
-        value.Contains("VMBUS", StringComparison.OrdinalIgnoreCase);
 
     private void RotateIfNeeded()
     {

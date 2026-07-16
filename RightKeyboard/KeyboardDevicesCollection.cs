@@ -41,6 +41,14 @@ public sealed class KeyboardDevicesCollection : IEnumerable<KeyboardDevice>
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Count();
 
+    public int CountConnectedWithSignature(string? signature) => string.IsNullOrEmpty(signature)
+        ? 0
+        : devicesByHandle.Values
+            .Where(device => string.Equals(device.Signature, signature, StringComparison.Ordinal))
+            .Select(device => device.Identity)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Count();
+
     public void Refresh()
     {
         devicesByHandle.Clear();
@@ -72,6 +80,7 @@ public sealed class KeyboardDevicesCollection : IEnumerable<KeyboardDevice>
     private KeyboardDevice CreateDevice(string path, nint handle)
     {
         DeviceIdentityResolver.DeviceDescriptor descriptor = identityResolver.Resolve(path);
+        KeyboardDeviceCapabilities? capabilities = API.GetKeyboardDeviceCapabilities(handle);
         return new KeyboardDevice(
             path,
             handle,
@@ -80,7 +89,8 @@ public sealed class KeyboardDevicesCollection : IEnumerable<KeyboardDevice>
             descriptor.DisplayName,
             descriptor.TechnicalId,
             descriptor.IsClearlyNonKeyboard,
-            API.GetKeyboardDeviceCapabilities(handle));
+            capabilities,
+            HidSignature.TryFromDevice(path, capabilities)?.ToCanonicalString());
     }
 
     public IEnumerator<KeyboardDevice> GetEnumerator() => devicesByHandle.Values.GetEnumerator();

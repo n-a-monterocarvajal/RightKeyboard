@@ -46,7 +46,7 @@ public sealed class ConfigurationTests
             Assert.That(loaded.Devices[keyboard.Identity].LastSeenUtc, Is.EqualTo(keyboardLastSeen));
             Assert.That(loaded.IgnoredDevices.Contains(mouse.Identity), Is.True);
             Assert.That(loaded.Devices[mouse.Identity].CustomName, Is.EqualTo("Mouse principal"));
-            Assert.That(File.ReadAllText(path), Does.Contain("\"version\": 3"));
+            Assert.That(File.ReadAllText(path), Does.Contain("\"version\": 4"));
         });
     }
 
@@ -174,10 +174,10 @@ public sealed class ConfigurationTests
     }
 
     [Test]
-    public void LoadImport_RejectsFutureSchemaWithoutReadingItAsVersion3()
+    public void LoadImport_RejectsFutureSchemaWithoutReadingItAsCurrent()
     {
         string path = WriteJson("future.json", """
-        { "version": 4, "devices": [], "mappings": [], "ignoredDeviceIds": [] }
+        { "version": 5, "devices": [], "mappings": [], "ignoredDeviceIds": [] }
         """);
 
         InvalidDataException error = Assert.Throws<InvalidDataException>(
@@ -400,12 +400,328 @@ public sealed class ConfigurationTests
         });
     }
 
+    private const string BaseusSignature = "enum:HID|vid:2571|pid:4104|mi:00|col:01|caps:81.0.1.12.3.101";
+
+    [Test]
+    public void Ignore_ManualWithEmptyFingerprint_RegistersSignature()
+    {
+        Configuration configuration = new();
+        KeyboardDevice presenter = Device("device:presenter", "", "Teclado sin nombre", signature: BaseusSignature);
+
+        bool registered = configuration.Ignore(presenter, extendToSignature: true);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(registered, Is.True);
+            Assert.That(configuration.IgnoredSignatures, Is.EquivalentTo(new[] { BaseusSignature }));
+            Assert.That(configuration.Devices[presenter.Identity].Signature, Is.EqualTo(BaseusSignature));
+        });
+    }
+
+    [Test]
+    public void Ignore_WithFingerprint_DoesNotRegisterSignature()
+    {
+        Configuration configuration = new();
+        KeyboardDevice keyboard = Device("device:kbd", "MODEL-A", "Teclado real", signature: BaseusSignature);
+
+        bool registered = configuration.Ignore(keyboard, extendToSignature: true);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(registered, Is.False);
+            Assert.That(configuration.IgnoredSignatures, Is.Empty);
+        });
+    }
+
+    [Test]
+    public void Ignore_WithoutExtension_DoesNotRegisterSignature()
+    {
+        // El auto-ignorado por clasificación de nombre no debe extender a la
+        // firma: sería una señal débil automática.
+        Configuration configuration = new();
+        KeyboardDevice mouse = Device("device:mouse", "", "MX Master 3S", nonKeyboard: true, signature: BaseusSignature);
+
+        bool registered = configuration.Ignore(mouse);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(registered, Is.False);
+            Assert.That(configuration.IgnoredSignatures, Is.Empty);
+        });
+    }
+
+    [Test]
+    public void IsIgnored_NewIdentityWithIgnoredSignature_LearnsIdentity()
+    {
+        Configuration configuration = new();
+        configuration.Ignore(
+            Device("device:old-port", "", "Teclado sin nombre", signature: BaseusSignature),
+            "Presentador",
+            extendToSignature: true);
+
+        KeyboardDevice reconnected = Device("device:new-port", "", "Teclado sin nombre", signature: BaseusSignature);
+        bool ignored = configuration.IsIgnored(
+            reconnected,
+            connectedDevicesWithSameFingerprint: 0,
+            connectedDevicesWithSameSignature: 1,
+            out IgnoreEvaluation evaluation);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(ignored, Is.True);
+            Assert.That(evaluation.Source, Is.EqualTo(IgnoreSource.Signature));
+            Assert.That(evaluation.LearnedIdentity, Is.True);
+            Assert.That(configuration.IgnoredDevices.Contains(reconnected.Identity), Is.True);
+            Assert.That(configuration.Devices[reconnected.Identity].CustomName, Is.EqualTo("Presentador"));
+        });
+    }
+
+    [TestCase(2, "", "varias_coincidencias_conectadas")]
+    [TestCase(1, "MODEL-A", "huella_presente")]
+    public void IsIgnored_IgnoredSignature_DoesNotApplyWhenAmbiguous(
+        int connectedWithSameSignature,
+        string fingerprint,
+        string expectedReason)
+    {
+        Configuration configuration = new();
+        configuration.Ignore(
+            Device("device:old-port", "", "Teclado sin nombre", signature: BaseusSignature),
+            extendToSignature: true);
+
+        KeyboardDevice candidate = Device("device:new-port", fingerprint, "Teclado sin nombre", signature: BaseusSignature);
+        bool ignored = configuration.IsIgnored(
+            candidate,
+            connectedDevicesWithSameFingerprint: 0,
+            connectedWithSameSignature,
+            out IgnoreEvaluation evaluation);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(ignored, Is.False);
+            Assert.That(evaluation.BlockedSignatureReason, Is.EqualTo(expectedReason));
+            Assert.That(configuration.IgnoredDevices.Contains(candidate.Identity), Is.False);
+        });
+    }
+
+    [Test]
+    public void IsIgnored_SignatureSharedWithMappedDevice_DoesNotApply()
+    {
+        Configuration configuration = new();
+        configuration.Ignore(
+            Device("device:presenter", "", "Teclado sin nombre", signature: BaseusSignature),
+            extendToSignature: true);
+        configuration.SetLayout(
+            Device("device:mapped", "", "Teclado sin nombre", signature: BaseusSignature), spanish);
+        // SetLayout retira la firma; se restaura el escenario de conflicto
+        // reintroduciéndola con otro portador ignorado aún presente.
+        configuration.IgnoredSignatures.Add(BaseusSignature);
+
+        bool ignored = configuration.IsIgnored(
+            Device("device:new-port", "", "Teclado sin nombre", signature: BaseusSignature),
+            connectedDevicesWithSameFingerprint: 0,
+            connectedDevicesWithSameSignature: 1,
+            out IgnoreEvaluation evaluation);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(ignored, Is.False);
+            Assert.That(evaluation.BlockedSignatureReason, Is.EqualTo("firma_con_distribucion"));
+        });
+    }
+
+    [Test]
+    public void UpdatePreference_Unignoring_RemovesSignature()
+    {
+        Configuration configuration = new();
+        KeyboardDevice presenter = Device("device:presenter", "", "Teclado sin nombre", signature: BaseusSignature);
+        configuration.Ignore(presenter, extendToSignature: true);
+
+        configuration.UpdatePreference(presenter.Identity, null, null, ignored: false);
+
+        Assert.That(configuration.IgnoredSignatures, Is.Empty);
+    }
+
+    [Test]
+    public void UpdatePreference_IgnoringConnectedWeakDevice_RegistersSignature()
+    {
+        Configuration configuration = new();
+        KeyboardDevice presenter = Device("device:presenter", "", "Teclado sin nombre", signature: BaseusSignature);
+        configuration.TouchDevice(presenter);
+
+        bool registered = configuration.UpdatePreference(
+            presenter.Identity, null, null, ignored: true, connectedDevice: presenter);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(registered, Is.True);
+            Assert.That(configuration.IgnoredSignatures, Is.EquivalentTo(new[] { BaseusSignature }));
+        });
+    }
+
+    [Test]
+    public void SetLayout_RemovesSignature()
+    {
+        Configuration configuration = new();
+        KeyboardDevice presenter = Device("device:presenter", "", "Teclado sin nombre", signature: BaseusSignature);
+        configuration.Ignore(presenter, extendToSignature: true);
+
+        configuration.SetLayout(presenter, spanish);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(configuration.IgnoredSignatures, Is.Empty);
+            Assert.That(configuration.IgnoredDevices, Is.Empty);
+        });
+    }
+
+    [Test]
+    public void Forget_LastCarrier_RemovesSignature_ButKeepsItWithIgnoredTwin()
+    {
+        Configuration configuration = new();
+        configuration.Ignore(
+            Device("device:port-a", "", "Teclado sin nombre", signature: BaseusSignature), extendToSignature: true);
+        configuration.Ignore(
+            Device("device:port-b", "", "Teclado sin nombre", signature: BaseusSignature), extendToSignature: true);
+
+        configuration.Forget("device:port-a");
+        Assert.That(configuration.IgnoredSignatures, Is.EquivalentTo(new[] { BaseusSignature }));
+
+        configuration.Forget("device:port-b");
+        Assert.That(configuration.IgnoredSignatures, Is.Empty);
+    }
+
+    [Test]
+    public void SaveAndLoad_RoundTripsSignatures()
+    {
+        string path = Path.Combine(temporaryDirectory, "preferences.json");
+        Configuration configuration = new();
+        configuration.Ignore(
+            Device("device:presenter", "", "Teclado sin nombre", signature: BaseusSignature),
+            "Presentador",
+            extendToSignature: true);
+
+        configuration.Save(path);
+        Configuration loaded = Configuration.LoadConfiguration(new KeyboardDevicesCollection(), path, [spanish]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(loaded.IgnoredSignatures, Is.EquivalentTo(new[] { BaseusSignature }));
+            Assert.That(loaded.Devices["device:presenter"].Signature, Is.EqualTo(BaseusSignature));
+            Assert.That(File.ReadAllText(path), Does.Contain("\"ignoredSignatures\""));
+        });
+    }
+
+    [Test]
+    public void Version3File_LoadsWithoutSignaturesAndSavesAsVersion4()
+    {
+        string path = WriteJson("preferences-v3.json", """
+        {
+          "version": 3,
+          "devices": [{ "identity": "device:a", "detectedName": "A" }],
+          "mappings": [],
+          "ignoredDeviceIds": ["device:a"]
+        }
+        """);
+
+        Configuration loaded = Configuration.LoadConfiguration(new KeyboardDevicesCollection(), path, [spanish]);
+        loaded.Save(path);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(loaded.IgnoredSignatures, Is.Empty);
+            Assert.That(loaded.Devices["device:a"].Signature, Is.Null);
+            Assert.That(File.ReadAllText(path), Does.Contain("\"version\": 4"));
+        });
+    }
+
+    [Test]
+    public void LoadConfiguration_Version4AcceptsNullCollectionsAsEmpty()
+    {
+        string path = WriteJson("null-collections-v4.json", """
+        { "version": 4, "devices": null, "mappings": null, "ignoredDeviceIds": null, "ignoredSignatures": null }
+        """);
+
+        Configuration loaded = Configuration.LoadConfiguration(new KeyboardDevicesCollection(), path, [spanish]);
+
+        Assert.That(loaded.Devices, Is.Empty);
+    }
+
+    [Test]
+    public void LoadImport_RejectsInvalidSignatures()
+    {
+        string orphan = WriteJson("orphan-signature.json", """
+        {
+          "version": 4,
+          "devices": [],
+          "mappings": [],
+          "ignoredDeviceIds": [],
+          "ignoredSignatures": ["enum:HID|vid:2571|pid:4104|mi:00|col:01|caps:81.0.1.12.3.101"]
+        }
+        """);
+        string duplicated = WriteJson("duplicated-signature.json", """
+        {
+          "version": 4,
+          "devices": [{ "identity": "device:a", "detectedName": "A", "signature": "enum:HID|vid:2571|pid:4104|mi:00|col:01|caps:81.0.1.12.3.101" }],
+          "mappings": [],
+          "ignoredDeviceIds": ["device:a"],
+          "ignoredSignatures": [
+            "enum:HID|vid:2571|pid:4104|mi:00|col:01|caps:81.0.1.12.3.101",
+            "enum:HID|vid:2571|pid:4104|mi:00|col:01|caps:81.0.1.12.3.101"
+          ]
+        }
+        """);
+        string malformed = WriteJson("malformed-signature.json", """
+        {
+          "version": 4,
+          "devices": [{ "identity": "device:a", "detectedName": "A", "signature": "vid=2571" }],
+          "mappings": [],
+          "ignoredDeviceIds": [],
+          "ignoredSignatures": []
+        }
+        """);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                Assert.Throws<InvalidDataException>(() => Configuration.LoadImport(orphan, [spanish]))!.Message,
+                Does.Contain("ningún dispositivo ignorado"));
+            Assert.That(
+                Assert.Throws<InvalidDataException>(() => Configuration.LoadImport(duplicated, [spanish]))!.Message,
+                Does.Contain("duplicada"));
+            Assert.That(
+                Assert.Throws<InvalidDataException>(() => Configuration.LoadImport(malformed, [spanish]))!.Message,
+                Does.Contain("no es canónica"));
+        });
+    }
+
+    [Test]
+    public void MergeFrom_PrunesSignaturesWithoutIgnoredCarrier()
+    {
+        Configuration current = new();
+        KeyboardDevice presenter = Device("device:presenter", "", "Teclado sin nombre", signature: BaseusSignature);
+        current.Ignore(presenter, extendToSignature: true);
+
+        // El import trae el mismo dispositivo sin ignorar: al combinar, la firma
+        // pierde su único portador y debe podarse.
+        Configuration imported = new();
+        imported.TouchDevice(presenter);
+
+        current.MergeFrom(imported, replace: false);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(current.IgnoredDevices, Is.Empty);
+            Assert.That(current.IgnoredSignatures, Is.Empty);
+        });
+    }
+
     private static KeyboardDevice Device(
         string identity,
         string fingerprint,
         string displayName,
-        bool nonKeyboard = false) =>
-        new("test-path", 1, identity, fingerprint, displayName, "ID DE PRUEBA", nonKeyboard);
+        bool nonKeyboard = false,
+        string? signature = null) =>
+        new("test-path", 1, identity, fingerprint, displayName, "ID DE PRUEBA", nonKeyboard, null, signature);
 
     private string WriteJson(string fileName, string json)
     {

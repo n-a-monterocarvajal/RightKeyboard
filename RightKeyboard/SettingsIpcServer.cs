@@ -137,12 +137,14 @@ internal sealed class SettingsIpcServer : IDisposable
                 {
                     throw new InvalidOperationException("La distribución seleccionada ya no está disponible.");
                 }
-                configuration.UpdatePreference(request.Identity!, request.CustomName, layout, request.Ignored == true);
+                SavePreference(request, layout);
                 configuration.Save();
                 break;
             case SettingsIpcProtocol.ForgetAction:
                 RequireIdentity(request);
+                string? forgottenSignature = TrackedSignature(request.Identity!);
                 configuration.Forget(request.Identity!);
+                LogSignatureRemoval(forgottenSignature, "dispositivo_olvidado");
                 configuration.Save();
                 break;
             case SettingsIpcProtocol.ClearAction:
@@ -172,6 +174,61 @@ internal sealed class SettingsIpcServer : IDisposable
         }
 
         return new SettingsResponse(true, null, CreateSnapshot());
+    }
+
+    private void SavePreference(SettingsRequest request, Layout? layout)
+    {
+        bool ignored = request.Ignored == true;
+        KeyboardDevice? connectedDevice = devices
+            .Where(device => string.Equals(device.Identity, request.Identity, StringComparison.OrdinalIgnoreCase))
+            .Select(device => (KeyboardDevice?)device)
+            .FirstOrDefault();
+        string? trackedSignature = TrackedSignature(request.Identity!);
+
+        bool signatureRegistered = configuration.UpdatePreference(
+            request.Identity!, request.CustomName, layout, ignored, connectedDevice);
+
+        if (ignored)
+        {
+            if (signatureRegistered)
+            {
+                diagnostics?.Write("firma_registrada", connectedDevice, new
+                {
+                    signature = connectedDevice?.Signature,
+                    origin = "configuracion"
+                });
+            }
+            else
+            {
+                diagnostics?.Write("firma_no_registrada", connectedDevice, new
+                {
+                    reason = connectedDevice is not KeyboardDevice device
+                        ? "dispositivo_no_conectado"
+                        : !string.IsNullOrEmpty(device.Fingerprint) ? "huella_presente" : "sin_vid_pid",
+                    origin = "configuracion"
+                });
+            }
+        }
+        else
+        {
+            LogSignatureRemoval(trackedSignature, "preferencia_reactivada");
+        }
+    }
+
+    /// <summary>Firma de la preferencia solo si sigue registrada como ignorada.</summary>
+    private string? TrackedSignature(string identity) =>
+        configuration.Devices.TryGetValue(identity, out DevicePreference? preference) &&
+        preference.Signature is string signature &&
+        configuration.IgnoredSignatures.Contains(signature)
+            ? signature
+            : null;
+
+    private void LogSignatureRemoval(string? signature, string reason)
+    {
+        if (signature is not null && !configuration.IgnoredSignatures.Contains(signature))
+        {
+            diagnostics?.Write("firma_retirada", details: new { signature, reason });
+        }
     }
 
     private SettingsResponse DiagnosticsResponse() => new(

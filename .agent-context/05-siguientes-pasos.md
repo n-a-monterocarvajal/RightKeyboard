@@ -14,16 +14,16 @@ Este backlog sustituye para continuidad técnica el orden histórico de `ROADMAP
 - agregar prueba de privacidad para impedir que vuelvan `VirtualKey`, rutas completas, alias o caracteres;
 - ambas variantes pasan la suite y la función Raw Input mantiene latencia.
 
-### 2. Mejorar detección preventiva de HID ambiguos
+### 2. Mejorar detección preventiva de HID ambiguos — **implementado (Etapa 5), pendiente de validación física**
 
 **Trabajo:** usar los logs extendidos para modelar firmas HID parciales (`VID`, `PID`, interfaz, colección, enumerador y capacidades). Caso concreto: presentador Baseus detectado como `Dispositivo F7E55424`, diagnosticado con `VID=2571` y `PID=4104`.
 
-**Criterios:**
+**Criterios (estado):**
 
-- ignorar manualmente un HID ambiguo puede aplicar también a su firma cuando sea seguro;
-- cambiar de puerto no debe reabrir selector si la firma ignorada es inequívoca;
-- ningún teclado real se excluye solo por coincidencia débil;
-- el diagnóstico muestra por qué se aplicó o no la regla.
+- ignorar manualmente un HID ambiguo puede aplicar también a su firma cuando sea seguro — hecho: solo con huella vacía y firma disponible (`Configuration.Ignore`/`UpdatePreference`);
+- cambiar de puerto no debe reabrir selector si la firma ignorada es inequívoca — hecho: regla en `Configuration.IsIgnored` (una coincidencia conectada, sin distribuciones con la firma); falta prueba física de cambio de puerto;
+- ningún teclado real se excluye solo por coincidencia débil — hecho por construcción: los dispositivos con huella quedan fuera del sistema de firmas;
+- el diagnóstico muestra por qué se aplicó o no la regla — hecho: `firma_registrada/no_registrada/no_aplicada/retirada`, `ignorado_recuperado_por_firma`.
 
 ### 3. Agrupar identidades del mismo dispositivo
 

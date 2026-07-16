@@ -96,6 +96,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         }
 
         int matchingDevices = devices.CountConnectedWithFingerprint(device.Fingerprint);
+        int matchingSignatures = devices.CountConnectedWithSignature(device.Signature);
         bool knownIdentity = configuration.Devices.ContainsKey(device.Identity);
         bool mappedIdentity = configuration.LayoutMappings.ContainsKey(device.Identity);
         bool ignoredIdentity = configuration.IgnoredDevices.Contains(device.Identity);
@@ -136,15 +137,32 @@ internal sealed class TrayApplicationContext : ApplicationContext
             return;
         }
 
-        if (configuration.IsIgnored(device, matchingDevices, out bool learnedIgnoredIdentity))
+        if (configuration.IsIgnored(device, matchingDevices, matchingSignatures, out IgnoreEvaluation ignoreEvaluation))
         {
-            diagnostics?.Write(learnedIgnoredIdentity ? "ignorado_recuperado_por_huella" : "entrada_ignorada", device);
-            if (learnedIgnoredIdentity)
+            diagnostics?.Write(
+                ignoreEvaluation.Source switch
+                {
+                    IgnoreSource.Signature => "ignorado_recuperado_por_firma",
+                    IgnoreSource.Fingerprint => "ignorado_recuperado_por_huella",
+                    _ => "entrada_ignorada"
+                },
+                device,
+                ignoreEvaluation.Source == IgnoreSource.Signature ? new { signature = device.Signature } : null);
+            if (ignoreEvaluation.LearnedIdentity)
             {
                 SaveConfiguration();
             }
 
             return;
+        }
+
+        if (ignoreEvaluation.BlockedSignatureReason is string blockedSignatureReason)
+        {
+            diagnostics?.Write("firma_no_aplicada", device, new
+            {
+                signature = device.Signature,
+                reason = blockedSignatureReason
+            });
         }
 
         if (device.IsClearlyNonKeyboard)
@@ -232,7 +250,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
             DialogResult result = dialog.ShowDialog();
             if (result == DialogResult.Ignore)
             {
-                configuration.Ignore(device, dialog.CustomName);
+                bool signatureRegistered = configuration.Ignore(device, dialog.CustomName, extendToSignature: true);
+                LogSignatureRegistration(signatureRegistered, device, "selector");
                 SaveConfiguration();
                 return;
             }
@@ -242,13 +261,40 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 return;
             }
 
+            bool signatureWasRegistered = device.Signature is not null &&
+                configuration.IgnoredSignatures.Contains(device.Signature);
             configuration.SetLayout(device, dialog.SelectedLayout, dialog.CustomName);
+            if (signatureWasRegistered)
+            {
+                diagnostics?.Write("firma_retirada", device, new
+                {
+                    signature = device.Signature,
+                    reason = "preferencia_reactivada"
+                });
+            }
+
             SaveConfiguration();
             ApplyLayout(dialog.SelectedLayout);
         }
         finally
         {
             selectingLayout = false;
+        }
+    }
+
+    private void LogSignatureRegistration(bool registered, KeyboardDevice device, string origin)
+    {
+        if (registered)
+        {
+            diagnostics?.Write("firma_registrada", device, new { signature = device.Signature, origin });
+        }
+        else
+        {
+            diagnostics?.Write("firma_no_registrada", device, new
+            {
+                reason = !string.IsNullOrEmpty(device.Fingerprint) ? "huella_presente" : "sin_vid_pid",
+                origin
+            });
         }
     }
 
