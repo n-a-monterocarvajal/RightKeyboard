@@ -87,7 +87,18 @@ Workflow Windows para restore/build/test, SDK fijado por `global.json`; consider
 
 Mover DTO de IPC, `VersionPresentation` y modelos compartidos a una biblioteca para que WinUI no referencie el ejecutable WinForms. Mantener compatibilidad del protocolo o incrementar versión.
 
-### 12. Revisar semántica de importación portable
+### 12. Reordenar la disposición de la Configuración WinUI y definir tamaño mínimo
+
+**Trabajo:** tras migrar Exportar, Importar e «Iniciar con Windows» (etapas 2–3), esos controles y «Limpiar preferencias» quedaron apilados bajo la lista de dispositivos sin criterio de diseño propio. Reubicarlos con una jerarquía deliberada (p. ej. barra de comandos, sección de preferencias o pie agrupado) y, cuando todo esté acomodado, definir un tamaño mínimo operacional de la ventana.
+
+**Criterios:**
+
+- los comandos de archivo (Exportar/Importar), los de sistema (Iniciar con Windows) y los destructivos (Limpiar preferencias) tienen agrupación y jerarquía visual distinguibles;
+- «Diagnóstico detallado»/«Abrir registros» siguen apareciendo solo en compilaciones de desarrollo y no condicionan el layout normal;
+- se define y aplica `MinWidth`/`MinHeight` de la ventana con todos los controles visibles y sin recortes a 100 % y 125 % de escala;
+- relacionado con la revisión de microcopia (#8): si se ejecutan juntas, un solo PR es aceptable.
+
+### 13. Revisar semántica de importación portable
 
 Probar equipo A→B, layout ausente y dispositivo desconectado. Decidir si una asociación no resoluble debe conservarse como pendiente en vez de descartarse con warning.
 
