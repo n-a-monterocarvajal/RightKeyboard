@@ -542,6 +542,61 @@ public sealed class ConfigurationTests
     }
 
     [Test]
+    public void UpdatePreference_RenamingNeverIgnoredDevice_KeepsRegisteredSignature()
+    {
+        // Renombrar un gemelo no ignorado del mismo modelo no debe desactivar
+        // la regla de firma que registró el dispositivo ignorado.
+        Configuration configuration = new();
+        configuration.Ignore(
+            Device("device:presenter", "", "Teclado sin nombre", signature: BaseusSignature),
+            extendToSignature: true);
+        KeyboardDevice twin = Device("device:twin", "", "Teclado sin nombre", signature: BaseusSignature);
+        configuration.TouchDevice(twin);
+
+        configuration.UpdatePreference(twin.Identity, "Presentador de repuesto", null, ignored: false);
+
+        Assert.That(configuration.IgnoredSignatures, Is.EquivalentTo(new[] { BaseusSignature }));
+    }
+
+    [Test]
+    public void UpdatePreference_AssigningLayoutToSignatureCarrier_RemovesSignature()
+    {
+        Configuration configuration = new();
+        configuration.Ignore(
+            Device("device:presenter", "", "Teclado sin nombre", signature: BaseusSignature),
+            extendToSignature: true);
+        KeyboardDevice twin = Device("device:twin", "", "Teclado sin nombre", signature: BaseusSignature);
+        configuration.TouchDevice(twin);
+
+        configuration.UpdatePreference(twin.Identity, null, spanish, ignored: false);
+
+        Assert.That(configuration.IgnoredSignatures, Is.Empty);
+    }
+
+    [Test]
+    public void Save_PrunesSignatureOrphanedByCarrierSignatureChange()
+    {
+        // Un identity estable (container:) puede cambiar de firma al cambiar de
+        // puerto; la firma anterior queda sin portador y debe podarse también en
+        // memoria al guardar, no solo en el archivo.
+        string path = Path.Combine(temporaryDirectory, "preferences.json");
+        Configuration configuration = new();
+        configuration.Ignore(
+            Device("container:stable", "", "Teclado sin nombre", signature: BaseusSignature),
+            extendToSignature: true);
+        configuration.TouchDevice(
+            Device("container:stable", "", "Teclado sin nombre", signature: "enum:HID|vid:2571|pid:4104|mi:01|col:02|caps:-"));
+
+        configuration.Save(path);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(configuration.IgnoredSignatures, Is.Empty);
+            Assert.That(File.ReadAllText(path), Does.Contain("\"ignoredSignatures\": []"));
+        });
+    }
+
+    [Test]
     public void UpdatePreference_IgnoringConnectedWeakDevice_RegistersSignature()
     {
         Configuration configuration = new();

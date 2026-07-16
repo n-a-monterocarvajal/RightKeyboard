@@ -205,7 +205,8 @@ public sealed class Configuration
         DevicePreference preference = TouchDevice(device, customName);
         IgnoredDevices.Remove(device.Identity);
         LayoutMappings[device.Identity] = layout;
-        RemoveSignature(preference.Signature ?? device.Signature);
+        // TouchDevice acaba de sincronizar preference.Signature con el dispositivo.
+        RemoveSignature(preference.Signature);
     }
 
     /// <summary>
@@ -247,6 +248,7 @@ public sealed class Configuration
             throw new InvalidOperationException("El dispositivo ya no existe en las preferencias.");
         }
 
+        bool wasIgnored = IgnoredDevices.Contains(identity);
         preference.CustomName = NormalizeCustomName(customName, preference.DetectedName);
         if (ignored)
         {
@@ -272,9 +274,15 @@ public sealed class Configuration
             LayoutMappings[identity] = layout;
         }
 
-        // Reactivar un dispositivo desactiva la regla de firma completa: es la
-        // única forma de deshacerla desde la UI actual.
-        RemoveSignature(preference.Signature);
+        // Reactivar a un portador ignorado desactiva la regla de firma completa
+        // (es la forma de deshacerla desde la UI); asignar distribución también,
+        // porque esa firma quedaría bloqueada por contradicción de todos modos.
+        // Renombrar un dispositivo que nunca estuvo ignorado no debe tocarla.
+        if (wasIgnored || layout is not null)
+        {
+            RemoveSignature(preference.Signature);
+        }
+
         return false;
     }
 
@@ -407,6 +415,10 @@ public sealed class Configuration
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         ValidateState();
+        // Restaurar el invariante también en memoria (una firma puede quedar
+        // huérfana si TouchDevice actualizó la firma de su único portador);
+        // así memoria y disco no divergen y la huérfana deja de suprimir.
+        PruneOrphanSignatures();
         string fullPath = Path.GetFullPath(path);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         StoredConfigurationV4 stored = new()
@@ -421,11 +433,7 @@ public sealed class Configuration
                 .Select(pair => StoredMappingV3.From(pair.Key, pair.Value))
                 .ToList(),
             IgnoredDeviceIds = IgnoredDevices.Order(StringComparer.OrdinalIgnoreCase).ToList(),
-            // Filtrado defensivo: nunca persistir una firma sin portador ignorado.
-            IgnoredSignatures = IgnoredSignatures
-                .Where(HasIgnoredCarrier)
-                .Order(StringComparer.Ordinal)
-                .ToList()
+            IgnoredSignatures = IgnoredSignatures.Order(StringComparer.Ordinal).ToList()
         };
 
         string temporaryPath = fullPath + $".{Guid.NewGuid():N}.tmp";

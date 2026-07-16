@@ -27,7 +27,7 @@ dotnet build .\RightKeyboard.sln --configuration Release
 dotnet test .\RightKeyboard.sln --configuration Release --no-build
 ```
 
-Tras la Etapa 5: 149/149 pruebas. Si se omite `--no-build`, `dotnet test` recompila.
+Tras la Etapa 5: 152/152 pruebas. Si se omite `--no-build`, `dotnet test` recompila.
 
 ## Ejecutar en desarrollo
 
@@ -115,7 +115,7 @@ No publicar por inferencia. Requiere solicitud humana explícita. Secuencia espe
 | `RightKeyboard.WinUI/SettingsWindow.xaml.cs` | Configuración WinUI normal |
 | `RightKeyboard.WinUI/LayoutSelectionWindow.cs` | Selector WinUI normal y foco |
 | `RightKeyboard.WinUI/SettingsIpcClient.cs` | Cliente named pipe |
-| `RightKeyboard.NUnit/` | 149 pruebas unitarias/interop/DTO |
+| `RightKeyboard.NUnit/` | 152 pruebas unitarias/interop/DTO |
 | `installer/RightKeyboard.iss` | Instalación/actualización/desinstalación por usuario |
 | `scripts/` | Publicación, instalador, SHA-256, prototipo histórico |
 | `docs/` | Arquitectura, matrices, historia y notas humanas; varias están desactualizadas |
