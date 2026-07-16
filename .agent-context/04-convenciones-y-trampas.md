@@ -4,14 +4,15 @@
 
 1. **Español:** documentación, comentarios que explican decisiones, UI, errores, notas y descripciones nuevas se escriben en español. Tipos, métodos, propiedades y APIs siguen convenciones .NET/Win32 en inglés (`CONTRIBUTING.md`).
 2. **El núcleo persiste:** ninguna UI WinUI debe abrir/escribir `preferences.json`; toda mutación pasa por IPC y `Configuration` en el hilo del núcleo.
-3. **Rutas HID opacas:** no extraer identidad cortando strings de rutas PnP. Usar SetupAPI/ContainerId/InstanceId. Solo diagnóstico puede extraer tokens no únicos.
+3. **Rutas HID opacas:** no extraer identidad cortando strings de rutas PnP. Usar SetupAPI/ContainerId/InstanceId. Solo `HidSignature` extrae tokens públicos no únicos (VID/PID/MI/COL/enumerador), y únicamente para diagnóstico y para la exclusión por firma tras un ignorado manual — nunca como identidad.
 4. **Recuperación conservadora:** nunca seleccionar arbitrariamente entre varias preferencias con la misma huella.
 5. **Raw Input caliente:** no hacer I/O, enumeración SetupAPI, espera, logging síncrono ni trabajo UI en cada pulsación.
 6. **`DefWindowProc` recibe `WM_INPUT`:** `RawInputWindow.WndProc` debe llamar siempre a `base.WndProc` para liberar recursos internos de Windows.
 7. **Sin elevación:** manifiestos `asInvoker`; instalación y estado bajo usuario actual.
 8. **Bandeja desde 1.5.0:** solo Configuración y Salir. Limpieza global vive en Configuración.
 9. **No topmost permanente:** el selector puede usar un pulso temporal para activación, nunca quedar «siempre visible».
-10. **Cambios de esquema:** validar, migrar explícitamente y escribir de forma atómica. Un esquema futuro se rechaza; no reinterpretarlo.
+10. **Cambios de esquema:** validar, migrar explícitamente y escribir de forma atómica. Un esquema futuro se rechaza; no reinterpretarlo. Vigente: esquema 4 (`ignoredSignatures` + `signature` por dispositivo); el 3 migra en memoria y se reescribe como 4 al guardar.
+11. **Firmas HID conservadoras:** una firma solo se registra tras ignorado manual de un dispositivo con huella vacía, solo se aplica con una única coincidencia conectada y sin distribuciones que la compartan, y no puede quedar huérfana: reactivar o asignar distribución la retira; `Forget` la retira si era el último portador.
 
 ## Costumbres actuales, no políticas impuestas por tooling
 

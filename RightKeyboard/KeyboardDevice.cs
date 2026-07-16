@@ -8,7 +8,8 @@ public readonly record struct KeyboardDevice(
     string DisplayName,
     string TechnicalId,
     bool IsClearlyNonKeyboard,
-    KeyboardDeviceCapabilities? Capabilities = null);
+    KeyboardDeviceCapabilities? Capabilities = null,
+    string? Signature = null);
 
 public sealed record KeyboardDeviceCapabilities(
     uint Type,

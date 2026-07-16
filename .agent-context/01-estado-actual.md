@@ -20,6 +20,7 @@ Snapshot actualizado el **2026-07-09** para promover la rama `codex/version-1.5`
 - Seguimiento del teclado pulsado con Configuración abierta; mientras el alias tiene foco no cambia la selección.
 - Menú nativo de bandeja limitado a **Configuración**, separador y **Salir** (`NativeTrayMenu`).
 - Detección conservadora de no-teclados por nombre y de la firma sintética observada al usar el historial del portapapeles.
+- Exclusión por firma HID parcial (Etapa 5): ignorar manualmente un dispositivo con huella vacía registra su firma (`HidSignature`); reconectarlo con otra identidad no reabre el selector si la coincidencia es inequívoca. Esquema de preferencias 4 (`ignoredSignatures`); el 3 migra al guardar.
 - Diagnóstico detallado fuera del build normal; el código del logger queda disponible para compilaciones de desarrollo con `RIGHTKEYBOARD_DIAGNOSTICS`.
 - Instalador Inno Setup por usuario, autocontenido, sin UAC, acceso en Inicio, inicio automático en instalación nueva y conservación de datos al actualizar.
 - Frontend publicado ReadyToRun; el snapshot IPC ya no repite SetupAPI en cada apertura.
@@ -54,4 +55,4 @@ No hay servicios falsos en producción. `RightKeyboard.WinUI` usa IPC real, `Con
 
 ## Evidencia automatizada
 
-En este snapshot hay **98 pruebas NUnit**. Cubren serialización/configuración, identidad y huella, clasificación básica, señales Raw Input, tamaños de interop, presentación WinForms, logger en modo de prueba, IPC DTO, menú y versión. No cubren extremo a extremo el pipe, UI WinUI, foco/foreground, SetupAPI real, registro de inicio, instalador ni hardware.
+En este snapshot había **98 pruebas NUnit**; tras las etapas 1-5 hay **152** (se añadieron protocolo IPC de exportar/importar/inicio, clasificación explicable, privacidad del log y firmas HID: parseo, esquema 4, regla inequívoca y reversibilidad). Cubren serialización/configuración, identidad y huella, clasificación básica, señales Raw Input, tamaños de interop, presentación WinForms, logger en modo de prueba, IPC DTO, menú y versión. No cubren extremo a extremo el pipe, UI WinUI, foco/foreground, SetupAPI real, registro de inicio, instalador ni hardware.

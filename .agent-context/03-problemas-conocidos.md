@@ -24,13 +24,13 @@ Agregar una prueba directa sobre el evento JSON sería buena mejora, pero ya no 
 
 **Acción:** diseñar comandos IPC validados para exportar/importar/startup, añadir controles WinUI y pruebas. No permitir que WinUI escriba archivos o registro directamente si rompe la autoridad del núcleo.
 
-## P1 — detección preventiva insuficiente para HID ambiguos
+## Implementado, pendiente de validación física — exclusión por firma HID parcial (Etapa 5)
 
-**Síntoma:** presentadores USB, mouse avanzados o interfaces virtuales pueden reportarse ante Windows como teclados HID normales y abrir el selector.
+**Síntoma original:** presentadores USB, mouse avanzados o interfaces virtuales pueden reportarse ante Windows como teclados HID normales y abrir el selector. Evidencia: presentador Baseus con `VID=2571`, `PID=4104`, interfaz `00`, colección `01`, capacidades de teclado y `clearlyNonKeyboard=false` (`Dispositivo F7E55424`).
 
-**Evidencia:** diagnóstico de presentador Baseus con `VID=2571`, `PID=4104`, interfaz `00`, colección `01`, capacidades de teclado y `clearlyNonKeyboard=false`. El identificador visible fue `Dispositivo F7E55424`, pero el log anonimiza identidad/ruta.
+**Estado:** ignorar manualmente un dispositivo con huella vacía registra su firma HID parcial (`HidSignature`, esquema 4). Una identidad nueva con esa firma se suprime sin selector solo si su huella es vacía, hay exactamente una coincidencia conectada y ninguna preferencia con distribución comparte la firma. Reversible desde la UI actual (reactivar/olvidar). El diagnóstico explica registro, aplicación y bloqueo.
 
-**Acción:** estudiar exclusión persistente por firma HID parcial (`VID`, `PID`, interfaz, colección, enumerador y capacidades) después de ignorado manual, sin excluir automáticamente teclados reales por señales débiles.
+**Pendiente:** validar en la estación física con el Baseus real (confirmar si su huella es vacía; si no lo es, la recuperación por huella ya cubría su reconexión y la firma cubre el resto de HID débiles) y ejecutar el cambio de puerto de la matriz.
 
 ## P1 — foco del selector depende de heurísticas Win32
 

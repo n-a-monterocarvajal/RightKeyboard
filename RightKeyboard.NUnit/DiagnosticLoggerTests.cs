@@ -81,16 +81,26 @@ public sealed class DiagnosticLoggerTests
         Assert.That(File.ReadAllLines(path), Has.Length.EqualTo(linesBefore));
     }
 
-    [TestCase(@"\\?\HID#VID_046D&PID_C548#PRIVATE", "HID")]
-    [TestCase(@"\\?\ROOT#RDP_KBD#0000", "ROOT")]
-    [TestCase(@"\\?\ACPI#PNP0303#4", "ACPI")]
-    public void ReadPathEnumerator_ReturnsOnlyNonUniqueFamily(string path, string expected) =>
-        Assert.That(DiagnosticLogger.ReadPathEnumerator(path), Is.EqualTo(expected));
+    [Test]
+    public void Enabled_SignatureDetails_DoNotLeakRawPath()
+    {
+        DiagnosticLogger logger = new(directory, forceEnableForTests: true);
+        KeyboardDevice device = CreateDevice();
+        string signature = HidSignature.TryFromDevice(device.DevicePath, device.Capabilities)!.ToCanonicalString();
+        logger.SetDetailedEnabled(true);
+        logger.Write("firma_registrada", device, new { signature, origin = "selector" });
+        logger.FlushAsync().GetAwaiter().GetResult();
 
-    [TestCase(@"\\?\ROOT#RDP_KBD#0000")]
-    [TestCase(@"\\?\VMBUS#SYNTHETIC_KBD#PRIVATE")]
-    public void HasVirtualPathHint_RecognizesKnownVirtualFamilies(string path) =>
-        Assert.That(DiagnosticLogger.HasVirtualPathHint(path), Is.True);
+        string log = string.Join('\n', File.ReadAllLines(Path.Combine(directory, "rightkeyboard-diagnostico.log")));
+        Assert.Multiple(() =>
+        {
+            // El canónico solo contiene tokens públicos y puede registrarse en claro.
+            Assert.That(log, Does.Contain(signature));
+            // La parte privada del path y la huella cruda no deben aparecer.
+            Assert.That(log, Does.Not.Contain("PRIVATE"));
+            Assert.That(log, Does.Not.Contain(device.DisplayName));
+        });
+    }
 
     private static KeyboardDevice CreateDevice() => new(
         @"\\?\HID#VID_1234&PID_5678#PRIVATE", 42,
