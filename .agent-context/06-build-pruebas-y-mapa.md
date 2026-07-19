@@ -6,7 +6,7 @@ Todos los comandos se ejecutan en PowerShell desde la raíz del repositorio.
 
 - Windows 10/11 x64.
 - .NET SDK **10.0.301**; `global.json` permite el último patch compatible.
-- Inno Setup 6.3+ para instalador (validado históricamente con 6.7.3).
+- Inno Setup 7.0+ para instalador (validado con 7.0.2; la línea 6.7.3 fue la anterior de referencia).
 - Para efectos visuales reales: Windows 11 físico con transparencia activa; una VM puede ocultarlos.
 
 Comprobar:
@@ -62,7 +62,7 @@ Si Inno Setup no está en una ruta detectada:
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\build-installer.ps1 `
   -Version 1.5.0 `
-  -IsccPath 'C:\ruta\a\Inno Setup 6\ISCC.exe'
+  -IsccPath 'C:\ruta\a\Inno Setup 7\ISCC.exe'
 ```
 
 Salidas ignoradas por Git:

@@ -30,7 +30,7 @@ if (Test-Path -LiteralPath $installerDirectory) {
 }
 New-Item -ItemType Directory -Path $publishDirectory, $installerDirectory -Force | Out-Null
 
-dotnet restore $projectPath --runtime win-x64
+dotnet restore $projectPath --runtime win-x64 -p:PublishReadyToRun=true
 if ($LASTEXITCODE -ne 0) { throw 'Falló dotnet restore.' }
 
 dotnet publish $projectPath `
@@ -40,21 +40,23 @@ dotnet publish $projectPath `
     --no-restore `
     --output $publishDirectory `
     -p:Version=$Version `
+    -p:PublishReadyToRun=true `
     -p:ContinuousIntegrationBuild=true `
     -p:DebugSymbols=false `
     -p:DebugType=None
 if ($LASTEXITCODE -ne 0) { throw 'Falló dotnet publish.' }
 
-$winUiDirectory = Join-Path $publishDirectory 'ui'
 dotnet restore $winUiProjectPath --runtime win-x64 -p:PublishReadyToRun=true
 if ($LASTEXITCODE -ne 0) { throw 'Falló dotnet restore para WinUI.' }
 
+# Ambas aplicaciones se publican en la misma carpeta para compartir una sola copia del
+# runtime .NET: el 99 % de los archivos del núcleo eran idénticos a los del frontend.
 dotnet publish $winUiProjectPath `
     --configuration $Configuration `
     --runtime win-x64 `
     --self-contained true `
     --no-restore `
-    --output $winUiDirectory `
+    --output $publishDirectory `
     -p:Version=$Version `
     -p:WindowsAppSDKSelfContained=true `
     -p:PublishReadyToRun=true `
@@ -63,8 +65,32 @@ dotnet publish $winUiProjectPath `
     -p:DebugType=None
 if ($LASTEXITCODE -ne 0) { throw 'Falló dotnet publish para WinUI.' }
 
+# El despliegue autocontenido del Windows App SDK copia el runtime de Windows ML aunque el
+# proyecto no lo use. `WindowsAppSDKMLPassthroughOnnxRuntime` no lo evita (WindowsAppSDK 5969),
+# así que se eliminan tras publicar. RightKeyboard no referencia ninguna API de Windows.AI:
+# si alguna vez lo hiciera, hay que quitar este bloque.
+$machineLearningBinaries = @(
+    'onnxruntime.dll',
+    'DirectML.dll',
+    'Microsoft.ML.OnnxRuntime.dll',
+    'Microsoft.Windows.AI.MachineLearning.dll',
+    'Microsoft.Windows.AI.MachineLearning.Projection.dll'
+)
+$removedBytes = 0
+foreach ($binary in $machineLearningBinaries) {
+    $path = Join-Path $publishDirectory $binary
+    if (Test-Path -LiteralPath $path) {
+        $removedBytes += (Get-Item -LiteralPath $path).Length
+        Remove-Item -LiteralPath $path -Force
+    }
+}
+Write-Host ('Runtime de Windows ML descartado: {0:N1} MB.' -f ($removedBytes / 1MB))
+
 $candidates = @(
     $IsccPath,
+    (Join-Path $env:ProgramFiles 'Inno Setup 7\ISCC.exe'),
+    (Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 7\ISCC.exe'),
+    (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 7\ISCC.exe'),
     (Get-Command ISCC.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue),
     (Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'),
     (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 6\ISCC.exe')
@@ -72,7 +98,7 @@ $candidates = @(
 
 $compiler = $candidates | Select-Object -First 1
 if (-not $compiler) {
-    throw "La publicación autocontenida quedó lista en '$publishDirectory', pero no se encontró ISCC.exe. Instale Inno Setup 6 o defina ISCC_PATH y vuelva a ejecutar este script."
+    throw "La publicación autocontenida quedó lista en '$publishDirectory', pero no se encontró ISCC.exe. Instale Inno Setup 7 o defina ISCC_PATH y vuelva a ejecutar este script."
 }
 
 & $compiler "/DPublishDir=$publishDirectory" "/DOutputDir=$installerDirectory" "/DAppVersion=$Version" $installerScript

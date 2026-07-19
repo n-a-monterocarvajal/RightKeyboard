@@ -50,7 +50,7 @@ scripts\build-installer.ps1
 ```
 
 La aplicación se genera en `RightKeyboard\bin\Release\net10.0-windows\`.
-El último comando publica para `win-x64`, compila el instalador con Inno Setup 6.3 o posterior y genera su archivo SHA-256 bajo `artifacts\installer`. Si `ISCC.exe` no está en una ubicación conocida, se puede indicar mediante `ISCC_PATH` o el parámetro `-IsccPath`.
+El último comando publica para `win-x64`, compila el instalador con Inno Setup 7.0 o posterior y genera su archivo SHA-256 bajo `artifacts\installer`. Si `ISCC.exe` no está en una ubicación conocida, se puede indicar mediante `ISCC_PATH` o el parámetro `-IsccPath`.
 
 ## Implementación
 
