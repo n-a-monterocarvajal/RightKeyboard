@@ -66,6 +66,12 @@ Se descartó cambiar la distribución global con `ActivateKeyboardLayout` en cad
 
 Después de fallos de repintado acumulativo en `ContextMenuStrip` y flyouts propios que cerraban el panel de iconos ocultos, se eligió `CreatePopupMenu/TrackPopupMenuEx`. En `1.5.0` solo contiene Configuración y Salir. No reintroducir limpieza global allí.
 
+Revisado el 19 de julio de 2026 a raíz del menú de bandeja de las apps de Claude y ChatGPT, que comparten aspecto: ambas son Electron, así que ese menú no es del sistema sino el widget de Chromium dibujado por la aplicación. Reproducirlo exige una ventana propia con acrílico, no un menú: la implementación de referencia (Akhmetov, 2025) es una `Window` WinUI con `ItemsControl` y `DesktopAcrylicBackdrop`.
+
+Se descarta por dos motivos independientes. El primero es de memoria: `MenuFlyout` y cualquier superficie WinUI exigen el Windows App SDK cargado en el proceso que las muestra, es decir dentro del residente y de forma permanente, peor que el frontend bajo demanda que sí se libera al cerrarse. El segundo ya se conocía por experiencia propia: un flyout propio cierra el panel de iconos ocultos, y el autor del artículo reconoce esa misma limitación sin resolverla.
+
+Tampoco hay término medio. Los menús Win32 no reciben acrílico automáticamente en Windows 11 —`AcrylicMenus` existe para engancharlos—, así que la vía nativa actual no renuncia a nada que otra opción sin coste pudiera ofrecer. La decisión se mantiene sin cambios.
+
 ### Materiales reales; no Acrylic simulado sobre GDI
 
 La ruta DWM/WinForms produjo transparencia y contraste defectuosos. WinUI usa `DesktopAcrylicBackdrop` con fallback `MicaBackdrop`; WinForms queda sólido. Se descartó seguir extendiendo DWM sobre controles GDI. `FluentWindowStyler` existe solo para el fallback.
