@@ -2,7 +2,7 @@
 
 El instalador se compila con `scripts\build-installer.ps1`. Los casos marcados como manuales deben ejecutarse en una cuenta estándar de Windows 10 y Windows 11 x64, idealmente también en una máquina limpia sin .NET Desktop Runtime.
 
-La compilación de las alfas se verifica con Inno Setup 6.7.3. Instalación, desinstalación e inicio automático ya fueron aprobados en un host; alpha 5 conserva la misma publicación .NET autocontenida y requiere repetir las comprobaciones visuales y del acceso del menú Inicio.
+La compilación se verifica con Inno Setup 7.0.2; hasta 1.5.0 la referencia fue 6.7.3. El script mantiene `SetupArchitecture` en su valor predeterminado (`x86`): las declaraciones `external` de `kernel32.dll` en la sección `[Code]` asumen un `THandle` de 4 bytes y compilar un instalador de 64 bits las rompería. Instalación, desinstalación e inicio automático ya fueron aprobados en un host; alpha 5 conserva la misma publicación .NET autocontenida y requiere repetir las comprobaciones visuales y del acceso del menú Inicio.
 
 | Caso | Preparación y acción | Resultado esperado | Tipo |
 |---|---|---|---|
@@ -15,6 +15,7 @@ La compilación de las alfas se verifica con Inno Setup 6.7.3. Instalación, des
 | Desactivación desde Windows | Deshabilitar RightKeyboard en Aplicaciones de inicio y abrir Configuración | La opción aparece desmarcada; una actualización no vuelve a activarla | Manual |
 | Instancia única | Iniciar dos veces `RightKeyboard.exe` | Solo permanece una instancia y un icono en el área de notificación | Manual |
 | Actualización con la aplicación abierta | Con preferencias guardadas y RightKeyboard activo, instalar una versión posterior | La aplicación se cierra ordenadamente; se reemplaza solo `app`; `preferences.json` y `exports` se conservan | Manual |
+| Actualización desde 1.5.0 o anterior | Instalar 1.5.0, luego actualizar a una versión con carpeta única | `{app}\ui` desaparece; **Configuración** sigue abriendo la ventana WinUI; el tamaño en disco de `app` baja alrededor de 145 MB | Manual |
 | Actualización con inicio desactivado | Deshabilitar el inicio desde RightKeyboard o Windows y actualizar | El instalador conserva el estado desactivado | Manual |
 | Lenguaje de actualización | Ejecutar el instalador sobre una versión existente | Las páginas de preparación, progreso y cierre dicen **Actualizar**, **Actualizando** y **Actualización completada**; no reutilizan **Instalando** ni **Completando la instalación**. Se anuncia que se conservarán preferencias e inicio automático y toda frase termina con puntuación. | Manual |
 | Reparación/reinstalación | Ejecutar de nuevo la misma versión con preferencias existentes | Los binarios se reinstalan y los datos permanecen sin cambios | Manual |

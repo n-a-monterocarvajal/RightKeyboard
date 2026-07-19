@@ -411,10 +411,18 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     private static string? FindWinUiExecutable()
     {
-        string installed = Path.Combine(AppContext.BaseDirectory, "ui", "RightKeyboard.WinUI.exe");
+        string installed = Path.Combine(AppContext.BaseDirectory, "RightKeyboard.WinUI.exe");
         if (File.Exists(installed))
         {
             return installed;
+        }
+
+        // Disposición anterior a 1.5.1: el frontend se publicaba en su propia carpeta con
+        // una copia completa del runtime. Se conserva para instalaciones no actualizadas.
+        string legacy = Path.Combine(AppContext.BaseDirectory, "ui", "RightKeyboard.WinUI.exe");
+        if (File.Exists(legacy))
+        {
+            return legacy;
         }
 
 #if DEBUG

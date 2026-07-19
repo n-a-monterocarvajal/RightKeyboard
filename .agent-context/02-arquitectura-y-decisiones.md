@@ -74,9 +74,23 @@ La ruta DWM/WinForms produjo transparencia y contraste defectuosos. WinUI usa `D
 
 Inno Setup con `PrivilegesRequired=lowest` instala bajo `%LOCALAPPDATA%`, incluye .NET y Windows App SDK y no descarga runtimes. Se prefirió a instalar runtime global (normalmente requiere administrador). MSIX quedó descartado por ahora por firma, actualización fuera de Store, inicio automático y migración. Véase `docs/distribucion-1.5.md`.
 
-### ReadyToRun solo para el frontend
+Se revisó descargar los runtimes desde el instalador para aligerarlo. Se descartó: tanto el .NET Desktop Runtime como el Windows App Runtime se instalan a nivel de máquina y piden elevación, lo que rompería el objetivo de instalación sin UAC. El mecanismo de descarga de Inno (`DownloadTemporaryFile`, WinHTTP) no cambia esa restricción, y la línea 7 no aportó ninguna vía nativa de Windows para prerrequisitos.
 
-Beta 7 activa `PublishReadyToRun=true` en restore/publish de WinUI para reducir arranque en frío; aumenta tamaño. No se mantiene un proceso UI caliente porque dañaría el objetivo de reposo liviano.
+### Carpeta única para núcleo y frontend
+
+Hasta 1.5.0 el frontend se publicaba en `{app}\ui` con su propia copia autocontenida: 217 de los 218 archivos del núcleo eran byte a byte idénticos a los del frontend, es decir, dos copias completas del runtime .NET 10. Ambas aplicaciones se publican ahora en la misma carpeta; los archivos `.deps.json` y `.runtimeconfig.json` son por aplicación y conviven sin conflicto. La publicación pasó de 813 archivos y 407,8 MB a 595 archivos y 299,1 MB.
+
+`TrayApplicationContext.FindWinUiExecutable` busca primero junto al núcleo y conserva `ui\` como respaldo para instalaciones no actualizadas. El instalador elimina `{app}\ui` mediante `[InstallDelete]`, porque `[Files]` no borra lo que sobra al actualizar.
+
+### ReadyToRun para ambos ejecutables
+
+Beta 7 activó `PublishReadyToRun=true` solo en WinUI para reducir arranque en frío. Con la carpeta única el núcleo también lo activa: al compartir carpeta, `RightKeyboard.dll` era el único archivo que difería entre ambas publicaciones y la última en escribirse ganaba. Igualar la opción hace la salida determinista y de paso mejora el arranque del núcleo. No se mantiene un proceso UI caliente porque dañaría el objetivo de reposo liviano.
+
+### Binarios de Windows ML descartados tras publicar
+
+La publicación autocontenida arrastra `onnxruntime.dll`, `DirectML.dll` y las proyecciones de `Microsoft.Windows.AI.MachineLearning`: 40,4 MB que RightKeyboard nunca usa. `WindowsAppSDKMLPassthroughOnnxRuntime=true` no los elimina, ni desde el `.csproj` ni por línea de comandos, porque el despliegue autocontenido del SDK los copia por una vía que ese `.targets` no intercepta (WindowsAppSDK issue 5969).
+
+`build-installer.ps1` los borra después de publicar. Se comprobó en ejecución que el núcleo arranca y que la ventana WinUI se crea sin ellos, y el código no referencia ninguna API de `Windows.AI`. La lista debe retirarse si alguna vez se adopta una de esas APIs.
 
 ### Diagnóstico sin Serilog y fuera del build normal
 

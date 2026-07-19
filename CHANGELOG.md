@@ -4,6 +4,10 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [Sin publicar]
 
+- El instalador se compila con Inno Setup 7.0.2. El script busca primero `Inno Setup 7` y conserva la línea 6 como respaldo. `SetupArchitecture` permanece en `x86`: las declaraciones `external` de `kernel32.dll` de la sección `[Code]` asumen un `THandle` de 4 bytes.
+- El núcleo y la Configuración WinUI se instalan en una sola carpeta y comparten una única copia del runtime .NET 10. Antes se publicaban por separado, con dos copias completas: la publicación baja de 813 archivos y 407,8 MB a 595 archivos y 299,1 MB. Al actualizar desde 1.5.0 el instalador elimina la carpeta `ui` heredada.
+- La publicación del núcleo activa `PublishReadyToRun`, igualando la opción del frontend para que la salida compartida sea determinista.
+- El instalador ya no incluye el runtime de Windows ML que arrastra el Windows App SDK autocontenido (`onnxruntime.dll`, `DirectML.dll` y proyecciones de `Microsoft.Windows.AI.MachineLearning`): 40,4 MB que la aplicación nunca usa.
 - La Configuración WinUI agrupa Exportar, Importar y Limpiar como operaciones sobre preferencias, mantiene «Iniciar con Windows» en Sistema y reserva toda la columna derecha para el dispositivo seleccionado. Guardar/Olvidar permanecen visibles al mínimo de 900 × 640 píxeles lógicos, y Limpiar adopta énfasis rojo en hover/pressed sin perder su confirmación accesible.
 - La Configuración WinUI permite agrupar manualmente identidades que el usuario reconoce como el mismo teclado. Un alias y una distribución gobiernan el grupo lógico; las identidades técnicas permanecen visibles y se pueden separar en cualquier momento, recuperando sus preferencias individuales anteriores.
 - Las preferencias pasan al esquema 5 con grupos lógicos explícitos. Los archivos de esquema 4 migran con grupos vacíos y el contrato IPC de Configuración pasa a v2 con snapshots y acciones de agrupación/separación.

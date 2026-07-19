@@ -44,6 +44,12 @@ Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 [Tasks]
 Name: "startup"; Description: "Iniciar RightKeyboard con Windows"; Flags: checkedonce; Check: IsFreshInstall
 
+[InstallDelete]
+; Hasta 1.5.0 el frontend WinUI se instalaba en {app}\ui con una copia completa del
+; runtime .NET. Ahora comparte carpeta con el núcleo: la carpeta anterior debe eliminarse
+; para que una actualización no deje ~109 MB huérfanos en disco.
+Type: filesandordirs; Name: "{app}\ui"
+
 [Files]
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
