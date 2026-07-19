@@ -29,10 +29,35 @@ Cuando Windows entrega identidades distintas para el mismo teclado al cambiar de
 - La operación es reversible.
 - La app nunca fusiona automáticamente dispositivos ambiguos sin intervención del usuario.
 
+## Observaciones sobre la Configuración WinUI
+
+Revisión del ejecutable de `1.5.0` del 19 de julio de 2026. Cada punto indica qué se verificó en el código.
+
+### Pulido visual
+
+- **Botón Recargar sin icono.** Es un `Button` con texto (`SettingsWindow.xaml.cs`). Debería usar un icono del sistema, conservando nombre accesible y descripción emergente.
+- **Casillas de verificación con ángulos rectos.** Los `CheckBox` son los únicos controles que no fijan `CornerRadius`; el resto usa `CornerRadius(8)`. El radio del glifo no proviene de la propiedad del control sino del recurso de tema `CheckBoxCornerRadius`, así que hay que sobrescribir el recurso y no la propiedad.
+
+### Abandono de edición sin guardar
+
+`DeviceList_SelectionChanged` reescribe el editor con la fila nueva sin comprobar nada, y no existe seguimiento de estado sucio en la ventana. Seleccionar otro dispositivo, o cerrar la ventana, descarta alias, distribución e ignorado en silencio. Falta detectar el estado sucio y confirmar antes de perderlo.
+
+### Relación entre Ignorar y Agrupar
+
+La dependencia existe y es unidireccional: ignorar bloquea agrupar en ambos sentidos. Como origen, `SetEditorEnabled` deshabilita el desplegable de agrupación cuando la fila está ignorada; como destino, `CanBeGroupTarget` excluye las filas ignoradas. Por tanto **Ignorar es una precondición y su posición sobre Agrupar es correcta**, pero hoy queda por debajo de Distribución, a la que también gobierna. Conviene situar Ignorar antes de todo lo que condiciona.
+
+Hay además un defecto real: `IgnoredCheckBox_Changed` solo reevalúa `LayoutComboBox.IsEnabled`. Al marcar Ignorar, los controles de agrupación siguen habilitados hasta reseleccionar la fila, de modo que se puede iniciar una agrupación que el núcleo rechaza.
+
+### Pulsaciones sintéticas y falsos dispositivos
+
+Por explorar. `API.TryReadKeyboardEvent` ya descarta los eventos con `Header.Device == 0`, que es el caso habitual de la entrada inyectada con `SendInput`, así que el portapapeles de Windows no debería crear un dispositivo fantasma. `RawKeyboardEvent.HasExtraInformation` se captura pero solo se registra en diagnóstico: no filtra nada. Queda por verificar el caso de teclados virtuales que sí se enumeran como HID real (escritorio remoto, automatización, teclado en pantalla) y decidir si deben poder llegar al selector.
+
+### Nomenclatura de la lista
+
+Se revisó si el panel izquierdo debía titularse «Dispositivos detectados». **No procede.** No existe esa distinción en la documentación ni en el historial del repositorio, y la lista incluye dispositivos desconectados, que por definición no se están detectando. Todo lo que aparece tiene un registro de preferencia, así que «Dispositivos conocidos» describe mejor el contenido.
+
 ## Pendientes funcionales de la línea 1.5
 
-- Migrar exportación/importación de preferencias a la Configuración WinUI.
-- Permitir administrar el inicio con Windows desde la Configuración WinUI.
 - Medir de forma reproducible la latencia de apertura de Configuración y del selector.
 - Revisar microtextos de la UI que aún suenan excesivamente técnicos.
 - Resolver/documentar la licencia heredada del fork antes de ampliar contribuciones externas.
