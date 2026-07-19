@@ -88,16 +88,17 @@ Workflow Windows para restore/build/test, SDK fijado por `global.json`; consider
 
 Mover DTO de IPC, `VersionPresentation` y modelos compartidos a una biblioteca para que WinUI no referencie el ejecutable WinForms. Mantener compatibilidad del protocolo o incrementar versión.
 
-### 12. Reordenar la disposición de la Configuración WinUI y definir tamaño mínimo
+### 12. Reordenar la disposición de la Configuración WinUI y definir tamaño mínimo — **implementado (Etapa 7), pendiente de validación DPI ampliada**
 
 **Trabajo:** tras migrar Exportar, Importar e «Iniciar con Windows» (etapas 2–3), esos controles y «Limpiar preferencias» quedaron apilados bajo la lista de dispositivos sin criterio de diseño propio. Reubicarlos con una jerarquía deliberada (p. ej. barra de comandos, sección de preferencias o pie agrupado) y, cuando todo esté acomodado, definir un tamaño mínimo operacional de la ventana.
 
 **Criterios:**
 
-- los comandos de archivo (Exportar/Importar), los de sistema (Iniciar con Windows) y los destructivos (Limpiar preferencias) tienen agrupación y jerarquía visual distinguibles;
-- «Diagnóstico detallado»/«Abrir registros» siguen apareciendo solo en compilaciones de desarrollo y no condicionan el layout normal;
-- se define y aplica `MinWidth`/`MinHeight` de la ventana con todos los controles visibles y sin recortes a 100 % y 125 % de escala;
-- relacionado con la revisión de microcopia (#8): si se ejecutan juntas, un solo PR es aceptable.
+- los comandos de archivo (Exportar/Importar), los de sistema (Iniciar con Windows) y los destructivos (Limpiar preferencias) tienen agrupación y jerarquía visual distinguibles — hecho;
+- «Diagnóstico detallado»/«Abrir registros» siguen apareciendo solo en compilaciones de desarrollo y no condicionan el layout normal — hecho;
+- se define y aplica un mínimo de 900 × 640 píxeles lógicos, adaptado al DPI; ambas variantes se verificaron a 100 % y las acciones siguen alcanzables mediante desplazamiento — hecho;
+- queda pendiente repetir con evidencia suficiente a 125 %, DPI mixto/dos monitores y texto ampliado fuera de esta VM;
+- la microcopia afectada y los nombres de automatización de los comandos se ajustaron sin convertir la etapa en una revisión textual completa.
 
 ### 13. Revisar semántica de importación portable
 

@@ -48,6 +48,12 @@ El grupo lógico tiene un solo alias/layout efectivo y muestra debajo sus identi
 
 **Pendiente:** validar en la estación física con dos teclados, reconexión y cambio de puerto. Esta VM no dispone de passthrough directo de dispositivos.
 
+## Implementado, pendiente de validación DPI ampliada — disposición y mínimo de Configuración (Etapa 7)
+
+La Configuración WinUI distingue Archivo, Sistema y Restablecer preferencias sin alterar la lista jerárquica de grupos e identidades técnicas. `SettingsWindow` impone 900 × 640 píxeles lógicos como mínimo mediante `WM_GETMINMAXINFO`, recalculado con el DPI de la ventana, y mantiene desplazable el editor cuando el espacio vertical se reduce. La variante diagnóstica añade sus controles dentro de Sistema; el build normal no crea esa subsección ni reserva su espacio.
+
+**Evidencia disponible:** inspección visual de ambas variantes a 100 % en la VM, al tamaño inicial y al mínimo; controles sin solapamiento y acciones inferiores alcanzables mediante desplazamiento. **Pendiente:** repetir a 125 %, con dos monitores/DPI mixto y texto ampliado en una estación que permita evidencia reproducible.
+
 ## P1 — portabilidad sin certificar
 
 El esquema puede resolver layouts por identificador o nombre, pero no hay prueba entre dos equipos reales. Además, al faltar un layout, `LoadImport` conserva el dispositivo pero elimina esa asociación de la configuración candidata y solo emite advertencia; comprobar que esta semántica es la deseada antes de llamarla «preferencia pendiente».

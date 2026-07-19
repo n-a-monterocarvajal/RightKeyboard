@@ -4,6 +4,7 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [Sin publicar]
 
+- La Configuración WinUI separa los comandos de archivo, las preferencias del sistema y la limpieza destructiva en secciones deliberadas, conserva la jerarquía visual de grupos e identidades técnicas y aplica un tamaño mínimo de 900 × 640 píxeles lógicos adaptado al DPI. El diagnóstico de desarrollo se integra sin reservar espacio en el build normal.
 - La Configuración WinUI permite agrupar manualmente identidades que el usuario reconoce como el mismo teclado. Un alias y una distribución gobiernan el grupo lógico; las identidades técnicas permanecen visibles y se pueden separar en cualquier momento, recuperando sus preferencias individuales anteriores.
 - Las preferencias pasan al esquema 5 con grupos lógicos explícitos. Los archivos de esquema 4 migran con grupos vacíos y el contrato IPC de Configuración pasa a v2 con snapshots y acciones de agrupación/separación.
 - La resolución en el residente consulta primero la preferencia efectiva del grupo. La recuperación conservadora por huella puede reutilizar esa distribución sin añadir membresía; no existe fusión automática, tampoco para dispositivos ambiguos.

@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Runtime.InteropServices;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -15,6 +16,13 @@ namespace RightKeyboard.WinUI;
 
 public sealed class SettingsWindow : Window
 {
+    private const int InitialWidth = 1080;
+    private const int InitialHeight = 720;
+    private const int MinimumWidth = 900;
+    private const int MinimumHeight = 640;
+    private const uint WmGetMinMaxInfo = 0x0024;
+    private const nuint MinimumSizeSubclassId = 0x524B0007;
+
     private readonly SettingsIpcClient client;
     private readonly ObservableCollection<DeviceRow> rows = [];
     private readonly ListView DeviceList = new();
@@ -46,6 +54,7 @@ public sealed class SettingsWindow : Window
     private Visual? activityVisual;
     private Visual? activityHintVisual;
     private bool activityHintVisible;
+    private NativeMethods.SubclassProc? minimumSizeSubclass;
 
     public SettingsWindow(SettingsIpcClient client)
     {
@@ -56,7 +65,8 @@ public sealed class SettingsWindow : Window
         ConfigureCaptionButtons();
         ApplyFluentResources();
         TryEnableBackdrop();
-        AppWindow.Resize(new Windows.Graphics.SizeInt32(1020, 640));
+        ConfigureMinimumSize();
+        ResizeForCurrentDpi(InitialWidth, InitialHeight);
         activityTimer = DispatcherQueue.CreateTimer();
         activityTimer.Interval = TimeSpan.FromMilliseconds(500);
         activityTimer.Tick += PollActivityAsync;
@@ -68,6 +78,7 @@ public sealed class SettingsWindow : Window
         {
             activityTimer.Stop();
             activityHintTimer.Stop();
+            RemoveMinimumSizeSubclass();
         };
     }
 
@@ -114,15 +125,15 @@ public sealed class SettingsWindow : Window
         root.Children.Add(titleBar);
         SetTitleBar(titleBar);
 
-        // Cuerpo en dos columnas. La columna derecha (editor) asciende hasta el nivel
-        // del título para aprovechar el espacio libre a su derecha; la botonera inferior
-        // desaparece y sus acciones se reubican para reducir la altura total.
+        // Cuerpo en dos columnas: el inventario conserva la jerarquía lógica de dispositivos
+        // y el editor reúne únicamente las acciones de la selección. Archivo, sistema y
+        // restablecimiento se presentan como ámbitos independientes.
         Grid body = new() { ColumnSpacing = 20 };
-        body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(340) });
+        body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(360) });
         body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         Grid.SetRow(body, 1);
 
-        // ---- Columna izquierda: título, lista de dispositivos y acciones generales ----
+        // ---- Columna izquierda: título, lista jerárquica y comandos de archivo ----
         Grid leftColumn = new() { RowSpacing = 12 };
         leftColumn.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         leftColumn.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
@@ -195,54 +206,51 @@ public sealed class SettingsWindow : Window
         Grid.SetRow(devicesCard, 1);
         leftColumn.Children.Add(devicesCard);
 
-        // Acciones generales (no dependen del dispositivo seleccionado).
-        StackPanel generalActions = new() { Spacing = 8 };
-        StackPanel backupRow = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
-        Button export = new() { Content = "Exportar" };
+        StackPanel fileCommands = new() { Spacing = 8 };
+        fileCommands.Children.Add(CreateSectionHeading(
+            "Archivo",
+            "Guarda una copia de tus preferencias o recupera una anterior."));
+        Grid fileButtons = new() { ColumnSpacing = 8 };
+        fileButtons.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        fileButtons.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        Button export = new()
+        {
+            Content = "Exportar archivo",
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
         export.CornerRadius = new CornerRadius(8);
         export.Click += ExportButton_Click;
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(export, "ExportPreferencesButton");
         buttons.Add(export);
-        backupRow.Children.Add(export);
-        Button import = new() { Content = "Importar" };
+        fileButtons.Children.Add(export);
+        Button import = new()
+        {
+            Content = "Importar archivo",
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
         import.CornerRadius = new CornerRadius(8);
         import.Click += ImportButton_Click;
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(import, "ImportPreferencesButton");
         buttons.Add(import);
-        backupRow.Children.Add(import);
-        generalActions.Children.Add(backupRow);
-        StartupCheckBox.Content = "Iniciar con Windows";
-        StartupCheckBox.Click += StartupCheckBox_Click;
-        generalActions.Children.Add(StartupCheckBox);
-        Button clear = new()
-        {
-            Content = "Limpiar preferencias",
-            HorizontalAlignment = HorizontalAlignment.Left
-        };
-        clear.CornerRadius = new CornerRadius(8);
-        buttons.Add(clear);
-        clear.Click += ClearButton_Click;
-        generalActions.Children.Add(clear);
-        if (DiagnosticLogger.IsAvailable)
-        {
-            StackPanel diagnosticsRow = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
-            DiagnosticsCheckBox.Content = "Diagnóstico detallado";
-            DiagnosticsCheckBox.VerticalAlignment = VerticalAlignment.Center;
-            DiagnosticsCheckBox.Click += DiagnosticsCheckBox_Click;
-            diagnosticsRow.Children.Add(DiagnosticsCheckBox);
-            Button openDiagnostics = new() { Content = "Abrir registros" };
-            openDiagnostics.CornerRadius = new CornerRadius(8);
-            openDiagnostics.Click += OpenDiagnostics_Click;
-            buttons.Add(openDiagnostics);
-            diagnosticsRow.Children.Add(openDiagnostics);
-            generalActions.Children.Add(diagnosticsRow);
-        }
-        Grid.SetRow(generalActions, 2);
-        leftColumn.Children.Add(generalActions);
+        Grid.SetColumn(import, 1);
+        fileButtons.Children.Add(import);
+        fileCommands.Children.Add(fileButtons);
+        Border fileCard = CreateCard(fileCommands, new Thickness(16));
+        Grid.SetRow(fileCard, 2);
+        leftColumn.Children.Add(fileCard);
 
         Grid.SetColumn(leftColumn, 0);
         body.Children.Add(leftColumn);
 
-        // ---- Columna derecha: editor del dispositivo seleccionado ----
+        // ---- Columna derecha: editor, preferencias generales y acción destructiva ----
+        Grid rightColumn = new() { RowSpacing = 12 };
+        rightColumn.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        rightColumn.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
         StackPanel editor = new() { Spacing = 12 };
+        editor.Children.Add(CreateSectionHeading(
+            "Dispositivo seleccionado",
+            "Edita el grupo lógico o el teclado seleccionado. Las identidades técnicas agrupadas permanecen visibles en la lista."));
         AliasTextBox.Header = "Nombre para este teclado";
         AliasTextBox.PlaceholderText = "Nombre reconocible";
         AliasTextBox.CornerRadius = new CornerRadius(8);
@@ -298,24 +306,176 @@ public sealed class SettingsWindow : Window
         editorButtons.Children.Add(SaveButton);
         editorButtons.Children.Add(ForgetButton);
         editor.Children.Add(editorButtons);
-        Border editorCard = new()
+        Border editorCard = CreateCard(new ScrollViewer
         {
-            Padding = new Thickness(20),
-            CornerRadius = new CornerRadius(8),
-            BorderThickness = new Thickness(1),
-            Child = new ScrollViewer
+            Content = editor,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            VerticalScrollMode = ScrollMode.Auto
+        }, new Thickness(20));
+        rightColumn.Children.Add(editorCard);
+
+        Grid generalCards = new() { ColumnSpacing = 12 };
+        generalCards.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        generalCards.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        StackPanel systemPreferences = new() { Spacing = 8 };
+        systemPreferences.Children.Add(CreateSectionHeading(
+            "Sistema",
+            "Preferencias generales de RightKeyboard."));
+        StartupCheckBox.Content = "Iniciar con Windows";
+        StartupCheckBox.Click += StartupCheckBox_Click;
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(
+            StartupCheckBox,
+            "StartWithWindowsCheckBox");
+        systemPreferences.Children.Add(StartupCheckBox);
+        if (DiagnosticLogger.IsAvailable)
+        {
+            Border separator = new()
             {
-                Content = editor,
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                VerticalScrollMode = ScrollMode.Auto
-            }
+                Height = 1,
+                Margin = new Thickness(0, 4, 0, 4)
+            };
+            cards.Add(separator);
+            systemPreferences.Children.Add(separator);
+            systemPreferences.Children.Add(CreateSectionHeading(
+                "Diagnóstico",
+                "Herramientas exclusivas de esta compilación de desarrollo."));
+            DiagnosticsCheckBox.Content = "Diagnóstico detallado";
+            DiagnosticsCheckBox.Click += DiagnosticsCheckBox_Click;
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(
+                DiagnosticsCheckBox,
+                "DetailedDiagnosticsCheckBox");
+            systemPreferences.Children.Add(DiagnosticsCheckBox);
+            Button openDiagnostics = new()
+            {
+                Content = "Abrir registros",
+                HorizontalAlignment = HorizontalAlignment.Left
+            };
+            openDiagnostics.CornerRadius = new CornerRadius(8);
+            openDiagnostics.Click += OpenDiagnostics_Click;
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(
+                openDiagnostics,
+                "OpenDiagnosticsButton");
+            buttons.Add(openDiagnostics);
+            systemPreferences.Children.Add(openDiagnostics);
+        }
+        generalCards.Children.Add(CreateCard(systemPreferences, new Thickness(16)));
+
+        StackPanel resetPreferences = new() { Spacing = 8 };
+        resetPreferences.Children.Add(CreateSectionHeading(
+            "Restablecer preferencias",
+            "Elimina nombres, distribuciones, grupos y dispositivos ignorados."));
+        Button clear = new()
+        {
+            Content = "Limpiar preferencias",
+            HorizontalAlignment = HorizontalAlignment.Left
         };
-        cards.Add(editorCard);
-        Grid.SetColumn(editorCard, 1);
-        body.Children.Add(editorCard);
+        clear.CornerRadius = new CornerRadius(8);
+        clear.Click += ClearButton_Click;
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(clear, "ClearPreferencesButton");
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(
+            clear,
+            "Acción destructiva que solicita confirmación antes de eliminar todas las preferencias.");
+        buttons.Add(clear);
+        resetPreferences.Children.Add(clear);
+        Border resetCard = CreateCard(resetPreferences, new Thickness(16));
+        Grid.SetColumn(resetCard, 1);
+        generalCards.Children.Add(resetCard);
+        Grid.SetRow(generalCards, 1);
+        rightColumn.Children.Add(generalCards);
+
+        Grid.SetColumn(rightColumn, 1);
+        body.Children.Add(rightColumn);
         root.Children.Add(body);
         return root;
     }
+
+    private StackPanel CreateSectionHeading(string title, string description)
+    {
+        StackPanel heading = new() { Spacing = 2 };
+        heading.Children.Add(new TextBlock
+        {
+            Text = title,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            TextWrapping = TextWrapping.Wrap
+        });
+        TextBlock supportingText = new()
+        {
+            Text = description,
+            FontSize = 12,
+            TextWrapping = TextWrapping.Wrap
+        };
+        secondaryText.Add(supportingText);
+        heading.Children.Add(supportingText);
+        return heading;
+    }
+
+    private Border CreateCard(UIElement child, Thickness padding)
+    {
+        Border card = new()
+        {
+            Padding = padding,
+            CornerRadius = new CornerRadius(8),
+            BorderThickness = new Thickness(1),
+            Child = child
+        };
+        cards.Add(card);
+        return card;
+    }
+
+    private void ConfigureMinimumSize()
+    {
+        nint hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+        minimumSizeSubclass = EnforceMinimumSize;
+        if (!NativeMethods.SetWindowSubclass(hwnd, minimumSizeSubclass, MinimumSizeSubclassId, 0))
+        {
+            minimumSizeSubclass = null;
+        }
+    }
+
+    private void RemoveMinimumSizeSubclass()
+    {
+        if (minimumSizeSubclass is null)
+        {
+            return;
+        }
+
+        nint hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+        NativeMethods.RemoveWindowSubclass(hwnd, minimumSizeSubclass, MinimumSizeSubclassId);
+        minimumSizeSubclass = null;
+    }
+
+    private nint EnforceMinimumSize(
+        nint hwnd,
+        uint message,
+        nint wParam,
+        nint lParam,
+        nuint subclassId,
+        nuint referenceData)
+    {
+        if (message == WmGetMinMaxInfo)
+        {
+            NativeMethods.MinMaxInfo limits = Marshal.PtrToStructure<NativeMethods.MinMaxInfo>(lParam);
+            uint dpi = NativeMethods.GetDpiForWindow(hwnd);
+            limits.MinTrackSize.X = ScaleForDpi(MinimumWidth, dpi);
+            limits.MinTrackSize.Y = ScaleForDpi(MinimumHeight, dpi);
+            Marshal.StructureToPtr(limits, lParam, false);
+        }
+
+        return NativeMethods.DefSubclassProc(hwnd, message, wParam, lParam);
+    }
+
+    private void ResizeForCurrentDpi(int logicalWidth, int logicalHeight)
+    {
+        nint hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+        uint dpi = NativeMethods.GetDpiForWindow(hwnd);
+        AppWindow.Resize(new Windows.Graphics.SizeInt32(
+            ScaleForDpi(logicalWidth, dpi),
+            ScaleForDpi(logicalHeight, dpi)));
+    }
+
+    private static int ScaleForDpi(int logicalPixels, uint dpi) =>
+        (int)Math.Ceiling(logicalPixels * Math.Max(dpi, 96u) / 96d);
 
     private void ConfigureCaptionButtons()
     {
@@ -392,10 +552,7 @@ public sealed class SettingsWindow : Window
         Activated -= OnActivated;
         GetActivityVisual().Opacity = 0.78f;
         GetActivityHintVisual().Opacity = 0;
-        double scale = (Content as FrameworkElement)?.XamlRoot?.RasterizationScale ?? 1;
-        AppWindow.Resize(new Windows.Graphics.SizeInt32(
-            (int)Math.Ceiling(1020 * scale),
-            (int)Math.Ceiling(640 * scale)));
+        ResizeForCurrentDpi(InitialWidth, InitialHeight);
         await ReloadAsync();
         await ReloadStartupAsync();
         if (DiagnosticLogger.IsAvailable)
@@ -923,7 +1080,7 @@ public sealed class SettingsWindow : Window
     {
         if (!await ShowOverlayAsync(
                 "Limpiar preferencias",
-                "Se eliminarán todos los alias, distribuciones y dispositivos ignorados. Esta acción no se puede deshacer.",
+                "Se eliminarán todos los alias, distribuciones, grupos y dispositivos ignorados. Esta acción no se puede deshacer.",
                 "Limpiar"))
         {
             return;
@@ -1385,6 +1542,56 @@ public sealed class SettingsWindow : Window
         GroupButton.Visibility = logicalPreference ? Visibility.Visible : Visibility.Collapsed;
         UngroupButton.IsEnabled = row?.IsGroupMember == true;
         UngroupButton.Visibility = row?.IsGroupMember == true ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private static class NativeMethods
+    {
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        internal delegate nint SubclassProc(
+            nint hwnd,
+            uint message,
+            nint wParam,
+            nint lParam,
+            nuint subclassId,
+            nuint referenceData);
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct Point
+        {
+            internal int X;
+            internal int Y;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct MinMaxInfo
+        {
+            internal Point Reserved;
+            internal Point MaxSize;
+            internal Point MaxPosition;
+            internal Point MinTrackSize;
+            internal Point MaxTrackSize;
+        }
+
+        [DllImport("comctl32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool SetWindowSubclass(
+            nint hwnd,
+            SubclassProc callback,
+            nuint subclassId,
+            nuint referenceData);
+
+        [DllImport("comctl32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool RemoveWindowSubclass(
+            nint hwnd,
+            SubclassProc callback,
+            nuint subclassId);
+
+        [DllImport("comctl32.dll")]
+        internal static extern nint DefSubclassProc(nint hwnd, uint message, nint wParam, nint lParam);
+
+        [DllImport("user32.dll")]
+        internal static extern uint GetDpiForWindow(nint hwnd);
     }
 }
 
