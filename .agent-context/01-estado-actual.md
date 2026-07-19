@@ -1,10 +1,10 @@
 # Estado actual real
 
-Snapshot actualizado el **2026-07-09** para promover la rama `codex/version-1.5` a proyecto `1.5.0`. Contrastar siempre con `git status`, `git log -1 --oneline` y los metadatos de versión del checkout actual.
+Snapshot actualizado el **2026-07-19** durante la Etapa 6. Contrastar siempre con `git status`, `git log -1 --oneline` y los metadatos de versión del checkout actual.
 
 ## Resumen ejecutivo
 
-`1.5.0` es la versión estable inicial de la línea 1.5, aprobada por validación física acumulada en VM y equipos host. El camino instalado normal usa un residente WinForms/Win32 (`RightKeyboard.exe`) y un frontend WinUI bajo demanda (`ui/RightKeyboard.WinUI.exe`). El fallback WinForms conserva funciones que todavía no se migraron a WinUI. La próxima etapa no es otra reescritura: es mantenimiento 1.5.x, robustecer la variante diagnóstica de desarrollo, mejorar detección preventiva de periféricos HID ambiguos y evaluar agrupación manual de identidades del mismo dispositivo.
+`1.5.0` es la versión estable inicial de la línea 1.5. Las etapas 1-6 posteriores añadieron CI estricto, paridad de exportación/importación/inicio en WinUI, diagnóstico explicable, exclusión conservadora por firma HID y agrupación manual de identidades. El camino instalado normal usa un residente WinForms/Win32 (`RightKeyboard.exe`) y un frontend WinUI bajo demanda (`ui/RightKeyboard.WinUI.exe`).
 
 ## Funciona en el código actual
 
@@ -14,31 +14,26 @@ Snapshot actualizado el **2026-07-09** para promover la rama `codex/version-1.5`
 - Cambio dirigido a la ventana activa mediante `WM_INPUTLANGCHANGEREQUEST`; no se modifica globalmente el idioma (`Win32/API.cs`).
 - Identidad priorizando `ContainerId`, luego hash de `InstanceId`, luego hash de ruta; huella separada para recuperación conservadora (`DeviceIdentityResolver`).
 - Recuperación de asociación/ignorado por huella solo cuando hay una coincidencia inequívoca (`Configuration.TryGetLayout` e `IsIgnored`).
-- Persistencia esquema 3, migración de esquema 2 y de `config.txt`, validación estricta y escritura temporal (`Configuration`).
+- Persistencia esquema 5, migraciones de esquemas 2-4 y de `config.txt`, validación estricta y escritura temporal (`Configuration`).
 - Selector WinUI con alias, agrupación visual por idioma, distribución, ignorado y fallback WinForms.
 - Configuración WinUI para listar, ordenar, renombrar, cambiar distribución, ignorar, olvidar y limpiar.
 - Seguimiento del teclado pulsado con Configuración abierta; mientras el alias tiene foco no cambia la selección.
 - Menú nativo de bandeja limitado a **Configuración**, separador y **Salir** (`NativeTrayMenu`).
 - Detección conservadora de no-teclados por nombre y de la firma sintética observada al usar el historial del portapapeles.
 - Exclusión por firma HID parcial (Etapa 5): ignorar manualmente un dispositivo con huella vacía registra su firma (`HidSignature`); reconectarlo con otra identidad no reabre el selector si la coincidencia es inequívoca. Esquema de preferencias 4 (`ignoredSignatures`); el 3 migra al guardar.
+- Agrupación manual de identidades (Etapa 6): esquema 5 y protocolo IPC v2; un grupo lógico gobierna alias/layout, conserva visibles sus miembros técnicos y al separarlos reaparecen sus preferencias individuales latentes. La recuperación por huella nunca crea membresía.
 - Diagnóstico detallado fuera del build normal; el código del logger queda disponible para compilaciones de desarrollo con `RIGHTKEYBOARD_DIAGNOSTICS`.
 - Instalador Inno Setup por usuario, autocontenido, sin UAC, acceso en Inicio, inicio automático en instalación nueva y conservación de datos al actualizar.
 - Frontend publicado ReadyToRun; el snapshot IPC ya no repite SetupAPI en cada apertura.
 
-## Funciona solo en el fallback WinForms, no en la UI instalada normal
-
-`SettingsDialog` contiene **Exportar**, **Importar** y **Iniciar RightKeyboard con Windows**. `SettingsWindow` (WinUI, camino normal cuando existe `ui/RightKeyboard.WinUI.exe`) no contiene esas acciones ni existen comandos IPC para ellas. Por tanto, el README y varias pruebas visuales sobrestiman la Configuración actual. No se debe afirmar que estas funciones están accesibles al usuario normal hasta migrarlas al IPC/WinUI.
-
-El fallback se abre únicamente si el frontend WinUI no existe o no puede iniciarse. No es una segunda interfaz seleccionable por el usuario.
-
 ## Parcial, no verificado o pendiente
 
 - La optimización de apertura (inventario residente + ReadyToRun) está implementada; faltan mediciones frías/calientes reproducibles y percentiles según `docs/criterios-winui3-1.5.md`.
-- Exportación/importación existen en el modelo y fallback, pero no en WinUI; la portabilidad entre equipos no está certificada.
-- Inicio automático funciona en instalador y fallback, pero no se administra desde WinUI.
+- Exportación/importación están disponibles en WinUI, pero la portabilidad entre equipos no está certificada.
+- La agrupación requiere validación física con dos teclados y cambio de puerto en la estación real; la VM no expone passthrough directo.
 - Reconexión/cambio de puerto funciona cuando Windows mantiene identidad o la huella es única; dos teclados idénticos siguen siendo deliberadamente ambiguos.
 - Accesibilidad, DPI mixto, contraste alto, Windows 10, sesión remota, suspensión y ciclos prolongados carecen de evidencia completa en el repo.
-- No hay CI ni `TreatWarningsAsErrors`; la validación es local/manual.
+- Hay CI Windows y `TreatWarningsAsErrors`; las pruebas físicas siguen siendo manuales.
 - No existe `LICENSE`; distribuir o aceptar contribuciones externas mantiene riesgo legal.
 - No hay archivos de issues versionados ni configuración `.github`; el backlog utilizable está repartido entre documentos y esta carpeta.
 
@@ -55,4 +50,4 @@ No hay servicios falsos en producción. `RightKeyboard.WinUI` usa IPC real, `Con
 
 ## Evidencia automatizada
 
-En este snapshot había **98 pruebas NUnit**; tras las etapas 1-5 hay **152** (se añadieron protocolo IPC de exportar/importar/inicio, clasificación explicable, privacidad del log y firmas HID: parseo, esquema 4, regla inequívoca y reversibilidad). Cubren serialización/configuración, identidad y huella, clasificación básica, señales Raw Input, tamaños de interop, presentación WinForms, logger en modo de prueba, IPC DTO, menú y versión. No cubren extremo a extremo el pipe, UI WinUI, foco/foreground, SetupAPI real, registro de inicio, instalador ni hardware.
+En este snapshot había **98 pruebas NUnit**; tras las etapas 1-6 hay **161**. Las nuevas pruebas de Etapa 6 cubren esquema 5, round-trip de grupos, preferencia lógica, separación reversible, rechazo de ignorados, ausencia de membresía automática y contrato IPC v2. No cubren extremo a extremo el pipe, UI WinUI, foco/foreground, SetupAPI real, registro de inicio, instalador ni hardware.

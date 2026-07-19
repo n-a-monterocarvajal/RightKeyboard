@@ -4,6 +4,9 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [Sin publicar]
 
+- La Configuración WinUI permite agrupar manualmente identidades que el usuario reconoce como el mismo teclado. Un alias y una distribución gobiernan el grupo lógico; las identidades técnicas permanecen visibles y se pueden separar en cualquier momento, recuperando sus preferencias individuales anteriores.
+- Las preferencias pasan al esquema 5 con grupos lógicos explícitos. Los archivos de esquema 4 migran con grupos vacíos y el contrato IPC de Configuración pasa a v2 con snapshots y acciones de agrupación/separación.
+- La resolución en el residente consulta primero la preferencia efectiva del grupo. La recuperación conservadora por huella puede reutilizar esa distribución sin añadir membresía; no existe fusión automática, tampoco para dispositivos ambiguos.
 - Al ignorar manualmente un dispositivo débilmente identificado (huella vacía), la exclusión se extiende a su firma HID parcial (enumerador, VID, PID, interfaz, colección y capacidades): reconectarlo en otro puerto ya no reabre el selector si la coincidencia es inequívoca. La regla nunca opera sobre teclados con huella, exige una sola coincidencia conectada y se desactiva al reactivar o asignar distribución al dispositivo.
 - Las preferencias pasan al esquema 4 (`ignoredSignatures` y `signature` por dispositivo). Los archivos de esquema 3 migran automáticamente al guardar; un export de esquema 4 no puede importarse en 1.5.0.
 - El diagnóstico de desarrollo explica la regla de firma con eventos nuevos: `firma_registrada`, `firma_no_registrada`, `ignorado_recuperado_por_firma`, `firma_no_aplicada` y `firma_retirada`.

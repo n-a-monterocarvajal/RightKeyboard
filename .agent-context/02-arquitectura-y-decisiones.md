@@ -9,7 +9,7 @@ RightKeyboard.exe (residente WinForms/Win32)
 ├─ RawInputWindow: WM_INPUT + WM_INPUT_DEVICE_CHANGE
 ├─ KeyboardDevicesCollection + DeviceIdentityResolver
 ├─ Configuration: única autoridad de preferences.json
-├─ SettingsIpcServer: pipe local v1
+├─ SettingsIpcServer: pipe local v2
 └─ inicia bajo demanda → ui/RightKeyboard.WinUI.exe
    ├─ sin argumentos: SettingsWindow
    └─ --select <identity>: LayoutSelectionWindow
@@ -40,7 +40,11 @@ El núcleo conserva WinForms solo para `NotifyIcon`, ventana de mensajes y fallb
 
 ### El núcleo es la única autoridad de estado
 
-WinUI no abre `preferences.json`. Usa `SettingsIpcProtocol` v1 por named pipe limitado al usuario actual. El servidor ejecuta las mutaciones en el `SynchronizationContext` del núcleo. Esto evita dos escritores y carreras entre Raw Input y UI.
+WinUI no abre `preferences.json`. Usa `SettingsIpcProtocol` v2 por named pipe limitado al usuario actual. El servidor ejecuta las mutaciones —incluidas agrupación y separación— en el `SynchronizationContext` del núcleo. Esto evita dos escritores y carreras entre Raw Input y UI.
+
+### Los grupos son explícitos; las recuperaciones no crean membresía
+
+El esquema 5 conserva un grupo lógico con alias/layout compartidos y sus identidades técnicas. Las preferencias individuales quedan latentes para poder revertir exactamente la agrupación. `TryGetEffectiveLayout` centraliza la prioridad del grupo; la recuperación conservadora por huella puede copiar una distribución a una identidad nueva, pero nunca la incorpora al grupo. Las firmas HID siguen perteneciendo exclusivamente a la ruta de ignorados.
 
 ### Identidad exacta primero; huella solo como respaldo no ambiguo
 

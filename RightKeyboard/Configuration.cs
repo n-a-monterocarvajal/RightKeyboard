@@ -5,7 +5,7 @@ namespace RightKeyboard;
 
 public sealed class Configuration
 {
-    public const int CurrentSchemaVersion = 4;
+    public const int CurrentSchemaVersion = 5;
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -26,6 +26,14 @@ public sealed class Configuration
     /// ignorado portador.
     /// </summary>
     public HashSet<string> IgnoredSignatures { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Preferencias lógicas creadas únicamente por una acción explícita del
+    /// usuario. Cada identidad técnica puede pertenecer como máximo a un grupo.
+    /// </summary>
+    public Dictionary<string, LogicalDeviceGroup> DeviceGroups { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    private Dictionary<string, string> GroupMembership { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     public static Configuration LoadConfiguration(
         KeyboardDevicesCollection devices,
@@ -82,10 +90,27 @@ public sealed class Configuration
         return preference;
     }
 
-    public string GetDisplayName(KeyboardDevice device) =>
-        Devices.TryGetValue(device.Identity, out DevicePreference? preference)
+    public string GetDisplayName(KeyboardDevice device) => GetGroup(device.Identity)?.DisplayName ??
+        (Devices.TryGetValue(device.Identity, out DevicePreference? preference)
             ? preference.DisplayName
-            : BuildSuggestedName(device.DisplayName, device.TechnicalId);
+            : BuildSuggestedName(device.DisplayName, device.TechnicalId));
+
+    public LogicalDeviceGroup? GetGroup(string identity) =>
+        GroupMembership.TryGetValue(identity, out string? groupId) && DeviceGroups.TryGetValue(groupId, out LogicalDeviceGroup? group)
+            ? group
+            : null;
+
+    public bool TryGetEffectiveLayout(string identity, out Layout? layout)
+    {
+        LogicalDeviceGroup? group = GetGroup(identity);
+        if (group is not null)
+        {
+            layout = group.Layout;
+            return layout is not null;
+        }
+
+        return LayoutMappings.TryGetValue(identity, out layout);
+    }
 
     public bool TryGetLayout(
         KeyboardDevice device,
@@ -95,7 +120,7 @@ public sealed class Configuration
     {
         learnedIdentity = false;
         TouchDevice(device);
-        if (LayoutMappings.TryGetValue(device.Identity, out layout))
+        if (TryGetEffectiveLayout(device.Identity, out layout))
         {
             return true;
         }
@@ -105,25 +130,32 @@ public sealed class Configuration
             return false;
         }
 
-        string[] candidateIds = Devices.Values
-            .Where(preference => preference.Fingerprint == device.Fingerprint && LayoutMappings.ContainsKey(preference.Identity))
-            .Select(preference => preference.Identity)
+        (string Identity, Layout Layout)[] candidatesByIdentity = Devices.Values
+            .Where(preference => preference.Fingerprint == device.Fingerprint &&
+                                 TryGetEffectiveLayout(preference.Identity, out _))
+            .Select(preference => (preference.Identity, GetEffectiveLayout(preference.Identity)!))
             .ToArray();
-
-        Layout[] candidates = candidateIds.Select(identity => LayoutMappings[identity]).ToArray();
+        Layout[] candidates = candidatesByIdentity
+            .Select(candidate => candidate.Layout)
+            .DistinctBy(candidate => candidate.Identifier)
+            .ToArray();
         if (candidates.Length == 0 || candidates.Select(candidate => candidate.Identifier).Distinct().Count() != 1)
         {
             return false;
         }
 
-        DevicePreference? previous = candidateIds.Select(identity => Devices[identity]).FirstOrDefault();
-        DevicePreference current = TouchDevice(device, previous?.CustomName);
-        current.CustomName = previous?.CustomName;
+        DevicePreference? previous = candidatesByIdentity.Select(candidate => Devices[candidate.Identity]).FirstOrDefault();
+        string? recoveredName = previous is null ? null : GetGroup(previous.Identity)?.DisplayName ?? previous.CustomName;
+        DevicePreference current = TouchDevice(device, recoveredName);
+        current.CustomName = recoveredName;
         layout = candidates[0];
         LayoutMappings[device.Identity] = layout;
         learnedIdentity = true;
         return true;
     }
+
+    private Layout? GetEffectiveLayout(string identity) =>
+        TryGetEffectiveLayout(identity, out Layout? layout) ? layout : null;
 
     public bool IsIgnored(
         KeyboardDevice device,
@@ -145,7 +177,7 @@ public sealed class Configuration
         if (!string.IsNullOrEmpty(device.Fingerprint) && connectedDevicesWithSameFingerprint == 1 &&
             candidates.Length == 1 &&
             !Devices.Values.Any(preference =>
-                preference.Fingerprint == device.Fingerprint && LayoutMappings.ContainsKey(preference.Identity)))
+                preference.Fingerprint == device.Fingerprint && TryGetEffectiveLayout(preference.Identity, out _)))
         {
             LearnIgnoredIdentity(device, Devices[candidates[0]]);
             evaluation = new IgnoreEvaluation(IgnoreSource.Fingerprint, true, null);
@@ -172,7 +204,7 @@ public sealed class Configuration
         }
         else if (Devices.Values.Any(preference =>
                      string.Equals(preference.Signature, device.Signature, StringComparison.Ordinal) &&
-                     LayoutMappings.ContainsKey(preference.Identity)))
+                     TryGetEffectiveLayout(preference.Identity, out _)))
         {
             blockedReason = "firma_con_distribucion";
         }
@@ -202,9 +234,22 @@ public sealed class Configuration
 
     public void SetLayout(KeyboardDevice device, Layout layout, string? customName = null)
     {
-        DevicePreference preference = TouchDevice(device, customName);
+        LogicalDeviceGroup? existingGroup = GetGroup(device.Identity);
+        DevicePreference preference = TouchDevice(device, existingGroup is null ? customName : null);
         IgnoredDevices.Remove(device.Identity);
-        LayoutMappings[device.Identity] = layout;
+        if (existingGroup is LogicalDeviceGroup group)
+        {
+            group.CustomName = NormalizeGroupName(customName, group.DisplayName);
+            group.Layout = layout;
+            foreach (string memberIdentity in group.MemberIdentities)
+            {
+                RemoveSignature(Devices[memberIdentity].Signature);
+            }
+        }
+        else
+        {
+            LayoutMappings[device.Identity] = layout;
+        }
         // TouchDevice acaba de sincronizar preference.Signature con el dispositivo.
         RemoveSignature(preference.Signature);
     }
@@ -216,6 +261,7 @@ public sealed class Configuration
     /// </summary>
     public bool Ignore(KeyboardDevice device, string? customName = null, bool extendToSignature = false)
     {
+        Ungroup(device.Identity);
         TouchDevice(device, customName);
         LayoutMappings.Remove(device.Identity);
         IgnoredDevices.Add(device.Identity);
@@ -249,6 +295,25 @@ public sealed class Configuration
         }
 
         bool wasIgnored = IgnoredDevices.Contains(identity);
+        if (GetGroup(identity) is LogicalDeviceGroup group)
+        {
+            if (ignored)
+            {
+                throw new InvalidOperationException("Separa la identidad del grupo antes de ignorarla.");
+            }
+
+            group.CustomName = NormalizeGroupName(customName, group.DisplayName);
+            group.Layout = layout;
+            if (layout is not null)
+            {
+                foreach (string memberIdentity in group.MemberIdentities)
+                {
+                    RemoveSignature(Devices[memberIdentity].Signature);
+                }
+            }
+            return false;
+        }
+
         preference.CustomName = NormalizeCustomName(customName, preference.DetectedName);
         if (ignored)
         {
@@ -288,12 +353,105 @@ public sealed class Configuration
 
     public void Forget(string identity)
     {
+        Ungroup(identity);
         Devices.Remove(identity, out DevicePreference? preference);
         LayoutMappings.Remove(identity);
         IgnoredDevices.Remove(identity);
         if (preference?.Signature is string signature && !HasIgnoredCarrier(signature))
         {
             IgnoredSignatures.Remove(signature);
+        }
+    }
+
+    public string GroupDevices(
+        string governingIdentity,
+        string memberIdentity,
+        string? customName = null,
+        Layout? layoutOverride = null,
+        bool overridePreference = false)
+    {
+        if (string.Equals(governingIdentity, memberIdentity, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Selecciona dos identidades distintas.");
+        }
+
+        if (!Devices.TryGetValue(governingIdentity, out DevicePreference? governingPreference) ||
+            !Devices.ContainsKey(memberIdentity))
+        {
+            throw new InvalidOperationException("Una de las identidades ya no existe.");
+        }
+
+        LogicalDeviceGroup? governingGroup = GetGroup(governingIdentity);
+        LogicalDeviceGroup? memberGroup = GetGroup(memberIdentity);
+        if (memberGroup is not null)
+        {
+            throw new InvalidOperationException("La identidad seleccionada ya pertenece a un grupo.");
+        }
+        string currentDisplayName = governingGroup?.DisplayName ?? governingPreference.DisplayName;
+        string displayName = overridePreference
+            ? NormalizeGroupName(customName, currentDisplayName)
+            : currentDisplayName;
+        Layout? layout = overridePreference
+            ? layoutOverride
+            : governingGroup?.Layout ?? GetEffectiveLayout(governingIdentity);
+        string groupId = governingGroup?.Id ?? $"group:{Guid.NewGuid():N}";
+        HashSet<string> members = new(StringComparer.OrdinalIgnoreCase) { governingIdentity, memberIdentity };
+        if (governingGroup is not null)
+        {
+            members.UnionWith(governingGroup.MemberIdentities);
+        }
+
+        if (members.Any(IgnoredDevices.Contains))
+        {
+            throw new InvalidOperationException("Reactiva las identidades ignoradas antes de agruparlas.");
+        }
+
+        if (governingGroup is not null)
+        {
+            RemoveGroup(governingGroup.Id);
+        }
+        LogicalDeviceGroup group = new(groupId, displayName, layout, members);
+        DeviceGroups[groupId] = group;
+        foreach (string identity in members)
+        {
+            GroupMembership[identity] = groupId;
+            if (layout is not null)
+            {
+                RemoveSignature(Devices[identity].Signature);
+            }
+        }
+
+        return groupId;
+    }
+
+    public void Ungroup(string identity)
+    {
+        LogicalDeviceGroup? group = GetGroup(identity);
+        if (group is null)
+        {
+            return;
+        }
+
+        group.MemberIdentities.Remove(identity);
+        GroupMembership.Remove(identity);
+        if (group.MemberIdentities.Count == 1)
+        {
+            string remainingIdentity = group.MemberIdentities.Single();
+            GroupMembership.Remove(remainingIdentity);
+            DeviceGroups.Remove(group.Id);
+        }
+    }
+
+    private void RemoveGroup(string groupId)
+    {
+        if (!DeviceGroups.Remove(groupId, out LogicalDeviceGroup? group))
+        {
+            return;
+        }
+
+        foreach (string identity in group.MemberIdentities)
+        {
+            GroupMembership.Remove(identity);
         }
     }
 
@@ -320,10 +478,13 @@ public sealed class Configuration
             LayoutMappings.Clear();
             IgnoredDevices.Clear();
             IgnoredSignatures.Clear();
+            DeviceGroups.Clear();
+            GroupMembership.Clear();
         }
 
         foreach ((string identity, DevicePreference preference) in imported.Devices)
         {
+            Ungroup(identity);
             Devices[identity] = preference.Clone();
             LayoutMappings.Remove(identity);
             IgnoredDevices.Remove(identity);
@@ -342,6 +503,24 @@ public sealed class Configuration
         }
 
         IgnoredSignatures.UnionWith(imported.IgnoredSignatures);
+        foreach (LogicalDeviceGroup importedGroup in imported.DeviceGroups.Values)
+        {
+            foreach (string identity in importedGroup.MemberIdentities)
+            {
+                Ungroup(identity);
+            }
+
+            string groupId = DeviceGroups.ContainsKey(importedGroup.Id)
+                ? $"group:{Guid.NewGuid():N}"
+                : importedGroup.Id;
+            LogicalDeviceGroup group = importedGroup.Clone(groupId);
+            DeviceGroups[groupId] = group;
+            foreach (string identity in group.MemberIdentities)
+            {
+                GroupMembership[identity] = groupId;
+                IgnoredDevices.Remove(identity);
+            }
+        }
         PruneOrphanSignatures();
     }
 
@@ -421,7 +600,7 @@ public sealed class Configuration
         PruneOrphanSignatures();
         string fullPath = Path.GetFullPath(path);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-        StoredConfigurationV4 stored = new()
+        StoredConfigurationV5 stored = new()
         {
             Devices = Devices.Values
                 .OrderBy(preference => preference.DisplayName)
@@ -433,7 +612,12 @@ public sealed class Configuration
                 .Select(pair => StoredMappingV3.From(pair.Key, pair.Value))
                 .ToList(),
             IgnoredDeviceIds = IgnoredDevices.Order(StringComparer.OrdinalIgnoreCase).ToList(),
-            IgnoredSignatures = IgnoredSignatures.Order(StringComparer.Ordinal).ToList()
+            IgnoredSignatures = IgnoredSignatures.Order(StringComparer.Ordinal).ToList(),
+            Groups = DeviceGroups.Values
+                .OrderBy(group => group.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+                .ThenBy(group => group.Id, StringComparer.OrdinalIgnoreCase)
+                .Select(StoredDeviceGroup.From)
+                .ToList()
         };
 
         string temporaryPath = fullPath + $".{Guid.NewGuid():N}.tmp";
@@ -490,7 +674,8 @@ public sealed class Configuration
         {
             2 => LoadV2(json, layouts, warnings),
             3 => LoadV3(json, layouts, warnings),
-            CurrentSchemaVersion => LoadV4(json, layouts, warnings),
+            4 => LoadV4(json, layouts, warnings),
+            CurrentSchemaVersion => LoadV5(json, layouts, warnings),
             > CurrentSchemaVersion => throw InvalidData(
                 $"El esquema {version} fue creado por una versión más reciente de RightKeyboard. " +
                 $"Esta versión admite hasta el esquema {CurrentSchemaVersion}."),
@@ -503,10 +688,11 @@ public sealed class Configuration
         IReadOnlyList<Layout> layouts,
         List<string>? warnings)
     {
-        StoredConfigurationV4 stored = DeserializeStored(json);
-        // El esquema 3 no porta firmas; se migra en memoria y el siguiente
-        // guardado escribe el esquema 4.
+        StoredConfigurationV5 stored = DeserializeStored(json);
+        // El esquema 3 no porta firmas ni grupos; se migra en memoria y el
+        // siguiente guardado escribe el esquema vigente.
         stored.IgnoredSignatures = [];
+        stored.Groups = [];
         foreach (StoredDevice? device in stored.Devices)
         {
             if (device is not null)
@@ -521,22 +707,32 @@ public sealed class Configuration
     private static Configuration LoadV4(
         string json,
         IReadOnlyList<Layout> layouts,
-        List<string>? warnings) =>
-        BuildFromStored(DeserializeStored(json), layouts, warnings);
-
-    private static StoredConfigurationV4 DeserializeStored(string json)
+        List<string>? warnings)
     {
-        StoredConfigurationV4 stored = JsonSerializer.Deserialize<StoredConfigurationV4>(json, JsonOptions)
+        StoredConfigurationV5 stored = DeserializeStored(json);
+        stored.Groups = [];
+        return BuildFromStored(stored, layouts, warnings);
+    }
+
+    private static Configuration LoadV5(
+        string json,
+        IReadOnlyList<Layout> layouts,
+        List<string>? warnings) => BuildFromStored(DeserializeStored(json), layouts, warnings);
+
+    private static StoredConfigurationV5 DeserializeStored(string json)
+    {
+        StoredConfigurationV5 stored = JsonSerializer.Deserialize<StoredConfigurationV5>(json, JsonOptions)
             ?? throw InvalidData("El documento JSON no contiene preferencias.");
         stored.Devices ??= [];
         stored.Mappings ??= [];
         stored.IgnoredDeviceIds ??= [];
         stored.IgnoredSignatures ??= [];
+        stored.Groups ??= [];
         return stored;
     }
 
     private static Configuration BuildFromStored(
-        StoredConfigurationV4 stored,
+        StoredConfigurationV5 stored,
         IReadOnlyList<Layout> layouts,
         List<string>? warnings)
     {
@@ -625,6 +821,61 @@ public sealed class Configuration
             {
                 throw InvalidData(
                     $"La firma ignorada '{signature}' no corresponde a ningún dispositivo ignorado.");
+            }
+        }
+
+        HashSet<string> groupIds = new(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> groupedIdentities = new(StringComparer.OrdinalIgnoreCase);
+        foreach (StoredDeviceGroup? storedGroup in stored.Groups)
+        {
+            if (storedGroup is null)
+            {
+                throw InvalidData("La colección 'groups' contiene un elemento nulo.");
+            }
+
+            storedGroup.MemberIdentities ??= [];
+            string groupId = RequireIdentity(storedGroup.Id, "groups");
+            if (!groupIds.Add(groupId))
+            {
+                throw InvalidData($"El grupo '{groupId}' está duplicado.");
+            }
+
+            string[] members = storedGroup.MemberIdentities
+                .Select(identity => RequireIdentity(identity, $"groups ('{groupId}')"))
+                .ToArray();
+            if (members.Length < 2 || members.Distinct(StringComparer.OrdinalIgnoreCase).Count() != members.Length)
+            {
+                throw InvalidData($"El grupo '{groupId}' debe contener al menos dos identidades distintas.");
+            }
+
+            foreach (string identity in members)
+            {
+                if (!configuration.Devices.ContainsKey(identity))
+                {
+                    throw InvalidData($"El miembro '{identity}' del grupo '{groupId}' no existe en devices.");
+                }
+                if (!groupedIdentities.Add(identity))
+                {
+                    throw InvalidData($"La identidad '{identity}' pertenece a más de un grupo.");
+                }
+                if (configuration.IgnoredDevices.Contains(identity))
+                {
+                    throw InvalidData($"El miembro '{identity}' no puede estar ignorado.");
+                }
+            }
+
+            Layout? groupLayout = null;
+            if (!string.IsNullOrEmpty(storedGroup.Layout) &&
+                !TryReadLayout(storedGroup.Layout, storedGroup.LanguageName, storedGroup.LayoutName, layouts, out groupLayout))
+            {
+                warnings?.Add($"No se encontró la distribución del grupo '{groupId}'; se importará sin asociación.");
+            }
+
+            LogicalDeviceGroup group = new(groupId, storedGroup.DisplayName, groupLayout, members);
+            configuration.DeviceGroups[groupId] = group;
+            foreach (string identity in members)
+            {
+                configuration.GroupMembership[identity] = groupId;
             }
         }
 
@@ -763,6 +1014,8 @@ public sealed class Configuration
         LayoutMappings.Clear();
         IgnoredDevices.Clear();
         IgnoredSignatures.Clear();
+        DeviceGroups.Clear();
+        GroupMembership.Clear();
 
         foreach ((string identity, DevicePreference preference) in source.Devices)
         {
@@ -776,6 +1029,15 @@ public sealed class Configuration
 
         IgnoredDevices.UnionWith(source.IgnoredDevices);
         IgnoredSignatures.UnionWith(source.IgnoredSignatures);
+        foreach (LogicalDeviceGroup sourceGroup in source.DeviceGroups.Values)
+        {
+            LogicalDeviceGroup group = sourceGroup.Clone();
+            DeviceGroups[group.Id] = group;
+            foreach (string identity in group.MemberIdentities)
+            {
+                GroupMembership[identity] = group.Id;
+            }
+        }
     }
 
     private void ValidateState()
@@ -808,6 +1070,34 @@ public sealed class Configuration
             {
                 throw InvalidData($"El dispositivo ignorado '{identity}' no existe en devices.");
             }
+        }
+
+        HashSet<string> groupedIdentities = new(StringComparer.OrdinalIgnoreCase);
+        foreach (LogicalDeviceGroup group in DeviceGroups.Values)
+        {
+            if (group.MemberIdentities.Count < 2)
+            {
+                throw InvalidData($"El grupo '{group.Id}' debe contener al menos dos identidades.");
+            }
+
+            foreach (string identity in group.MemberIdentities)
+            {
+                if (!Devices.ContainsKey(identity) || !groupedIdentities.Add(identity) || IgnoredDevices.Contains(identity))
+                {
+                    throw InvalidData($"La membresía de grupo de '{identity}' no es válida.");
+                }
+
+                if (!GroupMembership.TryGetValue(identity, out string? groupId) ||
+                    !string.Equals(groupId, group.Id, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw InvalidData($"El índice de membresía de '{identity}' no coincide con su grupo.");
+                }
+            }
+        }
+
+        if (GroupMembership.Count != groupedIdentities.Count)
+        {
+            throw InvalidData("El índice de membresía contiene identidades fuera de los grupos.");
         }
     }
 
@@ -895,13 +1185,42 @@ public sealed class Configuration
         return string.Equals(normalized, detectedName, StringComparison.CurrentCultureIgnoreCase) ? null : normalized;
     }
 
-    private sealed class StoredConfigurationV4
+    private static string NormalizeGroupName(string? customName, string fallback)
+    {
+        string? normalized = string.IsNullOrWhiteSpace(customName) ? null : customName.Trim();
+        return normalized ?? fallback;
+    }
+
+    private sealed class StoredConfigurationV5
     {
         public int Version { get; set; } = CurrentSchemaVersion;
         public List<StoredDevice> Devices { get; set; } = [];
         public List<StoredMappingV3> Mappings { get; set; } = [];
         public List<string> IgnoredDeviceIds { get; set; } = [];
         public List<string> IgnoredSignatures { get; set; } = [];
+        public List<StoredDeviceGroup> Groups { get; set; } = [];
+    }
+
+    private sealed class StoredDeviceGroup
+    {
+        public string Id { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
+        public string? Layout { get; set; }
+        public string? LanguageName { get; set; }
+        public string? LayoutName { get; set; }
+        public List<string> MemberIdentities { get; set; } = [];
+
+        public static StoredDeviceGroup From(LogicalDeviceGroup group) => new()
+        {
+            Id = group.Id,
+            DisplayName = group.DisplayName,
+            Layout = group.Layout is null
+                ? null
+                : unchecked((ulong)group.Layout.Identifier.ToInt64()).ToString("X16"),
+            LanguageName = group.Layout?.LanguageName,
+            LayoutName = group.Layout?.LayoutName,
+            MemberIdentities = group.MemberIdentities.Order(StringComparer.OrdinalIgnoreCase).ToList()
+        };
     }
 
     private sealed class StoredDevice
@@ -999,6 +1318,26 @@ public sealed class DevicePreference
         TechnicalId = TechnicalId,
         LastSeenUtc = LastSeenUtc
     };
+}
+
+public sealed class LogicalDeviceGroup
+{
+    public LogicalDeviceGroup(string id, string? displayName, Layout? layout, IEnumerable<string> memberIdentities)
+    {
+        Id = id;
+        CustomName = string.IsNullOrWhiteSpace(displayName) ? "Teclado agrupado" : displayName.Trim();
+        Layout = layout;
+        MemberIdentities = new HashSet<string>(memberIdentities, StringComparer.OrdinalIgnoreCase);
+    }
+
+    public string Id { get; }
+    public string CustomName { get; set; }
+    public string DisplayName => CustomName;
+    public Layout? Layout { get; set; }
+    public HashSet<string> MemberIdentities { get; }
+
+    public LogicalDeviceGroup Clone(string? id = null) =>
+        new(id ?? Id, CustomName, Layout, MemberIdentities);
 }
 
 public enum IgnoreSource

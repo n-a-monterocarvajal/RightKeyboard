@@ -27,7 +27,14 @@ dotnet build .\RightKeyboard.sln --configuration Release
 dotnet test .\RightKeyboard.sln --configuration Release --no-build
 ```
 
-Tras la Etapa 5: 152/152 pruebas. Si se omite `--no-build`, `dotnet test` recompila.
+Tras la Etapa 6: 161/161 pruebas. Si se omite `--no-build`, `dotnet test` recompila.
+
+La puerta de Etapa 6 exige además la variante diagnóstica:
+
+```powershell
+dotnet build .\RightKeyboard.sln --configuration Release -p:DefineConstants=RIGHTKEYBOARD_DIAGNOSTICS
+dotnet test .\RightKeyboard.sln --configuration Release --no-build -p:DefineConstants=RIGHTKEYBOARD_DIAGNOSTICS
+```
 
 ## Ejecutar en desarrollo
 
@@ -105,9 +112,9 @@ No publicar por inferencia. Requiere solicitud humana explícita. Secuencia espe
 | `RightKeyboard/Win32/` | Interop Raw Input, layouts, foreground |
 | `RightKeyboard/DeviceIdentityResolver.cs` | SetupAPI, identidad, nombre y huella |
 | `RightKeyboard/KeyboardDevicesCollection.cs` | Inventario handle/path/identidad |
-| `RightKeyboard/Configuration.cs` | Esquema, migración, validación y persistencia |
+| `RightKeyboard/Configuration.cs` | Esquema 5, grupos lógicos, migración, validación y persistencia |
 | `RightKeyboard/HidSignature.cs` | Firma HID parcial: tokens públicos del path y forma canónica |
-| `RightKeyboard/SettingsIpcProtocol.cs` | DTO/acciones de pipe v1 |
+| `RightKeyboard/SettingsIpcProtocol.cs` | DTO/acciones de pipe v2, incluida agrupación reversible |
 | `RightKeyboard/SettingsIpcServer.cs` | Autoridad IPC en núcleo |
 | `RightKeyboard/DiagnosticLogger.cs` | Diagnóstico de desarrollo tras `RIGHTKEYBOARD_DIAGNOSTICS` |
 | `RightKeyboard/SettingsDialog.cs` | Configuración WinForms fallback |
@@ -115,7 +122,7 @@ No publicar por inferencia. Requiere solicitud humana explícita. Secuencia espe
 | `RightKeyboard.WinUI/SettingsWindow.xaml.cs` | Configuración WinUI normal |
 | `RightKeyboard.WinUI/LayoutSelectionWindow.cs` | Selector WinUI normal y foco |
 | `RightKeyboard.WinUI/SettingsIpcClient.cs` | Cliente named pipe |
-| `RightKeyboard.NUnit/` | 152 pruebas unitarias/interop/DTO |
+| `RightKeyboard.NUnit/` | 161 pruebas unitarias/interop/DTO |
 | `installer/RightKeyboard.iss` | Instalación/actualización/desinstalación por usuario |
 | `scripts/` | Publicación, instalador, SHA-256, prototipo histórico |
 | `docs/` | Arquitectura, matrices, historia y notas humanas; varias están desactualizadas |

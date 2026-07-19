@@ -25,16 +25,17 @@ Este backlog sustituye para continuidad técnica el orden histórico de `ROADMAP
 - ningún teclado real se excluye solo por coincidencia débil — hecho por construcción: los dispositivos con huella quedan fuera del sistema de firmas;
 - el diagnóstico muestra por qué se aplicó o no la regla — hecho: `firma_registrada/no_registrada/no_aplicada/retirada`, `ignorado_recuperado_por_firma`.
 
-### 3. Agrupar identidades del mismo dispositivo
+### 3. Agrupar identidades del mismo dispositivo — **implementado (Etapa 6), pendiente de validación física**
 
 **Trabajo:** permitir que la UI anide/fusione manualmente identidades que el usuario reconoce como el mismo teclado conectado en distintos puertos.
 
-**Criterios:**
+**Criterios (estado):**
 
-- operación reversible;
-- una distribución/alias gobierna el grupo lógico;
-- los miembros del grupo siguen visibles como identidades técnicas secundarias;
-- no hay fusión automática en dispositivos ambiguos.
+- operación reversible — hecho: separar recupera las preferencias individuales latentes y disuelve automáticamente un grupo que queda con un solo miembro;
+- una distribución/alias gobierna el grupo lógico — hecho: `Configuration.TryGetEffectiveLayout` y `GetDisplayName` priorizan el grupo;
+- los miembros del grupo siguen visibles como identidades técnicas secundarias — hecho en `SettingsWindow` mediante encabezado lógico y filas indentadas;
+- no hay fusión automática en dispositivos ambiguos — hecho: solo las acciones IPC v2 `group`/`ungroup` cambian membresía; la recuperación por huella nunca lo hace;
+- falta ejecutar la matriz física con dos teclados y cambio de puerto en la estación real.
 
 ### 4. Completar la Configuración WinUI
 
