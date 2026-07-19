@@ -27,14 +27,16 @@ dotnet build .\RightKeyboard.sln --configuration Release
 dotnet test .\RightKeyboard.sln --configuration Release --no-build
 ```
 
-Tras la Etapa 6: 161/161 pruebas. Si se omite `--no-build`, `dotnet test` recompila.
+Tras la Etapa 7: 161/161 pruebas. Si se omite `--no-build`, `dotnet test` recompila.
 
-La puerta de Etapa 6 exige además la variante diagnóstica:
+La puerta de las etapas 6-7 exige además la variante diagnóstica:
 
 ```powershell
 dotnet build .\RightKeyboard.sln --configuration Release -p:DefineConstants=RIGHTKEYBOARD_DIAGNOSTICS
 dotnet test .\RightKeyboard.sln --configuration Release --no-build -p:DefineConstants=RIGHTKEYBOARD_DIAGNOSTICS
 ```
+
+Para la Etapa 7, comprobar por separado la Configuración normal y la diagnóstica a tamaño inicial y al mínimo de 900 × 640 píxeles lógicos. Registrar la escala efectiva y marcar como **Bloqueada por entorno** —no aprobada por inferencia— cualquier validación de 125 %, DPI mixto o monitor que la VM no permita evidenciar.
 
 ## Ejecutar en desarrollo
 
