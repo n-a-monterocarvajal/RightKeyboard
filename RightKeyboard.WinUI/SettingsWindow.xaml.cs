@@ -37,10 +37,18 @@ public sealed class SettingsWindow : Window
     private readonly ComboBox GroupTargetComboBox = new();
     private readonly Button GroupButton = new();
     private readonly Button UngroupButton = new();
+    private readonly StackPanel DeviceDetailsPanel = new() { Spacing = 2, Visibility = Visibility.Collapsed };
+    private readonly StackPanel GroupButtonsPanel = new()
+    {
+        Orientation = Orientation.Horizontal,
+        Spacing = 8,
+        Visibility = Visibility.Collapsed
+    };
     private readonly CheckBox DiagnosticsCheckBox = new();
     private readonly CheckBox StartupCheckBox = new();
     private readonly List<Button> buttons = [];
     private readonly List<Border> cards = [];
+    private readonly List<Border> separators = [];
     private readonly List<TextBlock> secondaryText = [];
     private readonly TextBlock activityText = new();
     private readonly TextBlock activityHintText = new();
@@ -125,9 +133,8 @@ public sealed class SettingsWindow : Window
         root.Children.Add(titleBar);
         SetTitleBar(titleBar);
 
-        // Cuerpo en dos columnas: el inventario conserva la jerarquía lógica de dispositivos
-        // y el editor reúne únicamente las acciones de la selección. Archivo, sistema y
-        // restablecimiento se presentan como ámbitos independientes.
+        // Cuerpo en dos columnas: el inventario cede altura y desplaza su lista cuando es
+        // necesario; el editor conserva el espacio operativo y sus acciones siempre visibles.
         Grid body = new() { ColumnSpacing = 20 };
         body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(360) });
         body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -206,49 +213,137 @@ public sealed class SettingsWindow : Window
         Grid.SetRow(devicesCard, 1);
         leftColumn.Children.Add(devicesCard);
 
-        StackPanel fileCommands = new() { Spacing = 8 };
-        fileCommands.Children.Add(CreateSectionHeading(
-            "Archivo",
-            "Guarda una copia de tus preferencias o recupera una anterior."));
+        StackPanel preferenceActions = new() { Spacing = 8 };
+        preferenceActions.Children.Add(new TextBlock
+        {
+            Text = "Preferencias",
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+        });
         Grid fileButtons = new() { ColumnSpacing = 8 };
         fileButtons.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         fileButtons.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         Button export = new()
         {
-            Content = "Exportar archivo",
+            Content = "Exportar",
             HorizontalAlignment = HorizontalAlignment.Stretch
         };
         export.CornerRadius = new CornerRadius(8);
         export.Click += ExportButton_Click;
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(export, "ExportPreferencesButton");
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(export, "Exportar preferencias a un archivo");
         buttons.Add(export);
         fileButtons.Children.Add(export);
         Button import = new()
         {
-            Content = "Importar archivo",
+            Content = "Importar",
             HorizontalAlignment = HorizontalAlignment.Stretch
         };
         import.CornerRadius = new CornerRadius(8);
         import.Click += ImportButton_Click;
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(import, "ImportPreferencesButton");
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(import, "Importar preferencias desde un archivo");
         buttons.Add(import);
         Grid.SetColumn(import, 1);
         fileButtons.Children.Add(import);
-        fileCommands.Children.Add(fileButtons);
-        Border fileCard = CreateCard(fileCommands, new Thickness(16));
-        Grid.SetRow(fileCard, 2);
-        leftColumn.Children.Add(fileCard);
+        preferenceActions.Children.Add(fileButtons);
+        preferenceActions.Children.Add(CreateSeparator());
+
+        Grid resetRow = new() { ColumnSpacing = 8 };
+        resetRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        resetRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        StackPanel resetDescription = new() { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
+        resetDescription.Children.Add(new TextBlock
+        {
+            Text = "Restablecer",
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+        });
+        TextBlock resetSupportingText = new()
+        {
+            Text = "Elimina todas las preferencias.",
+            FontSize = 12,
+            TextWrapping = TextWrapping.Wrap
+        };
+        secondaryText.Add(resetSupportingText);
+        resetDescription.Children.Add(resetSupportingText);
+        resetRow.Children.Add(resetDescription);
+        Button clear = new()
+        {
+            Content = "Limpiar preferencias",
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        clear.CornerRadius = new CornerRadius(8);
+        clear.Click += ClearButton_Click;
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(clear, "ClearPreferencesButton");
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(
+            clear,
+            "Acción destructiva que solicita confirmación antes de eliminar todas las preferencias.");
+        ApplyDestructiveButtonResources(clear);
+        buttons.Add(clear);
+        Grid.SetColumn(clear, 1);
+        resetRow.Children.Add(clear);
+        preferenceActions.Children.Add(resetRow);
+
+        StackPanel systemPreferences = new() { Spacing = 8 };
+        Grid systemRow = new() { ColumnSpacing = 8 };
+        systemRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        systemRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        systemRow.Children.Add(new TextBlock
+        {
+            Text = "Sistema",
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            VerticalAlignment = VerticalAlignment.Center
+        });
+        StartupCheckBox.Content = "Iniciar con Windows";
+        StartupCheckBox.Click += StartupCheckBox_Click;
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(
+            StartupCheckBox,
+            "StartWithWindowsCheckBox");
+        Grid.SetColumn(StartupCheckBox, 1);
+        systemRow.Children.Add(StartupCheckBox);
+        systemPreferences.Children.Add(systemRow);
+        if (DiagnosticLogger.IsAvailable)
+        {
+            systemPreferences.Children.Add(CreateSeparator());
+            systemPreferences.Children.Add(new TextBlock
+            {
+                Text = "Diagnóstico",
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+            });
+            Grid diagnosticsRow = new() { ColumnSpacing = 8 };
+            diagnosticsRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            diagnosticsRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            DiagnosticsCheckBox.Content = "Diagnóstico detallado";
+            DiagnosticsCheckBox.VerticalAlignment = VerticalAlignment.Center;
+            DiagnosticsCheckBox.Click += DiagnosticsCheckBox_Click;
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(
+                DiagnosticsCheckBox,
+                "DetailedDiagnosticsCheckBox");
+            diagnosticsRow.Children.Add(DiagnosticsCheckBox);
+            Button openDiagnostics = new() { Content = "Abrir registros" };
+            openDiagnostics.CornerRadius = new CornerRadius(8);
+            openDiagnostics.Click += OpenDiagnostics_Click;
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(
+                openDiagnostics,
+                "OpenDiagnosticsButton");
+            buttons.Add(openDiagnostics);
+            Grid.SetColumn(openDiagnostics, 1);
+            diagnosticsRow.Children.Add(openDiagnostics);
+            systemPreferences.Children.Add(diagnosticsRow);
+        }
+
+        StackPanel leftFooter = new() { Spacing = 12 };
+        leftFooter.Children.Add(CreateCard(preferenceActions, new Thickness(12)));
+        leftFooter.Children.Add(CreateCard(systemPreferences, new Thickness(12)));
+        Grid.SetRow(leftFooter, 2);
+        leftColumn.Children.Add(leftFooter);
 
         Grid.SetColumn(leftColumn, 0);
         body.Children.Add(leftColumn);
 
-        // ---- Columna derecha: editor, preferencias generales y acción destructiva ----
-        Grid rightColumn = new() { RowSpacing = 12 };
-        rightColumn.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        rightColumn.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-
-        StackPanel editor = new() { Spacing = 12 };
-        editor.Children.Add(CreateSectionHeading(
+        // ---- Columna derecha: editor estable del dispositivo seleccionado ----
+        StackPanel editorFields = new() { Spacing = 12 };
+        editorFields.Children.Add(CreateSectionHeading(
             "Dispositivo seleccionado",
             "Edita el grupo lógico o el teclado seleccionado. Las identidades técnicas agrupadas permanecen visibles en la lista."));
         AliasTextBox.Header = "Nombre para este teclado";
@@ -257,32 +352,32 @@ public sealed class SettingsWindow : Window
         ApplyRoundedTextBoxResources(AliasTextBox);
         AliasTextBox.TextChanged += AliasTextBox_TextChanged;
         AliasTextBox.KeyDown += AliasTextBox_KeyDown;
-        editor.Children.Add(AliasTextBox);
+        editorFields.Children.Add(AliasTextBox);
         DetectedNameText.TextWrapping = TextWrapping.Wrap;
         TechnicalIdText.TextWrapping = TextWrapping.Wrap;
         StatusText.TextWrapping = TextWrapping.Wrap;
         secondaryText.Add(DetectedNameText);
         secondaryText.Add(TechnicalIdText);
         secondaryText.Add(StatusText);
-        editor.Children.Add(DetectedNameText);
-        editor.Children.Add(TechnicalIdText);
-        editor.Children.Add(StatusText);
+        DeviceDetailsPanel.Children.Add(DetectedNameText);
+        DeviceDetailsPanel.Children.Add(TechnicalIdText);
+        DeviceDetailsPanel.Children.Add(StatusText);
+        editorFields.Children.Add(DeviceDetailsPanel);
         LayoutComboBox.Header = "Distribución";
         LayoutComboBox.HorizontalAlignment = HorizontalAlignment.Stretch;
         LayoutComboBox.CornerRadius = new CornerRadius(8);
-        editor.Children.Add(LayoutComboBox);
+        editorFields.Children.Add(LayoutComboBox);
         IgnoredCheckBox.Content = "Ignorar eventos de este dispositivo";
         IgnoredCheckBox.Checked += IgnoredCheckBox_Changed;
         IgnoredCheckBox.Unchecked += IgnoredCheckBox_Changed;
-        editor.Children.Add(IgnoredCheckBox);
+        editorFields.Children.Add(IgnoredCheckBox);
         GroupTargetComboBox.Header = "Agrupar con otra identidad";
         GroupTargetComboBox.PlaceholderText = "Selecciona una identidad técnica";
         GroupTargetComboBox.HorizontalAlignment = HorizontalAlignment.Stretch;
         GroupTargetComboBox.CornerRadius = new CornerRadius(8);
         GroupTargetComboBox.SelectionChanged += (_, _) =>
             GroupButton.IsEnabled = GroupTargetComboBox.IsEnabled && GroupTargetComboBox.SelectedItem is DeviceRow;
-        editor.Children.Add(GroupTargetComboBox);
-        StackPanel groupButtons = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
+        editorFields.Children.Add(GroupTargetComboBox);
         GroupButton.Content = "Agrupar identidades";
         GroupButton.CornerRadius = new CornerRadius(8);
         GroupButton.Click += GroupButton_Click;
@@ -291,9 +386,9 @@ public sealed class SettingsWindow : Window
         UngroupButton.Click += UngroupButton_Click;
         buttons.Add(GroupButton);
         buttons.Add(UngroupButton);
-        groupButtons.Children.Add(GroupButton);
-        groupButtons.Children.Add(UngroupButton);
-        editor.Children.Add(groupButtons);
+        GroupButtonsPanel.Children.Add(GroupButton);
+        GroupButtonsPanel.Children.Add(UngroupButton);
+        editorFields.Children.Add(GroupButtonsPanel);
         StackPanel editorButtons = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
         SaveButton.Content = "Guardar cambios";
         SaveButton.CornerRadius = new CornerRadius(8);
@@ -305,87 +400,22 @@ public sealed class SettingsWindow : Window
         buttons.Add(ForgetButton);
         editorButtons.Children.Add(SaveButton);
         editorButtons.Children.Add(ForgetButton);
-        editor.Children.Add(editorButtons);
-        Border editorCard = CreateCard(new ScrollViewer
+        Grid editorLayout = new() { RowSpacing = 12, MinHeight = 440 };
+        editorLayout.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        editorLayout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        ScrollViewer editorScroll = new()
         {
-            Content = editor,
+            Content = editorFields,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             VerticalScrollMode = ScrollMode.Auto
-        }, new Thickness(20));
-        rightColumn.Children.Add(editorCard);
-
-        Grid generalCards = new() { ColumnSpacing = 12 };
-        generalCards.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        generalCards.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-        StackPanel systemPreferences = new() { Spacing = 8 };
-        systemPreferences.Children.Add(CreateSectionHeading(
-            "Sistema",
-            "Preferencias generales de RightKeyboard."));
-        StartupCheckBox.Content = "Iniciar con Windows";
-        StartupCheckBox.Click += StartupCheckBox_Click;
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(
-            StartupCheckBox,
-            "StartWithWindowsCheckBox");
-        systemPreferences.Children.Add(StartupCheckBox);
-        if (DiagnosticLogger.IsAvailable)
-        {
-            Border separator = new()
-            {
-                Height = 1,
-                Margin = new Thickness(0, 4, 0, 4)
-            };
-            cards.Add(separator);
-            systemPreferences.Children.Add(separator);
-            systemPreferences.Children.Add(CreateSectionHeading(
-                "Diagnóstico",
-                "Herramientas exclusivas de esta compilación de desarrollo."));
-            DiagnosticsCheckBox.Content = "Diagnóstico detallado";
-            DiagnosticsCheckBox.Click += DiagnosticsCheckBox_Click;
-            Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(
-                DiagnosticsCheckBox,
-                "DetailedDiagnosticsCheckBox");
-            systemPreferences.Children.Add(DiagnosticsCheckBox);
-            Button openDiagnostics = new()
-            {
-                Content = "Abrir registros",
-                HorizontalAlignment = HorizontalAlignment.Left
-            };
-            openDiagnostics.CornerRadius = new CornerRadius(8);
-            openDiagnostics.Click += OpenDiagnostics_Click;
-            Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(
-                openDiagnostics,
-                "OpenDiagnosticsButton");
-            buttons.Add(openDiagnostics);
-            systemPreferences.Children.Add(openDiagnostics);
-        }
-        generalCards.Children.Add(CreateCard(systemPreferences, new Thickness(16)));
-
-        StackPanel resetPreferences = new() { Spacing = 8 };
-        resetPreferences.Children.Add(CreateSectionHeading(
-            "Restablecer preferencias",
-            "Elimina nombres, distribuciones, grupos y dispositivos ignorados."));
-        Button clear = new()
-        {
-            Content = "Limpiar preferencias",
-            HorizontalAlignment = HorizontalAlignment.Left
         };
-        clear.CornerRadius = new CornerRadius(8);
-        clear.Click += ClearButton_Click;
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(clear, "ClearPreferencesButton");
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(
-            clear,
-            "Acción destructiva que solicita confirmación antes de eliminar todas las preferencias.");
-        buttons.Add(clear);
-        resetPreferences.Children.Add(clear);
-        Border resetCard = CreateCard(resetPreferences, new Thickness(16));
-        Grid.SetColumn(resetCard, 1);
-        generalCards.Children.Add(resetCard);
-        Grid.SetRow(generalCards, 1);
-        rightColumn.Children.Add(generalCards);
-
-        Grid.SetColumn(rightColumn, 1);
-        body.Children.Add(rightColumn);
+        editorLayout.Children.Add(editorScroll);
+        Grid.SetRow(editorButtons, 1);
+        editorLayout.Children.Add(editorButtons);
+        Border editorCard = CreateCard(editorLayout, new Thickness(20));
+        editorCard.MinHeight = 440;
+        Grid.SetColumn(editorCard, 1);
+        body.Children.Add(editorCard);
         root.Children.Add(body);
         return root;
     }
@@ -421,6 +451,37 @@ public sealed class SettingsWindow : Window
         };
         cards.Add(card);
         return card;
+    }
+
+    private Border CreateSeparator()
+    {
+        Border separator = new()
+        {
+            Height = 1,
+            Margin = new Thickness(0, 2, 0, 2)
+        };
+        separators.Add(separator);
+        return separator;
+    }
+
+    private static void ApplyDestructiveButtonResources(Button button)
+    {
+        ResourceDictionary light = new();
+        light["ButtonBackgroundPointerOver"] = new SolidColorBrush(Color.FromArgb(0xFF, 0xFD, 0xE7, 0xE9));
+        light["ButtonBorderBrushPointerOver"] = new SolidColorBrush(Color.FromArgb(0xFF, 0xC4, 0x2B, 0x1C));
+        light["ButtonForegroundPointerOver"] = new SolidColorBrush(Color.FromArgb(0xFF, 0xA4, 0x26, 0x2C));
+        light["ButtonBackgroundPressed"] = new SolidColorBrush(Color.FromArgb(0xFF, 0xF1, 0xAE, 0xB5));
+        light["ButtonBorderBrushPressed"] = new SolidColorBrush(Color.FromArgb(0xFF, 0xA4, 0x26, 0x2C));
+        light["ButtonForegroundPressed"] = new SolidColorBrush(Color.FromArgb(0xFF, 0x5C, 0x0B, 0x0E));
+        ResourceDictionary dark = new();
+        dark["ButtonBackgroundPointerOver"] = new SolidColorBrush(Color.FromArgb(0xFF, 0x5A, 0x1D, 0x1D));
+        dark["ButtonBorderBrushPointerOver"] = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0x99, 0xA4));
+        dark["ButtonForegroundPointerOver"] = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF));
+        dark["ButtonBackgroundPressed"] = new SolidColorBrush(Color.FromArgb(0xFF, 0x7A, 0x1F, 0x28));
+        dark["ButtonBorderBrushPressed"] = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0xB3, 0xBA));
+        dark["ButtonForegroundPressed"] = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF));
+        button.Resources.ThemeDictionaries["Light"] = light;
+        button.Resources.ThemeDictionaries["Dark"] = dark;
     }
 
     private void ConfigureMinimumSize()
@@ -507,6 +568,11 @@ public sealed class SettingsWindow : Window
         {
             card.Background = background;
             card.BorderBrush = stroke;
+        }
+
+        foreach (Border separator in separators)
+        {
+            separator.Background = stroke;
         }
 
         foreach (TextBlock text in secondaryText)
@@ -1526,22 +1592,27 @@ public sealed class SettingsWindow : Window
 
     private void SetEditorEnabled(bool enabled)
     {
-        DeviceRow? row = enabled ? SelectedRow : null;
-        bool logicalPreference = row is not null && !row.IsGroupMember;
+        DeviceRow? row = SelectedRow;
+        bool logicalPreference = enabled && row is not null && !row.IsGroupMember;
         AliasTextBox.IsEnabled = logicalPreference;
         LayoutComboBox.IsEnabled = logicalPreference && IgnoredCheckBox.IsChecked != true;
-        IgnoredCheckBox.IsEnabled = logicalPreference && !row!.IsGroup;
-        IgnoredCheckBox.Visibility = row?.IsGroup == true || row?.IsGroupMember == true
-            ? Visibility.Collapsed
-            : Visibility.Visible;
+        IgnoredCheckBox.IsEnabled = logicalPreference && row is { IsGroup: false };
+        IgnoredCheckBox.Visibility = row is { IsGroup: false, IsGroupMember: false }
+            ? Visibility.Visible
+            : Visibility.Collapsed;
         SaveButton.IsEnabled = logicalPreference;
-        ForgetButton.IsEnabled = row is { IsGroup: false, IsGroupMember: false };
-        GroupTargetComboBox.IsEnabled = logicalPreference && row!.Ignored == false;
+        ForgetButton.IsEnabled = enabled && row is { IsGroup: false, IsGroupMember: false };
+        GroupTargetComboBox.IsEnabled = logicalPreference && row is { Ignored: false };
         GroupButton.IsEnabled = GroupTargetComboBox.IsEnabled && GroupTargetComboBox.SelectedItem is DeviceRow;
-        GroupTargetComboBox.Visibility = logicalPreference ? Visibility.Visible : Visibility.Collapsed;
-        GroupButton.Visibility = logicalPreference ? Visibility.Visible : Visibility.Collapsed;
-        UngroupButton.IsEnabled = row?.IsGroupMember == true;
+        bool canGroup = row is not null && !row.IsGroupMember;
+        GroupTargetComboBox.Visibility = canGroup ? Visibility.Visible : Visibility.Collapsed;
+        GroupButton.Visibility = canGroup ? Visibility.Visible : Visibility.Collapsed;
+        UngroupButton.IsEnabled = enabled && row?.IsGroupMember == true;
         UngroupButton.Visibility = row?.IsGroupMember == true ? Visibility.Visible : Visibility.Collapsed;
+        GroupButtonsPanel.Visibility = canGroup || row?.IsGroupMember == true
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        DeviceDetailsPanel.Visibility = row is null ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private static class NativeMethods

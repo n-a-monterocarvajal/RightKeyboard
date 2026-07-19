@@ -94,9 +94,10 @@ Mover DTO de IPC, `VersionPresentation` y modelos compartidos a una biblioteca p
 
 **Criterios:**
 
-- los comandos de archivo (Exportar/Importar), los de sistema (Iniciar con Windows) y los destructivos (Limpiar preferencias) tienen agrupación y jerarquía visual distinguibles — hecho;
+- Exportar, Importar y Limpiar se agrupan como operaciones sobre preferencias; Limpiar conserva confirmación y añade énfasis rojo en hover/pressed — hecho;
+- «Iniciar con Windows» permanece en Sistema porque su estado no se exporta, importa ni limpia con las preferencias — hecho;
 - «Diagnóstico detallado»/«Abrir registros» siguen apareciendo solo en compilaciones de desarrollo y no condicionan el layout normal — hecho;
-- se define y aplica un mínimo de 900 × 640 píxeles lógicos, adaptado al DPI; ambas variantes se verificaron a 100 % y las acciones siguen alcanzables mediante desplazamiento — hecho;
+- se define y aplica un mínimo de 900 × 640 píxeles lógicos, adaptado al DPI; ambas variantes se verificaron a 100 %, Guardar/Olvidar quedan fijos y la lista de dispositivos conserva desplazamiento — hecho;
 - queda pendiente repetir con evidencia suficiente a 125 %, DPI mixto/dos monitores y texto ampliado fuera de esta VM;
 - la microcopia afectada y los nombres de automatización de los comandos se ajustaron sin convertir la etapa en una revisión textual completa.
 
