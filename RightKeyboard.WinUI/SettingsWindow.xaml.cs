@@ -26,6 +26,9 @@ public sealed class SettingsWindow : Window
     private readonly CheckBox IgnoredCheckBox = new();
     private readonly Button SaveButton = new();
     private readonly Button ForgetButton = new();
+    private readonly ComboBox GroupTargetComboBox = new();
+    private readonly Button GroupButton = new();
+    private readonly Button UngroupButton = new();
     private readonly CheckBox DiagnosticsCheckBox = new();
     private readonly CheckBox StartupCheckBox = new();
     private readonly List<Button> buttons = [];
@@ -264,6 +267,25 @@ public sealed class SettingsWindow : Window
         IgnoredCheckBox.Checked += IgnoredCheckBox_Changed;
         IgnoredCheckBox.Unchecked += IgnoredCheckBox_Changed;
         editor.Children.Add(IgnoredCheckBox);
+        GroupTargetComboBox.Header = "Agrupar con otra identidad";
+        GroupTargetComboBox.PlaceholderText = "Selecciona una identidad técnica";
+        GroupTargetComboBox.HorizontalAlignment = HorizontalAlignment.Stretch;
+        GroupTargetComboBox.CornerRadius = new CornerRadius(8);
+        GroupTargetComboBox.SelectionChanged += (_, _) =>
+            GroupButton.IsEnabled = GroupTargetComboBox.IsEnabled && GroupTargetComboBox.SelectedItem is DeviceRow;
+        editor.Children.Add(GroupTargetComboBox);
+        StackPanel groupButtons = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
+        GroupButton.Content = "Agrupar identidades";
+        GroupButton.CornerRadius = new CornerRadius(8);
+        GroupButton.Click += GroupButton_Click;
+        UngroupButton.Content = "Separar del grupo";
+        UngroupButton.CornerRadius = new CornerRadius(8);
+        UngroupButton.Click += UngroupButton_Click;
+        buttons.Add(GroupButton);
+        buttons.Add(UngroupButton);
+        groupButtons.Children.Add(GroupButton);
+        groupButtons.Children.Add(UngroupButton);
+        editor.Children.Add(groupButtons);
         StackPanel editorButtons = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
         SaveButton.Content = "Guardar cambios";
         SaveButton.CornerRadius = new CornerRadius(8);
@@ -567,7 +589,26 @@ public sealed class SettingsWindow : Window
         snapshot = value;
         rows.Clear();
         DeviceList.Items.Clear();
+        Dictionary<string, SettingsDevice> devicesByIdentity = value.Devices
+            .ToDictionary(device => device.Identity, StringComparer.OrdinalIgnoreCase);
+        foreach (SettingsDeviceGroup group in value.Groups.OrderBy(
+                     group => group.DisplayName, StringComparer.CurrentCultureIgnoreCase))
+        {
+            SettingsLayout? groupLayout = value.Layouts.FirstOrDefault(candidate =>
+                candidate.Identifier == group.LayoutIdentifier);
+            DeviceRow groupRow = new(group, groupLayout, devicesByIdentity);
+            AddRow(groupRow);
+            foreach (string memberIdentity in group.MemberIdentities)
+            {
+                if (devicesByIdentity.TryGetValue(memberIdentity, out SettingsDevice? member))
+                {
+                    AddRow(new DeviceRow(member, group.Id));
+                }
+            }
+        }
+
         IEnumerable<(SettingsDevice Device, SettingsLayout? Layout)> orderedDevices = value.Devices
+            .Where(device => device.GroupId is null)
             .Select(device =>
             {
                 SettingsLayout? layout = value.Layouts.FirstOrDefault(candidate =>
@@ -579,9 +620,7 @@ public sealed class SettingsWindow : Window
 
         foreach ((SettingsDevice device, SettingsLayout? layout) in orderedDevices)
         {
-            DeviceRow row = new(device, layout);
-            rows.Add(row);
-            DeviceList.Items.Add(CreateDeviceItem(row));
+            AddRow(new DeviceRow(device, layout));
         }
 
         LayoutComboBox.Items.Clear();
@@ -596,6 +635,12 @@ public sealed class SettingsWindow : Window
         DeviceList.SelectedItem = DeviceList.Items.OfType<ListViewItem>()
             .FirstOrDefault(item => ReferenceEquals(item.Tag, selected));
         SetEditorEnabled(DeviceList.SelectedItem is not null);
+    }
+
+    private void AddRow(DeviceRow row)
+    {
+        rows.Add(row);
+        DeviceList.Items.Add(CreateDeviceItem(row));
     }
 
     private static int DeviceSortRank(SettingsDevice device, SettingsLayout? layout)
@@ -628,15 +673,17 @@ public sealed class SettingsWindow : Window
             Opacity = 0.72,
             TextTrimming = TextTrimming.CharacterEllipsis
         });
-        return new ListViewItem
+        ListViewItem item = new()
         {
             Tag = row,
             Content = content,
             CornerRadius = new CornerRadius(8),
-            Margin = new Thickness(0, 2, 0, 2),
+            Margin = row.IsGroupMember ? new Thickness(20, 0, 0, 0) : new Thickness(0, 2, 0, 2),
             Padding = new Thickness(10, 8, 10, 8),
             HorizontalContentAlignment = HorizontalAlignment.Stretch
         };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(item, row.AccessibleName);
+        return item;
     }
 
     private void DeviceList_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -649,14 +696,29 @@ public sealed class SettingsWindow : Window
 
         applyingEditorState = true;
         AliasTextBox.Text = row.DisplayName;
-        DetectedNameText.Text = $"Detectado: {row.DetectedName}";
-        TechnicalIdText.Text = $"Identificador: {row.TechnicalId}";
-        StatusText.Text = $"Estado: {(row.Connected ? "Conectado" : "Desconectado")} · Última detección: {row.LastSeenUtc.ToLocalTime():g}";
+        DetectedNameText.Text = row.IsGroup
+            ? $"Grupo lógico con {row.MemberCount} identidades técnicas"
+            : $"Detectado: {row.DetectedName}";
+        TechnicalIdText.Text = row.IsGroup
+            ? "Selecciona una identidad secundaria para ver o separarla."
+            : $"Identificador: {row.TechnicalId}";
+        StatusText.Text = row.IsGroup
+            ? $"Estado: {(row.Connected ? "Algún miembro conectado" : "Desconectado")}"
+            : $"Estado: {(row.Connected ? "Conectado" : "Desconectado")} · Última detección: {row.LastSeenUtc.ToLocalTime():g}";
         IgnoredCheckBox.IsChecked = row.Ignored;
         LayoutComboBox.SelectedItem = row.Layout is null
             ? LayoutComboBox.Items[0]
             : LayoutComboBox.Items.OfType<SettingsLayout>()
                 .FirstOrDefault(candidate => candidate.Identifier == row.Layout.Identifier);
+        GroupTargetComboBox.Items.Clear();
+        foreach (DeviceRow candidate in rows.Where(candidate =>
+                     candidate.CanBeGroupTarget &&
+                     !string.Equals(candidate.GroupId, row.GroupId, StringComparison.OrdinalIgnoreCase) &&
+                     !string.Equals(candidate.TargetIdentity, row.TargetIdentity, StringComparison.OrdinalIgnoreCase)))
+        {
+            GroupTargetComboBox.Items.Add(candidate);
+        }
+        GroupTargetComboBox.SelectedIndex = -1;
         applyingEditorState = false;
         SetEditorEnabled(true);
     }
@@ -737,7 +799,7 @@ public sealed class SettingsWindow : Window
 
     private async Task SaveSelectedAsync()
     {
-        if (SelectedRow is not DeviceRow row)
+        if (SelectedRow is not DeviceRow row || row.IsGroupMember)
         {
             return;
         }
@@ -747,7 +809,7 @@ public sealed class SettingsWindow : Window
             SetBusy(true);
             SettingsLayout? layout = LayoutComboBox.SelectedItem as SettingsLayout;
             ApplySnapshot(await client.SaveAsync(
-                row.Identity, AliasTextBox.Text, layout?.Identifier, IgnoredCheckBox.IsChecked == true), row.Identity);
+                row.TargetIdentity, AliasTextBox.Text, layout?.Identifier, IgnoredCheckBox.IsChecked == true), row.Identity);
         }
         catch (Exception error)
         {
@@ -761,7 +823,7 @@ public sealed class SettingsWindow : Window
 
     private async void ForgetButton_Click(object sender, RoutedEventArgs e)
     {
-        if (SelectedRow is not DeviceRow row)
+        if (SelectedRow is not DeviceRow row || row.IsGroup || row.IsGroupMember)
         {
             return;
         }
@@ -777,11 +839,79 @@ public sealed class SettingsWindow : Window
         try
         {
             SetBusy(true);
-            ApplySnapshot(await client.ForgetAsync(row.Identity));
+            ApplySnapshot(await client.ForgetAsync(row.TargetIdentity));
         }
         catch (Exception error)
         {
             await ShowErrorAsync("No se pudo olvidar el dispositivo", error);
+        }
+        finally
+        {
+            SetBusy(false);
+        }
+    }
+
+    private async void GroupButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (SelectedRow is not DeviceRow row || GroupTargetComboBox.SelectedItem is not DeviceRow target)
+        {
+            return;
+        }
+
+        if (!await ShowOverlayAsync(
+                "Agrupar identidades",
+                $"\"{AliasTextBox.Text.Trim()}\" gobernará el alias y la distribución compartidos con \"{target.DisplayName}\". Las identidades técnicas seguirán visibles y podrán separarse.",
+                "Agrupar"))
+        {
+            return;
+        }
+
+        try
+        {
+            SetBusy(true);
+            SettingsLayout? layout = LayoutComboBox.SelectedItem as SettingsLayout;
+            SettingsSnapshot grouped = await client.GroupAsync(
+                row.TargetIdentity,
+                target.TargetIdentity,
+                AliasTextBox.Text,
+                layout?.Identifier);
+            string? groupId = grouped.Groups.FirstOrDefault(group =>
+                group.MemberIdentities.Contains(row.TargetIdentity, StringComparer.OrdinalIgnoreCase))?.Id;
+            ApplySnapshot(grouped, groupId ?? row.TargetIdentity);
+        }
+        catch (Exception error)
+        {
+            await ShowErrorAsync("No se pudieron agrupar las identidades", error);
+        }
+        finally
+        {
+            SetBusy(false);
+        }
+    }
+
+    private async void UngroupButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (SelectedRow is not DeviceRow { IsGroupMember: true } row)
+        {
+            return;
+        }
+
+        if (!await ShowOverlayAsync(
+                "Separar identidad",
+                $"\"{row.DisplayName}\" dejará el grupo y recuperará sus preferencias individuales anteriores.",
+                "Separar"))
+        {
+            return;
+        }
+
+        try
+        {
+            SetBusy(true);
+            ApplySnapshot(await client.UngroupAsync(row.TargetIdentity), row.TargetIdentity);
+        }
+        catch (Exception error)
+        {
+            await ShowErrorAsync("No se pudo separar la identidad", error);
         }
         finally
         {
@@ -1239,11 +1369,22 @@ public sealed class SettingsWindow : Window
 
     private void SetEditorEnabled(bool enabled)
     {
-        AliasTextBox.IsEnabled = enabled;
-        LayoutComboBox.IsEnabled = enabled && IgnoredCheckBox.IsChecked != true;
-        IgnoredCheckBox.IsEnabled = enabled;
-        SaveButton.IsEnabled = enabled;
-        ForgetButton.IsEnabled = enabled;
+        DeviceRow? row = enabled ? SelectedRow : null;
+        bool logicalPreference = row is not null && !row.IsGroupMember;
+        AliasTextBox.IsEnabled = logicalPreference;
+        LayoutComboBox.IsEnabled = logicalPreference && IgnoredCheckBox.IsChecked != true;
+        IgnoredCheckBox.IsEnabled = logicalPreference && !row!.IsGroup;
+        IgnoredCheckBox.Visibility = row?.IsGroup == true || row?.IsGroupMember == true
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+        SaveButton.IsEnabled = logicalPreference;
+        ForgetButton.IsEnabled = row is { IsGroup: false, IsGroupMember: false };
+        GroupTargetComboBox.IsEnabled = logicalPreference && row!.Ignored == false;
+        GroupButton.IsEnabled = GroupTargetComboBox.IsEnabled && GroupTargetComboBox.SelectedItem is DeviceRow;
+        GroupTargetComboBox.Visibility = logicalPreference ? Visibility.Visible : Visibility.Collapsed;
+        GroupButton.Visibility = logicalPreference ? Visibility.Visible : Visibility.Collapsed;
+        UngroupButton.IsEnabled = row?.IsGroupMember == true;
+        UngroupButton.Visibility = row?.IsGroupMember == true ? Visibility.Visible : Visibility.Collapsed;
     }
 }
 
@@ -1252,6 +1393,8 @@ public sealed class DeviceRow
     internal DeviceRow(SettingsDevice device, SettingsLayout? layout)
     {
         Identity = device.Identity;
+        TargetIdentity = device.Identity;
+        GroupId = device.GroupId;
         DisplayName = device.DisplayName;
         DetectedName = device.DetectedName;
         TechnicalId = device.TechnicalId;
@@ -1264,7 +1407,52 @@ public sealed class DeviceRow
         AccessibleName = $"{DisplayName}. {Summary}";
     }
 
+    internal DeviceRow(SettingsDevice device, string groupId)
+    {
+        Identity = device.Identity;
+        TargetIdentity = device.Identity;
+        GroupId = groupId;
+        DisplayName = device.DetectedName;
+        DetectedName = device.DetectedName;
+        TechnicalId = device.TechnicalId;
+        LastSeenUtc = device.LastSeenUtc;
+        Connected = device.Connected;
+        IsGroupMember = true;
+        string state = device.Connected ? "Conectado" : "Desconectado";
+        Summary = $"Identidad técnica · {state}";
+        AccessibleName = $"{DisplayName}. {Summary}";
+    }
+
+    internal DeviceRow(
+        SettingsDeviceGroup group,
+        SettingsLayout? layout,
+        IReadOnlyDictionary<string, SettingsDevice> devices)
+    {
+        Identity = group.Id;
+        TargetIdentity = group.MemberIdentities.First();
+        GroupId = group.Id;
+        DisplayName = group.DisplayName;
+        DetectedName = string.Empty;
+        TechnicalId = string.Empty;
+        SettingsDevice[] members = group.MemberIdentities
+            .Where(devices.ContainsKey)
+            .Select(identity => devices[identity])
+            .ToArray();
+        LastSeenUtc = members.Select(member => member.LastSeenUtc).DefaultIfEmpty().Max();
+        Connected = members.Any(member => member.Connected);
+        Layout = layout;
+        IsGroup = true;
+        MemberCount = members.Length;
+        string state = Connected ? "Conectado" : "Desconectado";
+        Summary = layout is null
+            ? $"{MemberCount} identidades · {state}"
+            : $"{MemberCount} identidades · {state} · {layout.Name}";
+        AccessibleName = $"Grupo {DisplayName}. {Summary}";
+    }
+
     public string Identity { get; }
+    public string TargetIdentity { get; }
+    public string? GroupId { get; }
     public string DisplayName { get; }
     public string DetectedName { get; }
     public string TechnicalId { get; }
@@ -1273,7 +1461,11 @@ public sealed class DeviceRow
     public string AccessibleName { get; }
     public bool Connected { get; }
     public bool Ignored { get; }
+    public bool IsGroup { get; }
+    public bool IsGroupMember { get; }
+    public bool CanBeGroupTarget => !IsGroup && !IsGroupMember && !Ignored;
+    public int MemberCount { get; }
     internal SettingsLayout? Layout { get; }
 
-    public override string ToString() => $"{DisplayName}\n{Summary}";
+    public override string ToString() => IsGroup ? $"Grupo: {DisplayName}" : DisplayName;
 }

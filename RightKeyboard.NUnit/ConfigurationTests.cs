@@ -46,7 +46,7 @@ public sealed class ConfigurationTests
             Assert.That(loaded.Devices[keyboard.Identity].LastSeenUtc, Is.EqualTo(keyboardLastSeen));
             Assert.That(loaded.IgnoredDevices.Contains(mouse.Identity), Is.True);
             Assert.That(loaded.Devices[mouse.Identity].CustomName, Is.EqualTo("Mouse principal"));
-            Assert.That(File.ReadAllText(path), Does.Contain("\"version\": 4"));
+            Assert.That(File.ReadAllText(path), Does.Contain("\"version\": 5"));
         });
     }
 
@@ -177,7 +177,7 @@ public sealed class ConfigurationTests
     public void LoadImport_RejectsFutureSchemaWithoutReadingItAsCurrent()
     {
         string path = WriteJson("future.json", """
-        { "version": 5, "devices": [], "mappings": [], "ignoredDeviceIds": [] }
+        { "version": 6, "devices": [], "mappings": [], "ignoredDeviceIds": [] }
         """);
 
         InvalidDataException error = Assert.Throws<InvalidDataException>(
@@ -667,7 +667,7 @@ public sealed class ConfigurationTests
     }
 
     [Test]
-    public void Version3File_LoadsWithoutSignaturesAndSavesAsVersion4()
+    public void Version3File_LoadsWithoutSignaturesAndSavesAsCurrentVersion()
     {
         string path = WriteJson("preferences-v3.json", """
         {
@@ -685,7 +685,7 @@ public sealed class ConfigurationTests
         {
             Assert.That(loaded.IgnoredSignatures, Is.Empty);
             Assert.That(loaded.Devices["device:a"].Signature, Is.Null);
-            Assert.That(File.ReadAllText(path), Does.Contain("\"version\": 4"));
+            Assert.That(File.ReadAllText(path), Does.Contain("\"version\": 5"));
         });
     }
 
@@ -768,6 +768,186 @@ public sealed class ConfigurationTests
             Assert.That(current.IgnoredDevices, Is.Empty);
             Assert.That(current.IgnoredSignatures, Is.Empty);
         });
+    }
+
+    [Test]
+    public void GroupDevices_UsesOneAliasAndLayoutForEveryMember()
+    {
+        Configuration configuration = new();
+        KeyboardDevice first = Device("device:port-a", "MODEL-A", "Teclado A");
+        KeyboardDevice second = Device("device:port-b", "MODEL-A", "Teclado B");
+        configuration.SetLayout(first, spanish, "Teclado escritorio");
+        configuration.TouchDevice(second, "Teclado viaje");
+
+        string groupId = configuration.GroupDevices(first.Identity, second.Identity);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(configuration.DeviceGroups[groupId].DisplayName, Is.EqualTo("Teclado escritorio"));
+            Assert.That(configuration.GetDisplayName(second), Is.EqualTo("Teclado escritorio"));
+            Assert.That(configuration.TryGetEffectiveLayout(second.Identity, out Layout? layout), Is.True);
+            Assert.That(layout, Is.SameAs(spanish));
+            Assert.That(configuration.LayoutMappings.Keys, Is.EquivalentTo(new[] { first.Identity }));
+        });
+    }
+
+    [Test]
+    public void Ungroup_LastPair_DissolvesGroupAndRestoresIndividualPreferences()
+    {
+        Configuration configuration = new();
+        KeyboardDevice first = Device("device:port-a", "MODEL-A", "Teclado A");
+        KeyboardDevice second = Device("device:port-b", "MODEL-A", "Teclado B");
+        configuration.SetLayout(first, spanish, "Teclado escritorio");
+        configuration.TouchDevice(second, "Teclado viaje");
+        configuration.GroupDevices(first.Identity, second.Identity);
+
+        configuration.Ungroup(second.Identity);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(configuration.DeviceGroups, Is.Empty);
+            Assert.That(configuration.Devices[first.Identity].DisplayName, Is.EqualTo("Teclado escritorio"));
+            Assert.That(configuration.Devices[second.Identity].DisplayName, Is.EqualTo("Teclado viaje"));
+            Assert.That(configuration.LayoutMappings.Keys, Is.EquivalentTo(new[] { first.Identity }));
+        });
+    }
+
+    [Test]
+    public void GroupDevices_IgnoredMember_IsRejectedWithoutMutation()
+    {
+        Configuration configuration = new();
+        KeyboardDevice first = Device("device:port-a", "MODEL-A", "Teclado A");
+        KeyboardDevice second = Device("device:port-b", "", "Ambiguo", signature: BaseusSignature);
+        configuration.TouchDevice(first);
+        configuration.Ignore(second, extendToSignature: true);
+
+        Assert.That(
+            () => configuration.GroupDevices(first.Identity, second.Identity),
+            Throws.InvalidOperationException.With.Message.Contains("Reactiva"));
+        Assert.Multiple(() =>
+        {
+            Assert.That(configuration.DeviceGroups, Is.Empty);
+            Assert.That(configuration.IgnoredDevices, Does.Contain(second.Identity));
+            Assert.That(configuration.IgnoredSignatures, Does.Contain(BaseusSignature));
+        });
+    }
+
+    [Test]
+    public void GroupedConfiguration_RoundTrip_PreservesLogicalPreferenceAndTechnicalMembers()
+    {
+        string path = Path.Combine(temporaryDirectory, "grouped-v5.json");
+        Configuration configuration = new();
+        KeyboardDevice first = Device("device:port-a", "MODEL-A", "Teclado A");
+        KeyboardDevice second = Device("device:port-b", "MODEL-A", "Teclado B");
+        configuration.SetLayout(first, spanish, "Teclado escritorio");
+        configuration.TouchDevice(second);
+        configuration.GroupDevices(first.Identity, second.Identity);
+
+        configuration.Save(path);
+        Configuration loaded = Configuration.LoadConfiguration(new KeyboardDevicesCollection(), path, [spanish]);
+
+        LogicalDeviceGroup group = loaded.DeviceGroups.Values.Single();
+        Assert.Multiple(() =>
+        {
+            Assert.That(group.DisplayName, Is.EqualTo("Teclado escritorio"));
+            Assert.That(group.MemberIdentities, Is.EquivalentTo(new[] { first.Identity, second.Identity }));
+            Assert.That(group.Layout, Is.SameAs(spanish));
+            Assert.That(loaded.Devices.Keys, Is.EquivalentTo(new[] { first.Identity, second.Identity }));
+            Assert.That(File.ReadAllText(path), Does.Contain("\"version\": 5"));
+        });
+    }
+
+    [Test]
+    public void FingerprintRecovery_FromGroupedIdentity_DoesNotCreateMembership()
+    {
+        Configuration configuration = new();
+        KeyboardDevice first = Device("device:port-a", "MODEL-A", "Teclado A");
+        KeyboardDevice second = Device("device:port-b", "MODEL-B", "Teclado B");
+        KeyboardDevice reconnected = Device("device:port-c", "MODEL-A", "Teclado A");
+        configuration.SetLayout(first, spanish, "Teclado escritorio");
+        configuration.TouchDevice(second);
+        configuration.GroupDevices(first.Identity, second.Identity);
+
+        bool found = configuration.TryGetLayout(reconnected, 1, out Layout? layout, out bool learnedIdentity);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(found, Is.True);
+            Assert.That(layout, Is.SameAs(spanish));
+            Assert.That(learnedIdentity, Is.True);
+            Assert.That(configuration.GetGroup(reconnected.Identity), Is.Null);
+            Assert.That(configuration.LayoutMappings.ContainsKey(reconnected.Identity), Is.True);
+        });
+    }
+
+    [Test]
+    public void UpdatePreference_GroupMember_ChangesOnlyLogicalPreference()
+    {
+        Configuration configuration = new();
+        KeyboardDevice first = Device("device:port-a", "MODEL-A", "Teclado A");
+        KeyboardDevice second = Device("device:port-b", "MODEL-B", "Teclado B");
+        configuration.SetLayout(first, spanish, "Alias individual A");
+        configuration.TouchDevice(second, "Alias individual B");
+        configuration.GroupDevices(first.Identity, second.Identity);
+
+        configuration.UpdatePreference(second.Identity, "Teclado compartido", spanish, ignored: false);
+        Assert.That(configuration.GetGroup(second.Identity)?.DisplayName, Is.EqualTo("Teclado compartido"));
+        configuration.Ungroup(second.Identity);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(configuration.DeviceGroups, Is.Empty);
+            Assert.That(configuration.Devices[first.Identity].DisplayName, Is.EqualTo("Alias individual A"));
+            Assert.That(configuration.Devices[second.Identity].DisplayName, Is.EqualTo("Alias individual B"));
+        });
+    }
+
+    [Test]
+    public void GroupWithoutLayout_HidesDormantIndividualLayoutUntilSeparated()
+    {
+        Configuration configuration = new();
+        KeyboardDevice governing = Device("device:without-layout", "MODEL-A", "Sin distribución");
+        KeyboardDevice mapped = Device("device:mapped", "MODEL-B", "Con distribución");
+        configuration.TouchDevice(governing);
+        configuration.SetLayout(mapped, spanish);
+        configuration.GroupDevices(governing.Identity, mapped.Identity);
+
+        bool groupedLayout = configuration.TryGetEffectiveLayout(mapped.Identity, out _);
+        configuration.Ungroup(mapped.Identity);
+        bool restoredLayout = configuration.TryGetEffectiveLayout(mapped.Identity, out Layout? layout);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(groupedLayout, Is.False);
+            Assert.That(restoredLayout, Is.True);
+            Assert.That(layout, Is.SameAs(spanish));
+        });
+    }
+
+    [Test]
+    public void LoadImport_GroupWithDuplicateMembership_IsRejected()
+    {
+        string path = WriteJson("duplicate-group-membership.json", """
+        {
+          "version": 5,
+          "devices": [
+            { "identity": "device:a", "detectedName": "A" },
+            { "identity": "device:b", "detectedName": "B" },
+            { "identity": "device:c", "detectedName": "C" }
+          ],
+          "mappings": [],
+          "ignoredDeviceIds": [],
+          "ignoredSignatures": [],
+          "groups": [
+            { "id": "group:1", "displayName": "Uno", "memberIdentities": ["device:a", "device:b"] },
+            { "id": "group:2", "displayName": "Dos", "memberIdentities": ["device:a", "device:c"] }
+          ]
+        }
+        """);
+
+        Assert.That(
+            () => Configuration.LoadImport(path, [spanish]),
+            Throws.TypeOf<InvalidDataException>().With.Message.Contains("más de un grupo"));
     }
 
     private static KeyboardDevice Device(

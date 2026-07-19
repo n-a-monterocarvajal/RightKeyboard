@@ -40,11 +40,13 @@ Agregar una prueba directa sobre el evento JSON sería buena mejora, pero ya no 
 
 `TryLaunchWinUiSettings` y `TryLaunchWinUiSelector` solo abren WinForms si no encuentran el ejecutable o `Process.Start` falla. Si WinUI crea proceso y después lanza una excepción, Configuración muestra su ventana de error y el selector simplemente termina; el residente no reabre automáticamente el fallback. La afirmación más amplia de recuperación en documentos de arquitectura no coincide con el código. Diseñar una señal de «lista/interactiva» o código de salida distinguible antes de prometer fallback ante crash.
 
-## P1 — identidad al cambiar puerto puede seguir siendo ambigua
+## Implementado, pendiente de validación física — agrupación manual de identidades (Etapa 6)
 
-Si no hay `ContainerId` persistente, cambia `InstanceId` y existen dos dispositivos con igual huella o asociaciones conflictivas, RightKeyboard no recupera automáticamente. Es una decisión de seguridad de datos, no un bug simple. Cualquier mejora requiere propiedades adicionales estables; no «arreglar» eligiendo la primera coincidencia.
+Si no hay `ContainerId` persistente, cambia `InstanceId` y existen dos dispositivos con igual huella o asociaciones conflictivas, RightKeyboard sigue sin adivinar automáticamente. La Etapa 6 añade en Configuración WinUI una operación manual para agrupar las identidades que el usuario reconoce como el mismo teclado.
 
-Idea aprobada para 1.5.x: permitir que el usuario agrupe o anide manualmente identidades distintas del mismo teclado cuando Windows lo presenta como otro dispositivo al cambiar de puerto USB. Debe ser reversible y no automático.
+El grupo lógico tiene un solo alias/layout efectivo y muestra debajo sus identidades técnicas. Separar restaura las preferencias individuales que quedaron latentes, y la recuperación por huella puede reutilizar la distribución sin crear membresía. No se admiten miembros ignorados y no existe fusión automática para dispositivos ambiguos.
+
+**Pendiente:** validar en la estación física con dos teclados, reconexión y cambio de puerto. Esta VM no dispone de passthrough directo de dispositivos.
 
 ## P1 — portabilidad sin certificar
 

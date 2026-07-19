@@ -21,7 +21,7 @@ RightKeyboard es una utilidad de productividad para Windows 10/11 x64 destinada 
 
 No se duplican especificaciones que ya están bien escritas:
 
-- Contrato del esquema 3 y semántica transaccional: `docs/preferencias-1.5.md` y `RightKeyboard/Configuration.cs`.
+- Contrato del esquema 5 y semántica transaccional: `docs/preferencias-1.5.md` y `RightKeyboard/Configuration.cs`.
 - Decisión de separar residente WinForms y frontend WinUI: `docs/arquitectura-winui-1.5.md`.
 - Criterios de aceptación de WinUI, rendimiento y pruebas físicas: `docs/criterios-winui3-1.5.md`.
 - Modelo de instalación por usuario: `docs/distribucion-1.5.md`, `installer/RightKeyboard.iss` e `installer/PRUEBAS.md`.

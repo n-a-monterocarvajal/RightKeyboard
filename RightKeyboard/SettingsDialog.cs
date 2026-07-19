@@ -281,7 +281,8 @@ internal sealed class SettingsDialog : FluentForm
         {
             bool isConnected = connected.Contains(preference.Identity);
             bool isIgnored = configuration.IgnoredDevices.Contains(preference.Identity);
-            configuration.LayoutMappings.TryGetValue(preference.Identity, out Layout? layout);
+            configuration.TryGetEffectiveLayout(preference.Identity, out Layout? layout);
+            string displayName = configuration.GetGroup(preference.Identity)?.DisplayName ?? preference.DisplayName;
             DevicePresentation presentation = DevicePresentation.Create(isConnected, isIgnored, layout);
             RadioButton button = new()
             {
@@ -291,11 +292,11 @@ internal sealed class SettingsDialog : FluentForm
                 FlatStyle = FlatStyle.Flat,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(12, 6, 12, 6),
-                Text = presentation.GetListText(preference.DisplayName),
+                Text = presentation.GetListText(displayName),
                 Tag = preference.Identity,
                 Margin = new Padding(0, 0, 0, 8),
                 AutoEllipsis = true,
-                AccessibleName = presentation.GetAccessibleName(preference.DisplayName),
+                AccessibleName = presentation.GetAccessibleName(displayName),
                 AccessibleDescription = "Selecciona el dispositivo para editar sus preferencias."
             };
             button.FlatAppearance.BorderColor = SystemColors.ControlLight;
@@ -363,7 +364,8 @@ internal sealed class SettingsDialog : FluentForm
     {
         selectedIdentity = identity;
         DevicePreference preference = configuration.Devices[identity];
-        customNameTextBox.Text = preference.CustomName ?? preference.DisplayName;
+        LogicalDeviceGroup? group = configuration.GetGroup(identity);
+        customNameTextBox.Text = group?.DisplayName ?? preference.CustomName ?? preference.DisplayName;
         detectedNameLabel.Text = $"Detectado: {preference.DetectedName}";
         technicalIdLabel.Text = $"Identificador: {preference.TechnicalId}";
         bool connected = devices.Any(device => device.Identity == identity);
@@ -375,10 +377,11 @@ internal sealed class SettingsDialog : FluentForm
             ? "El dispositivo está conectado actualmente."
             : "El dispositivo no está conectado, pero sus preferencias siguen siendo editables.";
         ignoredCheckBox.Checked = configuration.IgnoredDevices.Contains(identity);
-        layoutComboBox.SelectedItem = configuration.LayoutMappings.TryGetValue(identity, out Layout? layout)
-            ? layouts.FirstOrDefault(candidate => candidate.Identifier == layout.Identifier) ?? layout
+        layoutComboBox.SelectedItem = configuration.TryGetEffectiveLayout(identity, out Layout? layout)
+            ? layouts.FirstOrDefault(candidate => candidate.Identifier == layout!.Identifier) ?? layout
             : layoutComboBox.Items[0];
         layoutComboBox.Enabled = !ignoredCheckBox.Checked;
+        ignoredCheckBox.Enabled = group is null;
         SetEditorEnabled(true);
     }
 
@@ -386,7 +389,8 @@ internal sealed class SettingsDialog : FluentForm
     {
         customNameTextBox.Enabled = enabled;
         layoutComboBox.Enabled = enabled && !ignoredCheckBox.Checked;
-        ignoredCheckBox.Enabled = enabled;
+        ignoredCheckBox.Enabled = enabled &&
+            (selectedIdentity is null || configuration.GetGroup(selectedIdentity) is null);
         saveButton.Enabled = enabled;
         forgetButton.Enabled = enabled;
     }

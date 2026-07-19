@@ -2,8 +2,8 @@ namespace RightKeyboard;
 
 internal static class SettingsIpcProtocol
 {
-    internal const string PipeName = "RightKeyboard.Settings.v1";
-    internal const int Version = 1;
+    internal const string PipeName = "RightKeyboard.Settings.v2";
+    internal const int Version = 2;
     internal const string SnapshotAction = "snapshot";
     internal const string SaveAction = "save";
     internal const string ForgetAction = "forget";
@@ -17,6 +17,8 @@ internal static class SettingsIpcProtocol
     internal const string ImportApplyAction = "import-apply";
     internal const string StartupAction = "startup";
     internal const string SetStartupAction = "set-startup";
+    internal const string GroupAction = "group";
+    internal const string UngroupAction = "ungroup";
 }
 
 internal sealed record SettingsRequest(
@@ -29,7 +31,8 @@ internal sealed record SettingsRequest(
     bool? DiagnosticsEnabled = null,
     string? FilePath = null,
     bool? Replace = null,
-    bool? StartupEnabled = null);
+    bool? StartupEnabled = null,
+    string? TargetIdentity = null);
 
 internal sealed record SettingsResponse(
     bool Success,
@@ -51,6 +54,7 @@ internal sealed record SettingsDiagnostics(bool Enabled, string DirectoryPath);
 internal sealed record SettingsSnapshot(
     int Version,
     IReadOnlyList<SettingsDevice> Devices,
+    IReadOnlyList<SettingsDeviceGroup> Groups,
     IReadOnlyList<SettingsLayout> Layouts);
 
 internal sealed record SettingsDevice(
@@ -61,7 +65,14 @@ internal sealed record SettingsDevice(
     DateTimeOffset LastSeenUtc,
     bool Connected,
     bool Ignored,
-    long? LayoutIdentifier);
+    long? LayoutIdentifier,
+    string? GroupId);
+
+internal sealed record SettingsDeviceGroup(
+    string Id,
+    string DisplayName,
+    long? LayoutIdentifier,
+    IReadOnlyList<string> MemberIdentities);
 
 internal sealed record SettingsLayout(long Identifier, string LanguageName, string LayoutName)
 {

@@ -98,7 +98,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         int matchingDevices = devices.CountConnectedWithFingerprint(device.Fingerprint);
         int matchingSignatures = devices.CountConnectedWithSignature(device.Signature);
         bool knownIdentity = configuration.Devices.ContainsKey(device.Identity);
-        bool mappedIdentity = configuration.LayoutMappings.ContainsKey(device.Identity);
+        bool mappedIdentity = configuration.TryGetEffectiveLayout(device.Identity, out _);
         bool ignoredIdentity = configuration.IgnoredDevices.Contains(device.Identity);
         diagnostics?.Write("entrada_recibida", device, new
         {

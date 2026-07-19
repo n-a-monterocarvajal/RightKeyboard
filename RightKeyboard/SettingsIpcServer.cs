@@ -130,13 +130,7 @@ internal sealed class SettingsIpcServer : IDisposable
                 break;
             case SettingsIpcProtocol.SaveAction:
                 RequireIdentity(request);
-                Layout? layout = request.LayoutIdentifier is long id
-                    ? Layout.EnumerateLayouts().FirstOrDefault(candidate => candidate.Identifier.ToInt64() == id)
-                    : null;
-                if (request.LayoutIdentifier is not null && layout is null)
-                {
-                    throw new InvalidOperationException("La distribución seleccionada ya no está disponible.");
-                }
+                Layout? layout = ResolveLayout(request);
                 SavePreference(request, layout);
                 configuration.Save();
                 break;
@@ -145,6 +139,22 @@ internal sealed class SettingsIpcServer : IDisposable
                 string? forgottenSignature = TrackedSignature(request.Identity!);
                 configuration.Forget(request.Identity!);
                 LogSignatureRemoval(forgottenSignature, "dispositivo_olvidado");
+                configuration.Save();
+                break;
+            case SettingsIpcProtocol.GroupAction:
+                RequireIdentity(request);
+                string targetIdentity = RequireTargetIdentity(request);
+                configuration.GroupDevices(
+                    request.Identity!,
+                    targetIdentity,
+                    request.CustomName,
+                    ResolveLayout(request),
+                    overridePreference: true);
+                configuration.Save();
+                break;
+            case SettingsIpcProtocol.UngroupAction:
+                RequireIdentity(request);
+                configuration.Ungroup(request.Identity!);
                 configuration.Save();
                 break;
             case SettingsIpcProtocol.ClearAction:
@@ -257,15 +267,24 @@ internal sealed class SettingsIpcServer : IDisposable
             .OrderBy(preference => preference.DisplayName, StringComparer.CurrentCultureIgnoreCase)
             .Select(preference => new SettingsDevice(
                 preference.Identity,
-                preference.DisplayName,
+                configuration.GetGroup(preference.Identity)?.DisplayName ?? preference.DisplayName,
                 preference.DetectedName,
                 preference.TechnicalId,
                 preference.LastSeenUtc,
                 connected.Contains(preference.Identity),
                 configuration.IgnoredDevices.Contains(preference.Identity),
-                configuration.LayoutMappings.TryGetValue(preference.Identity, out Layout? layout)
-                    ? layout.Identifier.ToInt64()
-                    : null))
+                configuration.TryGetEffectiveLayout(preference.Identity, out Layout? layout)
+                    ? layout!.Identifier.ToInt64()
+                    : null,
+                configuration.GetGroup(preference.Identity)?.Id))
+            .ToArray();
+        SettingsDeviceGroup[] groups = configuration.DeviceGroups.Values
+            .OrderBy(group => group.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+            .Select(group => new SettingsDeviceGroup(
+                group.Id,
+                group.DisplayName,
+                group.Layout?.Identifier.ToInt64(),
+                group.MemberIdentities.Order(StringComparer.OrdinalIgnoreCase).ToArray()))
             .ToArray();
         SettingsLayout[] layouts = Layout.EnumerateLayouts()
             .OrderBy(layout => layout.LanguageName, StringComparer.CurrentCultureIgnoreCase)
@@ -273,7 +292,7 @@ internal sealed class SettingsIpcServer : IDisposable
             .Select(layout => new SettingsLayout(
                 layout.Identifier.ToInt64(), layout.LanguageName, layout.LayoutName))
             .ToArray();
-        return new SettingsSnapshot(SettingsIpcProtocol.Version, deviceRows, layouts);
+        return new SettingsSnapshot(SettingsIpcProtocol.Version, deviceRows, groups, layouts);
     }
 
     private static void RequireIdentity(SettingsRequest request)
@@ -292,6 +311,29 @@ internal sealed class SettingsIpcServer : IDisposable
         }
 
         return request.FilePath;
+    }
+
+    private static string RequireTargetIdentity(SettingsRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.TargetIdentity))
+        {
+            throw new InvalidOperationException("No se indicó la identidad que se agrupará.");
+        }
+
+        return request.TargetIdentity;
+    }
+
+    private static Layout? ResolveLayout(SettingsRequest request)
+    {
+        Layout? layout = request.LayoutIdentifier is long id
+            ? Layout.EnumerateLayouts().FirstOrDefault(candidate => candidate.Identifier.ToInt64() == id)
+            : null;
+        if (request.LayoutIdentifier is not null && layout is null)
+        {
+            throw new InvalidOperationException("La distribución seleccionada ya no está disponible.");
+        }
+
+        return layout;
     }
 
     private Task<T> InvokeOnUiThreadAsync<T>(Func<T> action)

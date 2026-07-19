@@ -11,8 +11,9 @@
 7. **Sin elevación:** manifiestos `asInvoker`; instalación y estado bajo usuario actual.
 8. **Bandeja desde 1.5.0:** solo Configuración y Salir. Limpieza global vive en Configuración.
 9. **No topmost permanente:** el selector puede usar un pulso temporal para activación, nunca quedar «siempre visible».
-10. **Cambios de esquema:** validar, migrar explícitamente y escribir de forma atómica. Un esquema futuro se rechaza; no reinterpretarlo. Vigente: esquema 4 (`ignoredSignatures` + `signature` por dispositivo); el 3 migra en memoria y se reescribe como 4 al guardar.
+10. **Cambios de esquema:** validar, migrar explícitamente y escribir de forma atómica. Un esquema futuro se rechaza; no reinterpretarlo. Vigente: esquema 5 (`groups`, además de firmas del esquema 4); los esquemas 3 y 4 migran en memoria y se reescriben como 5 al guardar.
 11. **Firmas HID conservadoras:** una firma solo se registra tras ignorado manual de un dispositivo con huella vacía, solo se aplica con una única coincidencia conectada y sin distribuciones que la compartan, y no puede quedar huérfana: reactivar o asignar distribución la retira; `Forget` la retira si era el último portador.
+12. **Grupos manuales y reversibles:** nunca añadir membresía desde huella, firma o reconexión. El alias/layout efectivo vive en el grupo; las preferencias individuales quedan latentes y reaparecen al separar.
 
 ## Costumbres actuales, no políticas impuestas por tooling
 

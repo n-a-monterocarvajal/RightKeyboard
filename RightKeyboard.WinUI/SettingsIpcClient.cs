@@ -16,6 +16,22 @@ public sealed class SettingsIpcClient
     internal Task<SettingsSnapshot> ForgetAsync(string identity) =>
         SendAsync(new SettingsRequest(SettingsIpcProtocol.Version, SettingsIpcProtocol.ForgetAction, identity));
 
+    internal Task<SettingsSnapshot> GroupAsync(
+        string identity,
+        string targetIdentity,
+        string? customName,
+        long? layoutIdentifier) =>
+        SendAsync(new SettingsRequest(
+            SettingsIpcProtocol.Version,
+            SettingsIpcProtocol.GroupAction,
+            identity,
+            customName,
+            layoutIdentifier,
+            TargetIdentity: targetIdentity));
+
+    internal Task<SettingsSnapshot> UngroupAsync(string identity) =>
+        SendAsync(new SettingsRequest(SettingsIpcProtocol.Version, SettingsIpcProtocol.UngroupAction, identity));
+
     internal Task<SettingsSnapshot> ClearAsync() =>
         SendAsync(new SettingsRequest(SettingsIpcProtocol.Version, SettingsIpcProtocol.ClearAction));
 
