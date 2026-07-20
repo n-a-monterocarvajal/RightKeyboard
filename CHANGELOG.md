@@ -2,25 +2,32 @@
 
 Todos los cambios relevantes del proyecto se documentan en este archivo y se describen en español.
 
-## [Sin publicar]
+## [1.5.1] - 2026-07-19
 
-- La documentación deja de contradecir al código. El README ya no anuncia como planificada la exportación/importación, que está implementada junto con «Iniciar con Windows»; `ROADMAP.md` marca como revertida la decisión de conservar WinForms sin adoptar WinUI 3, y reclasifica la agrupación de identidades y la detección preventiva de HID ambiguos como implementadas a la espera de validación física, en vez de como backlog futuro. AUT-13 y AUT-15 pasan a cubiertos en `docs/calidad-1.5.md`, y `.agent-context` deja de afirmar que no existen `LICENSE` ni configuración `.github`. Lo implementado sin validar físicamente se declara así, no como terminado. Las notas de versiones ya publicadas quedan fuera de esta sincronización: `docs/releases/` es registro de lo publicado en su fecha y no se edita para reflejar trabajo posterior.
+### Cambios principales
 
-- El proyecto declara licencia por primera vez. `LICENSE` separa tres capas: la obra de 2007 atribuida a Antoine Aubry bajo CPOL 1.02, los repositorios anteriores sin licencia declarada, y los cambios de este fork bajo MIT. Se restaura además la atribución al artículo de origen, que este fork había perdido y los anteriores sí conservaban. Por CPOL 5(d), RightKeyboard no puede venderse, arrendarse ni alquilarse por sí solo.
-- La atribución de origen se declara como tal y no como hecho verificado: el artículo de CodeProject desapareció, de modo que no puede compararse el código heredado con el suyo. El proyecto adopta la postura conservadora de tratar CPOL como vinculante. Se corrige además la línea de procedencia: `agabor` no es antecesor de este repositorio sino una derivación hermana, y se cita solo como testimonio independiente de la atribución.
+- La Configuración WinUI permite agrupar manualmente las identidades que el usuario reconoce como un mismo teclado. El alias y la distribución gobiernan el grupo lógico; sus identidades técnicas siguen visibles y pueden separarse para recuperar sus preferencias individuales.
+- La exclusión de un dispositivo ambiguo ignorado puede recuperarse por su firma HID parcial al cambiarlo de puerto, siempre que la coincidencia sea inequívoca. La regla conservadora no se aplica a teclados con huella ni fusiona dispositivos automáticamente.
+- Exportar, Importar y Limpiar se reúnen como operaciones sobre preferencias, e «Iniciar con Windows» queda disponible en la Configuración WinUI. El editor aprovecha toda la columna derecha y mantiene Guardar y Olvidar visibles al mínimo de 900 × 640 píxeles lógicos.
 
-- El instalador se compila con Inno Setup 7.0.2. El script busca primero `Inno Setup 7` y conserva la línea 6 como respaldo. `SetupArchitecture` permanece en `x86`: las declaraciones `external` de `kernel32.dll` de la sección `[Code]` asumen un `THandle` de 4 bytes.
-- El núcleo y la Configuración WinUI se instalan en una sola carpeta y comparten una única copia del runtime .NET 10. Antes se publicaban por separado, con dos copias completas: la publicación baja de 813 archivos y 407,8 MB a 595 archivos y 299,1 MB. Al actualizar desde 1.5.0 el instalador elimina la carpeta `ui` heredada.
-- La publicación del núcleo activa `PublishReadyToRun`, igualando la opción del frontend para que la salida compartida sea determinista.
-- El instalador ya no incluye el runtime de Windows ML que arrastra el Windows App SDK autocontenido (`onnxruntime.dll`, `DirectML.dll` y proyecciones de `Microsoft.Windows.AI.MachineLearning`): 40,4 MB que la aplicación nunca usa.
-- La Configuración WinUI agrupa Exportar, Importar y Limpiar como operaciones sobre preferencias, mantiene «Iniciar con Windows» en Sistema y reserva toda la columna derecha para el dispositivo seleccionado. Guardar/Olvidar permanecen visibles al mínimo de 900 × 640 píxeles lógicos, y Limpiar adopta énfasis rojo en hover/pressed sin perder su confirmación accesible.
-- La Configuración WinUI permite agrupar manualmente identidades que el usuario reconoce como el mismo teclado. Un alias y una distribución gobiernan el grupo lógico; las identidades técnicas permanecen visibles y se pueden separar en cualquier momento, recuperando sus preferencias individuales anteriores.
-- Las preferencias pasan al esquema 5 con grupos lógicos explícitos. Los archivos de esquema 4 migran con grupos vacíos y el contrato IPC de Configuración pasa a v2 con snapshots y acciones de agrupación/separación.
-- La resolución en el residente consulta primero la preferencia efectiva del grupo. La recuperación conservadora por huella puede reutilizar esa distribución sin añadir membresía; no existe fusión automática, tampoco para dispositivos ambiguos.
-- Al ignorar manualmente un dispositivo débilmente identificado (huella vacía), la exclusión se extiende a su firma HID parcial (enumerador, VID, PID, interfaz, colección y capacidades): reconectarlo en otro puerto ya no reabre el selector si la coincidencia es inequívoca. La regla nunca opera sobre teclados con huella, exige una sola coincidencia conectada y se desactiva al reactivar o asignar distribución al dispositivo.
-- Las preferencias pasan al esquema 4 (`ignoredSignatures` y `signature` por dispositivo). Los archivos de esquema 3 migran automáticamente al guardar; un export de esquema 4 no puede importarse en 1.5.0.
-- El diagnóstico de desarrollo explica la regla de firma con eventos nuevos: `firma_registrada`, `firma_no_registrada`, `ignorado_recuperado_por_firma`, `firma_no_aplicada` y `firma_retirada`.
-- CI en Windows con advertencias como errores; Exportar/Importar e «Iniciar con Windows» disponibles en la Configuración WinUI.
+### Preferencias y compatibilidad
+
+- Las preferencias pasan al esquema 5 con grupos lógicos explícitos y protocolo IPC v2. Los esquemas 3 y 4 migran al guardar; las recuperaciones por huella pueden reutilizar una distribución, pero nunca crean membresía de grupo.
+- El esquema 4 incorporó `ignoredSignatures` y la firma por dispositivo. Por ello, una exportación guardada por 1.5.1 no se puede importar en 1.5.0.
+- El diagnóstico de desarrollo explica las decisiones de firma HID y refuerza la anonimización de los datos registrados.
+
+### Instalación y rendimiento
+
+- El núcleo y la Configuración WinUI comparten una sola carpeta y una única copia del runtime .NET 10. La publicación compilada para 1.5.1 contiene 590 archivos y ocupa 258,71 MiB; al actualizar desde 1.5.0 se eliminan la carpeta `ui` heredada y las copias DAC versionadas de runtimes anteriores.
+- Se excluyen 40,4 MB del runtime de Windows ML que la aplicación no usa y se activa `PublishReadyToRun` también en el núcleo.
+- El instalador se compila con Inno Setup 7.0.2, conservando compatibilidad con la línea 6. Mantiene arquitectura de setup `x86` porque las declaraciones Win32 de su sección `[Code]` dependen de ese tamaño de `THandle`.
+
+### Calidad, documentación y licencia
+
+- CI compila y prueba en Windows con advertencias tratadas como errores.
+- La documentación pública se sincroniza con el código y distingue lo implementado de lo validado físicamente. Las notas de `docs/releases/` permanecen como registro inmutable de cada publicación.
+- El proyecto declara su licencia en tres capas: la obra de 2007 atribuida a Antoine Aubry bajo CPOL 1.02, los repositorios intermedios sin licencia declarada y los cambios de este fork bajo MIT. La atribución de origen se marca como no verificada; `agabor` se documenta como una derivación hermana, no como antecesor.
+- CPOL 5(d) impide vender, arrendar o alquilar RightKeyboard por sí solo; la distribución gratuita es compatible con esa restricción.
 
 ## [1.5.0] - 2026-07-09
 
