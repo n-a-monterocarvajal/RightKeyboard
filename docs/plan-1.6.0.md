@@ -41,13 +41,15 @@ Fue primero porque `1.5.1` no debía publicarse con documentación que contradic
 
 Corregido:
 
-- Exportar/importar e «Iniciar con Windows» figuraban como pendientes en `README.md`, `docs/distribucion-1.5.md`, `docs/calidad-1.5.md`, `docs/releases/1.5.0.md` y `.agent-context/03-problemas-conocidos.md` pese a estar implementados. Ahora se describen como disponibles, con la portabilidad entre equipos declarada sin certificar.
+- Exportar/importar e «Iniciar con Windows» figuraban como pendientes en `README.md`, `docs/distribucion-1.5.md`, `docs/calidad-1.5.md` y `.agent-context/03-problemas-conocidos.md` pese a estar implementados. Ahora se describen como disponibles, con la portabilidad entre equipos declarada sin certificar.
 - `ROADMAP.md` marca explícitamente como revertida la decisión de conservar WinForms y no adoptar WinUI 3, conservando vigentes los criterios visuales.
 - AUT-15 y AUT-13 pasan a «Cubierto» en `docs/calidad-1.5.md`, con la evidencia concreta; el riesgo 5 pasa a resuelto y el 4 baja de Alto a Medio.
-- Agrupar identidades y detección preventiva de HID ambiguos se reclasifican de backlog futuro a implementadas con validación física pendiente, en `ROADMAP.md` y `docs/releases/1.5.0.md`.
+- Agrupar identidades y detección preventiva de HID ambiguos se reclasifican de backlog futuro a implementadas con validación física pendiente, en `ROADMAP.md`.
 - `.agent-context/01-estado-actual.md` deja de afirmar que no existen `LICENSE` ni configuración `.github`.
 
-Criterio aplicado: lo implementado pero sin validar en hardware se declara así, no como terminado. Las notas de `1.5.0` conservan su lista original como registro y anotan al lado qué se abordó después.
+Criterio aplicado: lo implementado pero sin validar en hardware se declara así, no como terminado.
+
+`docs/releases/1.5.0.md` queda **sin tocar** de forma deliberada. Las notas de una versión publicada describen lo que se publicó en su fecha y no se editan para reflejar trabajo posterior; su lista de pendientes se lee contra el 9 de julio de 2026. La convención quedó registrada en `.agent-context/01-estado-actual.md`.
 
 Sigue abierto y no lo resuelve esta etapa: la semántica de «preferencia pendiente» al importar con una distribución ausente. `LoadImport` conserva el dispositivo pero descarta la asociación y solo advierte; falta decidir si es lo deseado. Anotado en `docs/distribucion-1.5.md` y en `.agent-context/03-problemas-conocidos.md`.
 

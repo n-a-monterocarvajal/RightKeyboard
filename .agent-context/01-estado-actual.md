@@ -49,6 +49,7 @@ No hay servicios falsos en producción. `RightKeyboard.WinUI` usa IPC real, `Con
 - `docs/calidad-1.5.md` conserva conteos y riesgos de beta 1; sirve como matriz, no como snapshot.
 - `docs/pruebas-visuales-interfaz-1.5.md` mezcla baseline WinForms y controles que no existen en WinUI.
 - `docs/arquitectura-fluent-1.5.md` es historia de la ruta WinForms; la arquitectura vigente está en `docs/arquitectura-winui-1.5.md` más el código actual.
+- `docs/releases/` son notas de versiones ya publicadas. **No se editan para reflejar trabajo posterior**, ni siquiera para anotar que un pendiente se resolvió después: describen lo que se publicó en su fecha y esa es su utilidad. Si contradicen al código, la contradicción es aparente y se resuelve leyendo su fecha. El estado vigente vive en este archivo, en `ROADMAP.md` y en `docs/plan-1.6.0.md`; una corrección real de una versión publicada va en la nota de la versión siguiente.
 
 ## Evidencia automatizada
 
