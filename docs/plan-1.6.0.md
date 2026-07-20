@@ -12,11 +12,11 @@ La revisión del ejecutable del 19 de julio de 2026 dejó observaciones de inter
 
 ## Mecánica de versión
 
-La versión se declara en dos sitios que deben moverse juntos: `RightKeyboard/RightKeyboard.csproj` y `RightKeyboard.WinUI/RightKeyboard.WinUI.csproj`. `scripts/build-installer.ps1` la lee del primero cuando no se pasa `-Version`. Cada etapa cierra con su bump y su entrada en `CHANGELOG.md`.
+La versión se declara en dos sitios que deben moverse juntos: `RightKeyboard/RightKeyboard.csproj` y `RightKeyboard.WinUI/RightKeyboard.WinUI.csproj`. `scripts/build-installer.ps1` la lee del primero cuando no se pasa `-Version`. Cada etapa de mantenimiento cierra con su bump, su entrada en `CHANGELOG.md`, una etiqueta `vX.Y.Z` y una Release de GitHub con instalador y SHA-256 después del squash y del CI en verde.
 
 ## Advertencia sobre la publicación
 
-El bloqueo por licencia se levantó el 19 de julio de 2026: existe `LICENSE` y la procedencia está trazada, según el carril B. Queda la restricción de CPOL 5(d) —no vender, arrendar ni alquilar la obra por sí sola— con la que la publicación gratuita del instalador es compatible. Sigue en pie decidir si `1.5.1` es una publicación pública o solo un corte interno de versión.
+El bloqueo por licencia se levantó el 19 de julio de 2026: existe `LICENSE` y la procedencia está trazada, según el carril B. Queda la restricción de CPOL 5(d) —no vender, arrendar ni alquilar la obra por sí sola— con la que la publicación gratuita del instalador es compatible. `1.5.1` y las versiones de mantenimiento posteriores se publican gratuitamente también como registro histórico.
 
 ## Carril A — etapas de código
 
@@ -27,7 +27,7 @@ Secuenciales. Cada una es una sesión, una rama, un PR y un bump de versión.
 | 9 | — | Sincronizar documentación con el código | Completada |
 | 10 | 1.5.1 | Publicar lo acumulado | Completada |
 | 11 | 1.5.2 | Guardia de cambios sin guardar | Completada |
-| 12 | 1.5.3 | Coherencia de Ignorar y Agrupar | Pendiente |
+| 12 | 1.5.3 | Coherencia de Ignorar y Agrupar | Completada |
 | 13 | 1.5.4 | Nomenclatura y estado de fila | Pendiente |
 | 14 | 1.5.5 | Pulido visual del panel | Pendiente |
 | 15 | 1.5.6 | Exploración de pulsaciones sintéticas | Pendiente |
@@ -84,14 +84,27 @@ Evidencia local:
 - Interfaz WinUI real: versión 1.5.2 visible; cierre limpio sin diálogo; alias modificado con confirmación; cancelar conservó `Alias temporal etapa 11`; descartar permitió cerrar; guardar un alias temporal, restaurar `Teclado sin nombre` y cerrar no produjo una confirmación posterior.
 - La VM solo tenía una fila conocida, por lo que no permitió ejecutar visualmente el cambio entre dos filas. La decisión y la restauración están cubiertas por la lógica automatizada y por la implementación inspeccionada, pero esa interacción concreta queda declarada sin validación visual en esta VM.
 - `git diff --check`: sin errores.
+- Publicada posteriormente como `v1.5.2` sobre el commit exacto `2f7b93b`, con instalador de 65.786.552 bytes y SHA-256 `73749883eb59ddba9810ca7f66a6aa92c2c52f4dec366c314c8c0601ca158c28`.
 
-### Etapa 12 — Coherencia de Ignorar y Agrupar (1.5.3)
+### Etapa 12 — Coherencia de Ignorar y Agrupar (1.5.3) · completada el 19 de julio de 2026
 
-La dependencia ya existe y es unidireccional: ignorar bloquea agrupar como origen (`SetEditorEnabled`) y como destino (`CanBeGroupTarget`). Falta que la interfaz lo respete en vivo y que el orden lo comunique.
+Resultado:
 
-- `IgnoredCheckBox_Changed` solo reevalúa la distribución; debe reevaluar el estado completo del editor para que los controles de agrupación se deshabiliten sin reseleccionar la fila.
-- Situar Ignorar por encima de Distribución, ya que gobierna tanto a Distribución como a Agrupar.
-- Añadir pruebas que fijen la regla «un dispositivo ignorado no agrupa» en ambos sentidos.
+- Una evaluación compartida y comprobable distingue dispositivo, grupo lógico y miembro técnico, y calcula la disponibilidad de alias, distribución, Ignorar, Guardar, Olvidar y todas las acciones de agrupación desde el valor actual del editor.
+- Marcar «Ignorar» deshabilita inmediatamente Distribución, el selector de destino y el botón Agrupar, y limpia cualquier destino seleccionado que deja de ser válido. Desmarcarlo recupera el selector solo para filas que pueden agrupar y mantiene el botón deshabilitado mientras falte un destino.
+- Un dispositivo ignorado no puede ser origen ni destino. La interfaz y la guardia defensiva de `Configuration.GroupDevices` fijan la misma regla sin cambiar la persistencia.
+- Las cargas programáticas protegidas no aplican estados transitorios ni ensucian el editor. La guardia de cambios sin guardar sigue comparando alias, distribución e Ignorar con el estado persistido.
+- «Ignorar» aparece antes de «Distribución» en WinUI y en el respaldo WinForms, con ayuda accesible que explica que también gobierna la agrupación.
+- Ambos proyectos avanzaron conjuntamente a `1.5.3`.
+
+Evidencia local:
+
+- `dotnet test RightKeyboard.sln -c Release`: 176/176 pruebas superadas, sin omitidas; son las 170 anteriores y 6 nuevas para origen, destino, limpieza de selección, recuperación condicionada y carga programática.
+- `dotnet build RightKeyboard.sln -c Release --no-restore`: compilación correcta, 0 advertencias y 0 errores.
+- Interfaz WinUI real: versión 1.5.3 visible y orden Ignorar, Distribución, Agrupar confirmado. Marcar Ignorar deshabilitó inmediatamente ambos selectores y Agrupar; desmarcarlo recuperó los selectores y mantuvo Agrupar deshabilitado por falta de destino.
+- La confirmación de cierre detectó el cambio de Ignorar; cancelar conservó la casilla marcada y todos los estados dependientes. Guardar un alias temporal, restaurar el original y cerrar no produjo una confirmación posterior.
+- La VM solo tenía una fila conocida. No fue posible comprobar visualmente una selección real de destino ni cancelar el cambio entre dos filas; ambas interacciones quedan cubiertas por las pruebas y la lógica compartida, pero no se dan por validadas en la interfaz de esta VM.
+- `git diff --check`: sin errores.
 
 ### Etapa 13 — Nomenclatura y estado de fila (1.5.4)
 
@@ -158,4 +171,5 @@ Nueve huecos en `.agent-context/05-siguientes-pasos.md` y los casos AUT-06, AUT-
 2. Ejecutar la aplicación y comprobar el cambio en la interfaz real. Cerrar antes cualquier instancia en ejecución: el mutex de instancia única hace que un segundo proceso salga de inmediato y produzca un falso negativo.
 3. Para cambios que afecten al instalador, ejecutar `scripts\build-installer.ps1` y comprobar tamaño y contenido de la publicación.
 4. Rama, PR, CI en verde y merge con squash.
-5. Actualizar el estado de la etapa en este archivo y la entrada correspondiente en `CHANGELOG.md`.
+5. Etiqueta de versión y Release de GitHub con instalador y SHA-256 verificados; no mover una etiqueta ya publicada.
+6. Actualizar el estado de la etapa en este archivo y la entrada correspondiente en `CHANGELOG.md`.

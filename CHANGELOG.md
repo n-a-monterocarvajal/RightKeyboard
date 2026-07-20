@@ -4,6 +4,15 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [Sin publicar]
 
+## [1.5.3] - 2026-07-19
+
+### Configuración
+
+- Cambiar «Ignorar» actualiza inmediatamente la distribución y todas las acciones de agrupación: una identidad ignorada deja de poder agrupar o aparecer como destino, y al reactivarla solo se recuperan las acciones válidas para esa fila.
+- «Ignorar» aparece antes de «Distribución» en Configuración para comunicar que gobierna tanto la distribución como la agrupación, también en el respaldo WinForms.
+
+## [1.5.2] - 2026-07-19
+
 ### Configuración
 
 - Los cambios pendientes de alias, distribución o estado ignorado ya no se pierden en silencio: Configuración pide confirmación antes de cambiar de dispositivo o cerrar, tanto en la interfaz WinUI como en el respaldo WinForms.
