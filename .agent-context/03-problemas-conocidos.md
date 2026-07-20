@@ -32,14 +32,6 @@ Agregar una prueba directa sobre el evento JSON sería buena mejora, pero ya no 
 
 **Pendiente:** validar en la estación física con el Baseus real (confirmar si su huella es vacía; si no lo es, la recuperación por huella ya cubría su reconexión y la firma cubre el resto de HID débiles) y ejecutar el cambio de puerto de la matriz.
 
-## P1 — el desplegable de «Agrupar con otra identidad» aparece vacío (observado en 1.5.4)
-
-**Síntoma:** en la Configuración WinUI de 1.5.4 el desplegable para «Agrupar con otra identidad» se muestra vacío, sin candidatos seleccionables, de modo que la agrupación manual no puede utilizarse.
-
-**Sospecha inicial:** revisar el filtrado de candidatos endurecido en 1.5.3 —una identidad ignorada dejó de poder agrupar o aparecer como destino— y la construcción de la lista de destinos en `SettingsWindow` y su acción IPC; confirmar si el filtro excluye de más o si la lista sencillamente no se está poblando.
-
-**Pendiente:** reproducir con al menos dos identidades no ignoradas, localizar dónde se arma la lista de destinos y validar el arreglo con hardware o identidades simuladas.
-
 ## P1 — foco del selector depende de heurísticas Win32
 
 `AllowSetForegroundWindow`, `AttachThreadInput`, `SetForegroundWindow`, `SetFocus`, un pulso topmost temporal y un retry a 180 ms intentan cooperar con las reglas de foco de Windows. La ventana puede estar delante sin que el `TextBox` tenga foco. No convertirla en topmost permanente. Instrumentar tiempos/resultado de foreground y probar varias aplicaciones antes de cambiar la secuencia.
@@ -55,14 +47,6 @@ Si no hay `ContainerId` persistente, cambia `InstanceId` y existen dos dispositi
 El grupo lógico tiene un solo alias/layout efectivo y muestra debajo sus identidades técnicas. Separar restaura las preferencias individuales que quedaron latentes, y la recuperación por huella puede reutilizar la distribución sin crear membresía. No se admiten miembros ignorados y no existe fusión automática para dispositivos ambiguos.
 
 **Pendiente:** validar en la estación física con dos teclados, reconexión y cambio de puerto. Esta VM no dispone de passthrough directo de dispositivos.
-
-## P2 — evaluar la agrupación de identidades ignoradas (observado en 1.5.4)
-
-Hoy la agrupación manual excluye por diseño a las identidades ignoradas: nunca se plantea el caso de «Agrupar» miembros ignorados (ver arriba, «No se admiten miembros ignorados», y el filtrado endurecido en 1.5.3). Es una decisión de nuestra lógica, no una limitación del hardware.
-
-**Caso a evaluar:** un mismo dispositivo ignorado que reaparece con identidades técnicas distintas al conectarse en puertos diferentes en ocasiones diversas —por ejemplo el presentador que se enchufa a dos puertos distintos—. Sin poder agruparlas, cada puerto se ignora por separado y la intención de «ignorar este dispositivo» no se traslada a todas sus identidades.
-
-**Pendiente:** decidir si tiene sentido permitir agrupar identidades ignoradas (o propagar el estado ignorado a un grupo lógico), definir la semántica de alias/distribución/estado para un grupo cuyos miembros están ignorados, y confirmar que no reintroduce selectores falsos ni fusiones automáticas. Relacionado con el bug P1 del desplegable vacío.
 
 ## Implementado, pendiente de validación DPI ampliada — disposición y mínimo de Configuración (Etapa 7)
 
@@ -81,29 +65,6 @@ Existe `LICENSE` en la raíz, con tres capas: obra original de 2007 de Antoine A
 Restricción vigente que condiciona la distribución: por CPOL 5(d) la obra **no puede venderse, arrendarse ni alquilarse por sí sola**, aunque los aportes propios sean MIT. Distribuirla gratis sí es compatible.
 
 Queda un punto abierto: CPOL 3(c) pide una nota en cada archivo modificado indicando cómo, cuándo y dónde se cambió. Hoy esa trazabilidad solo está en el historial de Git. Decidir si se añaden las notas o se documenta el historial como equivalente.
-
-## P2 — indicador gráfico de conexión en «Dispositivos detectados»
-
-1.5.4 separó en cada fila la conexión, el estado «Ignorado» y la distribución como texto. Falta un elemento gráfico que distinga de un vistazo «Conectado» de «Desconectado»: se propone una «bolita» verde o roja junto a la palabra, según corresponda, tanto en la Configuración WinUI como en el respaldo WinForms.
-
-**Accesibilidad:** el indicador no debe depender solo del color. Conservar el texto de estado y su anuncio para el lector de pantalla, de forma coherente con la separación introducida en 1.5.4.
-
-## P2 — «Conectados arriba» como regla de orden en «Dispositivos detectados» (observado en 1.5.4)
-
-La lista tiene hoy una jerarquía lógica implementada en `DeviceSortRank` (`RightKeyboard.WinUI/SettingsWindow.xaml.cs`). El orden actual, de arriba abajo, es: conectado y configurado (0), conectado y sin configurar (1), desconectado y configurado (2), desconectado y sin configurar (3) e **ignorado siempre al final (4), esté conectado o no**.
-
-**Propuesta:** que la conexión sea la clave primaria del orden para *todos* los estados, y que dentro de cada bloque se conserve la jerarquía lógica (conocido y configurado, detectado y sin configurar, ignorado). Resultado, de arriba abajo:
-
-1. Conectado y configurado
-2. Conectado y sin configurar
-3. Conectado e ignorado
-4. Desconectado y configurado
-5. Desconectado y sin configurar
-6. Desconectado e ignorado
-
-Así, por ejemplo, un ignorado conectado aparece por encima de un conocido y configurado desconectado. El cambio respecto al comportamiento actual es que «ignorado» deja de ir siempre al fondo: pasa a ordenarse primero por conexión y solo después por su rango lógico.
-
-**Pendiente:** ajustar `DeviceSortRank` (los grupos lógicos conservan su ordenación por nombre; revisar cómo hereda el rango un grupo con miembros en estados distintos) y validar visualmente con dispositivos conectados y desconectados en cada categoría.
 
 ## P2 — primera detección no admite solo modificadores/auxiliares
 
