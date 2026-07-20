@@ -88,6 +88,23 @@ Queda un punto abierto: CPOL 3(c) pide una nota en cada archivo modificado indic
 
 **Accesibilidad:** el indicador no debe depender solo del color. Conservar el texto de estado y su anuncio para el lector de pantalla, de forma coherente con la separación introducida en 1.5.4.
 
+## P2 — «Conectados arriba» como regla de orden en «Dispositivos detectados» (observado en 1.5.4)
+
+La lista tiene hoy una jerarquía lógica implementada en `DeviceSortRank` (`RightKeyboard.WinUI/SettingsWindow.xaml.cs`). El orden actual, de arriba abajo, es: conectado y configurado (0), conectado y sin configurar (1), desconectado y configurado (2), desconectado y sin configurar (3) e **ignorado siempre al final (4), esté conectado o no**.
+
+**Propuesta:** que la conexión sea la clave primaria del orden para *todos* los estados, y que dentro de cada bloque se conserve la jerarquía lógica (conocido y configurado, detectado y sin configurar, ignorado). Resultado, de arriba abajo:
+
+1. Conectado y configurado
+2. Conectado y sin configurar
+3. Conectado e ignorado
+4. Desconectado y configurado
+5. Desconectado y sin configurar
+6. Desconectado e ignorado
+
+Así, por ejemplo, un ignorado conectado aparece por encima de un conocido y configurado desconectado. El cambio respecto al comportamiento actual es que «ignorado» deja de ir siempre al fondo: pasa a ordenarse primero por conexión y solo después por su rango lógico.
+
+**Pendiente:** ajustar `DeviceSortRank` (los grupos lógicos conservan su ordenación por nombre; revisar cómo hereda el rango un grupo con miembros en estados distintos) y validar visualmente con dispositivos conectados y desconectados en cada categoría.
+
 ## P2 — primera detección no admite solo modificadores/auxiliares
 
 `RawKeyboardEvent.CanStartMapping` exige key-down utilizable y no modificador. `Ctrl`, `Shift`, `Alt`, Windows, `Fn` y varias multimedia no abren el selector por sí solas; una vez configurado sí aplican la asociación. Es deliberado para evitar falsos positivos. Véase `docs/limitaciones-conocidas-1.5.md`.
