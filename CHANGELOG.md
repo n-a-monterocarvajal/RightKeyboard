@@ -2,6 +2,12 @@
 
 Todos los cambios relevantes del proyecto se documentan en este archivo y se describen en español.
 
+## [Sin publicar]
+
+### Configuración
+
+- Los cambios pendientes de alias, distribución o estado ignorado ya no se pierden en silencio: Configuración pide confirmación antes de cambiar de dispositivo o cerrar, tanto en la interfaz WinUI como en el respaldo WinForms.
+
 ## [1.5.1] - 2026-07-19
 
 ### Cambios principales

@@ -18,8 +18,12 @@ internal sealed class SettingsDialog : FluentForm
     private readonly Button saveButton;
     private readonly Button forgetButton;
     private readonly PreferenceResetService preferenceReset;
+    private readonly SettingsEditorStateTracker editorStateTracker = new();
     private string? selectedIdentity;
     private string? lastTriggeredIdentity;
+    private RadioButton? selectedDeviceButton;
+    private bool applyingEditorState;
+    private bool restoringSelection;
 
     public SettingsDialog(
         Configuration configuration,
@@ -143,6 +147,7 @@ internal sealed class SettingsDialog : FluentForm
             AccessibleName = "Nombre para este teclado",
             AccessibleDescription = "Alias opcional que se muestra en lugar del nombre detectado."
         };
+        customNameTextBox.TextChanged += (_, _) => TrackEditorState();
         editor.Controls.Add(customNameTextBox);
 
         detectedNameLabel = DetailLabel();
@@ -165,6 +170,7 @@ internal sealed class SettingsDialog : FluentForm
         };
         layoutComboBox.Items.Add("Sin distribución");
         layoutComboBox.Items.AddRange(layouts.Cast<object>().ToArray());
+        layoutComboBox.SelectedIndexChanged += (_, _) => TrackEditorState();
         editor.Controls.Add(layoutComboBox);
 
         ignoredCheckBox = new CheckBox
@@ -174,7 +180,11 @@ internal sealed class SettingsDialog : FluentForm
             Margin = new Padding(0, 0, 0, 16),
             AccessibleDescription = "Impide que RightKeyboard cambie la distribución al recibir eventos del dispositivo."
         };
-        ignoredCheckBox.CheckedChanged += (_, _) => layoutComboBox.Enabled = !ignoredCheckBox.Checked;
+        ignoredCheckBox.CheckedChanged += (_, _) =>
+        {
+            layoutComboBox.Enabled = !ignoredCheckBox.Checked;
+            TrackEditorState();
+        };
         editor.Controls.Add(ignoredCheckBox);
 
         FlowLayoutPanel preferenceActions = new()
@@ -260,6 +270,7 @@ internal sealed class SettingsDialog : FluentForm
                 eventArgs.SuppressKeyPress = true;
             }
         };
+        FormClosing += SettingsDialog_FormClosing;
         RefreshDeviceList();
     }
 
@@ -273,7 +284,10 @@ internal sealed class SettingsDialog : FluentForm
         }
 
         saveConfiguration();
+        applyingEditorState = true;
         selectedIdentity = null;
+        selectedDeviceButton = null;
+        editorStateTracker.Clear();
         deviceList.Controls.Clear();
 
         foreach (DevicePreference preference in configuration.Devices.Values
@@ -305,7 +319,7 @@ internal sealed class SettingsDialog : FluentForm
             {
                 if (button.Checked)
                 {
-                    SelectDevice((string)button.Tag);
+                    RequestSelectDevice(button);
                 }
             };
             deviceList.Controls.Add(button);
@@ -324,6 +338,7 @@ internal sealed class SettingsDialog : FluentForm
                 ?? deviceList.Controls.OfType<RadioButton>().First();
             selected.Checked = true;
         }
+        applyingEditorState = false;
     }
 
     internal void HighlightDevice(string identity)
@@ -335,6 +350,11 @@ internal sealed class SettingsDialog : FluentForm
                 string.Equals(button.Tag as string, identity, StringComparison.OrdinalIgnoreCase));
         if (selected is null)
         {
+            if (!ConfirmDiscardChanges())
+            {
+                return;
+            }
+
             RefreshDeviceList(identity);
             selected = deviceList.Controls
                 .OfType<RadioButton>()
@@ -344,7 +364,6 @@ internal sealed class SettingsDialog : FluentForm
         else
         {
             selected.Checked = true;
-            SelectDevice(identity);
         }
 
         selected?.Focus();
@@ -360,29 +379,112 @@ internal sealed class SettingsDialog : FluentForm
         }
     }
 
-    private void SelectDevice(string identity)
+    private void RequestSelectDevice(RadioButton button)
+    {
+        if (button.Tag is not string identity)
+        {
+            return;
+        }
+
+        if (restoringSelection || applyingEditorState)
+        {
+            if (applyingEditorState)
+            {
+                SelectDevice(identity, button);
+            }
+            return;
+        }
+
+        if (string.Equals(identity, selectedIdentity, StringComparison.OrdinalIgnoreCase))
+        {
+            selectedDeviceButton = button;
+            return;
+        }
+
+        if (!ConfirmDiscardChanges())
+        {
+            restoringSelection = true;
+            button.Checked = false;
+            if (selectedDeviceButton is not null)
+            {
+                selectedDeviceButton.Checked = true;
+            }
+            restoringSelection = false;
+            selectedDeviceButton?.Focus();
+            return;
+        }
+
+        SelectDevice(identity, button);
+    }
+
+    private void SelectDevice(string identity, RadioButton button)
     {
         selectedIdentity = identity;
+        selectedDeviceButton = button;
         DevicePreference preference = configuration.Devices[identity];
         LogicalDeviceGroup? group = configuration.GetGroup(identity);
-        customNameTextBox.Text = group?.DisplayName ?? preference.CustomName ?? preference.DisplayName;
-        detectedNameLabel.Text = $"Detectado: {preference.DetectedName}";
-        technicalIdLabel.Text = $"Identificador: {preference.TechnicalId}";
-        bool connected = devices.Any(device => device.Identity == identity);
-        string triggerState = string.Equals(identity, lastTriggeredIdentity, StringComparison.OrdinalIgnoreCase)
-            ? " · Pulsado ahora"
-            : string.Empty;
-        statusLabel.Text = $"Estado: {(connected ? "Conectado" : "Desconectado")} · Última detección: {preference.LastSeenUtc.ToLocalTime():g}{triggerState}";
-        statusLabel.AccessibleDescription = connected
-            ? "El dispositivo está conectado actualmente."
-            : "El dispositivo no está conectado, pero sus preferencias siguen siendo editables.";
-        ignoredCheckBox.Checked = configuration.IgnoredDevices.Contains(identity);
-        layoutComboBox.SelectedItem = configuration.TryGetEffectiveLayout(identity, out Layout? layout)
-            ? layouts.FirstOrDefault(candidate => candidate.Identifier == layout!.Identifier) ?? layout
-            : layoutComboBox.Items[0];
-        layoutComboBox.Enabled = !ignoredCheckBox.Checked;
-        ignoredCheckBox.Enabled = group is null;
+        applyingEditorState = true;
+        try
+        {
+            customNameTextBox.Text = group?.DisplayName ?? preference.CustomName ?? preference.DisplayName;
+            detectedNameLabel.Text = $"Detectado: {preference.DetectedName}";
+            technicalIdLabel.Text = $"Identificador: {preference.TechnicalId}";
+            bool connected = devices.Any(device => device.Identity == identity);
+            string triggerState = string.Equals(identity, lastTriggeredIdentity, StringComparison.OrdinalIgnoreCase)
+                ? " · Pulsado ahora"
+                : string.Empty;
+            statusLabel.Text = $"Estado: {(connected ? "Conectado" : "Desconectado")} · Última detección: {preference.LastSeenUtc.ToLocalTime():g}{triggerState}";
+            statusLabel.AccessibleDescription = connected
+                ? "El dispositivo está conectado actualmente."
+                : "El dispositivo no está conectado, pero sus preferencias siguen siendo editables.";
+            ignoredCheckBox.Checked = configuration.IgnoredDevices.Contains(identity);
+            layoutComboBox.SelectedItem = configuration.TryGetEffectiveLayout(identity, out Layout? layout)
+                ? layouts.FirstOrDefault(candidate => candidate.Identifier == layout!.Identifier) ?? layout
+                : layoutComboBox.Items[0];
+            layoutComboBox.Enabled = !ignoredCheckBox.Checked;
+            ignoredCheckBox.Enabled = group is null;
+        }
+        finally
+        {
+            applyingEditorState = false;
+        }
+
+        editorStateTracker.Load(CreateEditorState());
         SetEditorEnabled(true);
+    }
+
+    private void TrackEditorState() => editorStateTracker.Update(CreateEditorState(), applyingEditorState);
+
+    private SettingsEditorState CreateEditorState() => new(
+        customNameTextBox.Text,
+        (layoutComboBox.SelectedItem as Layout)?.Identifier.ToInt64(),
+        ignoredCheckBox.Checked);
+
+    private bool ConfirmDiscardChanges()
+    {
+        if (!editorStateTracker.IsDirty)
+        {
+            return true;
+        }
+
+        DialogResult result = MessageBox.Show(
+            this,
+            "Cambiaste el alias, la distribución o el estado ignorado. Si continúas, esos cambios se descartarán.",
+            "Cambios sin guardar",
+            MessageBoxButtons.OKCancel,
+            MessageBoxIcon.Warning,
+            MessageBoxDefaultButton.Button2);
+        return editorStateTracker.CanLeave(result == DialogResult.OK
+            ? UnsavedChangesDecision.Discard
+            : UnsavedChangesDecision.KeepEditing);
+    }
+
+    private void SettingsDialog_FormClosing(object? sender, FormClosingEventArgs e)
+    {
+        if (!ConfirmDiscardChanges())
+        {
+            e.Cancel = true;
+        }
     }
 
     private void SetEditorEnabled(bool enabled)
@@ -444,13 +546,22 @@ internal sealed class SettingsDialog : FluentForm
 
         selectedIdentity = null;
         deviceList.Controls.Clear();
-        deviceList.Controls.Add(emptyLabel);
-        customNameTextBox.Clear();
-        detectedNameLabel.Text = string.Empty;
-        technicalIdLabel.Text = string.Empty;
-        statusLabel.Text = "Las preferencias se limpiaron correctamente.";
-        ignoredCheckBox.Checked = false;
-        layoutComboBox.SelectedIndex = 0;
+        applyingEditorState = true;
+        editorStateTracker.Clear();
+        try
+        {
+            deviceList.Controls.Add(emptyLabel);
+            customNameTextBox.Clear();
+            detectedNameLabel.Text = string.Empty;
+            technicalIdLabel.Text = string.Empty;
+            statusLabel.Text = "Las preferencias se limpiaron correctamente.";
+            ignoredCheckBox.Checked = false;
+            layoutComboBox.SelectedIndex = 0;
+        }
+        finally
+        {
+            applyingEditorState = false;
+        }
         SetEditorEnabled(false);
     }
 

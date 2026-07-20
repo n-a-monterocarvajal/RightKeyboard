@@ -26,7 +26,7 @@ Secuenciales. Cada una es una sesión, una rama, un PR y un bump de versión.
 |---|---|---|---|
 | 9 | — | Sincronizar documentación con el código | Completada |
 | 10 | 1.5.1 | Publicar lo acumulado | Completada |
-| 11 | 1.5.2 | Guardia de cambios sin guardar | Pendiente |
+| 11 | 1.5.2 | Guardia de cambios sin guardar | Completada |
 | 12 | 1.5.3 | Coherencia de Ignorar y Agrupar | Pendiente |
 | 13 | 1.5.4 | Nomenclatura y estado de fila | Pendiente |
 | 14 | 1.5.5 | Pulido visual del panel | Pendiente |
@@ -65,15 +65,25 @@ Corte de versión de todo lo acumulado desde `1.5.0`, sin funcionalidad nueva.
 
 Pendientes declarados en la nota de la versión: exclusión por firma HID y agrupación de identidades sin validar con hardware físico, y portabilidad de exportar/importar entre dos equipos sin certificar. La matriz manual completa del instalador en cuentas estándar de Windows 10 y Windows 11 sigue abierta en el carril C.
 
-### Etapa 11 — Guardia de cambios sin guardar (1.5.2)
+### Etapa 11 — Guardia de cambios sin guardar (1.5.2) · completada el 19 de julio de 2026
 
 El defecto de mayor impacto: hoy se pierde trabajo en silencio. `DeviceList_SelectionChanged` reescribe el editor con la fila nueva sin comprobar nada, y no existe seguimiento de estado sucio en la ventana.
 
-- Detectar estado sucio comparando el editor contra la fila seleccionada: alias, distribución e ignorado.
-- Confirmar antes de perder cambios al cambiar de fila y al cerrar la ventana.
-- Reutilizar el patrón de `ContentDialog` que ya existe en `SettingsWindow.xaml.cs`.
-- Respetar el campo `applyingEditorState`, que ya distingue la carga programática de la edición del usuario: sin él, poblar el editor marcaría sucio de inmediato.
-- Revisar si el diálogo WinForms de respaldo tiene el mismo agujero y decidir si entra aquí o se anota.
+Resultado:
+
+- El editor compara alias, distribución y estado ignorado con la fila aceptada. Volver exactamente a los tres valores persistidos lo deja limpio, y las cargas protegidas por `applyingEditorState` no generan cambios pendientes.
+- La selección WinUI restaura primero la fila anterior mientras muestra la confirmación modal existente. Cancelar conserva tanto la fila como los valores editados; descartar aplica la fila solicitada sin reentradas ni bucles de selección.
+- El cierre de WinUI se cancela antes de destruir la ventana y solo se reintenta tras confirmar el descarte. Guardar recarga el estado persistido y evita confirmaciones posteriores.
+- El respaldo WinForms tenía el mismo defecto y quedó protegido con el mismo rastreador comprobable, su confirmación nativa y restauración explícita del botón de selección anterior.
+- La versión avanzó conjuntamente a `1.5.2` en los dos proyectos y `[Sin publicar]` describe el impacto para el usuario.
+
+Evidencia local:
+
+- `dotnet test RightKeyboard.sln -c Release`: 170/170 pruebas superadas, sin omitidas (161 existentes y 9 nuevas para estado limpio, los tres campos, restauración, carga programática y ambas decisiones).
+- `dotnet build RightKeyboard.sln -c Release --no-restore`: compilación correcta, 0 advertencias y 0 errores.
+- Interfaz WinUI real: versión 1.5.2 visible; cierre limpio sin diálogo; alias modificado con confirmación; cancelar conservó `Alias temporal etapa 11`; descartar permitió cerrar; guardar un alias temporal, restaurar `Teclado sin nombre` y cerrar no produjo una confirmación posterior.
+- La VM solo tenía una fila conocida, por lo que no permitió ejecutar visualmente el cambio entre dos filas. La decisión y la restauración están cubiertas por la lógica automatizada y por la implementación inspeccionada, pero esa interacción concreta queda declarada sin validación visual en esta VM.
+- `git diff --check`: sin errores.
 
 ### Etapa 12 — Coherencia de Ignorar y Agrupar (1.5.3)
 
