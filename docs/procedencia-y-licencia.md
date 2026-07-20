@@ -6,13 +6,19 @@ Investigación del 19 de julio de 2026. Este documento reúne lo verificado sobr
 
 ```text
 Artículo de CodeProject núm. 20994 (23 de octubre de 2007)
-  └─ agabor/RightKeyboard (repositorio creado el 16 de octubre de 2015)
-      └─ gmcouto/RightKeyboard (enero de 2020)
-          └─ mnivet/RightKeyboard (mayo de 2020)
-              └─ n-a-monterocarvajal/RightKeyboard (junio de 2026, este repositorio)
+  │   atribución declarada, no verificada
+  ├─► agabor/RightKeyboard (2015) — rama independiente, no antecesora
+  │
+  └─► gmcouto/RightKeyboard (enero de 2020)
+        └─ mnivet/RightKeyboard (mayo de 2020, fork de gmcouto)
+             └─ n-a-monterocarvajal/RightKeyboard (junio de 2026, este repositorio)
 ```
 
 El artículo original es «Using multiple keyboards with different layouts on the same machine», publicado en `codeproject.com/Articles/20994/`.
+
+Corrección del 19 de julio de 2026: la primera versión de este documento presentaba la cadena como lineal, con agabor por delante de gmcouto. Es falso. `gmcouto` no es fork de GitHub de ningún repositorio (`fork: false`, sin padre) y su código difiere del de agabor: comparando el volcado de 2020 con los archivos de agabor, `Layout.cs` y `LayoutSelectionDialog.cs` tienen tamaños muy distintos, aunque `Program.cs` coincide. Son derivaciones hermanas de un ancestro común, no una sucesión.
+
+El valor de agabor es otro y no menor: es un tercero sin relación de fork que atribuye su código al mismo artículo de forma independiente. Refuerza la atribución sin formar parte de la línea.
 
 ## Evidencia verificada
 
@@ -20,14 +26,18 @@ El artículo original es «Using multiple keyboards with different layouts on th
 - El `AssemblyInfo.cs` de esa importación declara `AssemblyCopyright("Copyright ©  2007")`, **sin titular**, y `AssemblyCompany("")`. La fecha sitúa el origen trece años antes del historial de GitHub.
 - `agabor/RightKeyboard` no es un fork de GitHub (`fork: false`) y su README declara: «This code is based on the work published here», enlazando el artículo de CodeProject. Es una republicación, no la obra original.
 - Los README de `gmcouto` y `mnivet` conservan la misma frase de atribución y el mismo enlace.
-- **Ninguno de los cuatro repositorios de la cadena contiene un archivo de licencia.** Comprobado mediante la API de GitHub sobre `agabor`, `gmcouto`, `mnivet` y este repositorio: los cuatro responden sin licencia declarada. La ausencia es heredada desde el origen.
+- **Ninguno de los cuatro repositorios contiene un archivo de licencia.** Comprobado mediante la API de GitHub sobre `agabor`, `gmcouto`, `mnivet` y este repositorio: los cuatro responden sin licencia declarada.
 - `codeproject.com` dejó de operar: el dominio está aparcado en GoDaddy. La fuente autorizada de los términos originales ya no está disponible en su dirección canónica. Existe una instantánea en el archivo web con fecha del 19 de mayo de 2024.
 
-## Confirmado
+## Confirmado, y hasta dónde llega
 
-El artículo declara **Code Project Open License (CPOL) 1.02** y su autor es **Antoine Aubry**. Confirmado el 19 de julio de 2026 sobre la instantánea archivada, dado que el sitio original ya no opera.
+El artículo declara **Code Project Open License (CPOL) 1.02** y su autor es **Antoine Aubry**. Leído el 19 de julio de 2026 sobre la instantánea archivada, dado que el sitio original ya no opera.
 
-Con ese dato se resolvió la licencia del proyecto. El resultado está en el archivo `LICENSE` de la raíz, estructurado en tres capas: la obra original de 2007 bajo CPOL 1.02, los forks intermedios sin licencia declarada, y los cambios de este fork bajo MIT. Ninguna capa relicencia a otra.
+Lo que **no** se ha podido comprobar es que el código heredado sea el del artículo. No existe comparación posible: la página desapareció y el archivo web no es accesible desde el entorno de trabajo. Todo lo que sostiene la atribución es el testimonio concordante de gmcouto, de mnivet y de agabor, más un `Copyright © 2007` sin titular en el `AssemblyInfo.cs` importado. Es evidencia razonable, no verificación.
+
+La consecuencia es una postura, no una certeza: el proyecto trata CPOL 1.02 como vinculante sobre la capa heredada y cumple sus obligaciones, en lugar de asumir que no aplica. Si algún día aparece una copia verificable del código del artículo, la comparación debería hacerse y este documento actualizarse.
+
+Con esa salvedad se resolvió la licencia del proyecto. El resultado está en el archivo `LICENSE` de la raíz, estructurado en tres capas: la obra original de 2007 bajo CPOL 1.02, los forks intermedios sin licencia declarada, y los cambios de este fork bajo MIT. Ninguna capa relicencia a otra.
 
 Las obligaciones de CPOL que sobreviven a la licencia MIT de los aportes nuevos son las secciones 3(c), 5(a), 5(d) y 6. La de mayor consecuencia práctica es 5(d): la obra no puede venderse, arrendarse ni alquilarse por sí sola, con independencia de que los aportes propios sean MIT. CPOL además no está aprobada por la OSI y su compatibilidad con licencias copyleft es discutida, lo que conviene tener presente si alguna vez se integra código de terceros bajo esas licencias.
 

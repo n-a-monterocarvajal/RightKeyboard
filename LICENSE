@@ -8,23 +8,42 @@ licencia. Cada capa se declara por separado. Ninguna capa relicencia a otra.
 La investigación de procedencia está en docs/procedencia-y-licencia.md.
 
 
-1. Obra original (2007) — Code Project Open License 1.02
---------------------------------------------------------
+1. Obra original atribuida (2007) — Code Project Open License 1.02
+------------------------------------------------------------------
 
-Autor: Antoine Aubry.
-Publicada como el artículo número 20994, «Using multiple keyboards with
-different layouts on the same machine», en CodeProject, el 23 de octubre
-de 2007.
-Licencia declarada: The Code Project Open License (CPOL) 1.02.
+Autor atribuido: Antoine Aubry.
+Obra atribuida: el artículo número 20994, «Using multiple keyboards with
+different layouts on the same machine», publicado en CodeProject el 23 de
+octubre de 2007 bajo The Code Project Open License (CPOL) 1.02.
 
-CodeProject dejó de operar y su dominio ya no aloja el artículo. El texto
-íntegro de la licencia se conserva en:
+ALCANCE DE ESTA ATRIBUCIÓN. Esta declaración se basa en el testimonio
+concordante de terceros, no en una comparación directa del código:
+
+  - El README de gmcouto/RightKeyboard, repositorio del que desciende este,
+    declara que su código «is based on the work published here» y enlaza ese
+    artículo. mnivet/RightKeyboard, fork de aquel, repite la declaración.
+  - agabor/RightKeyboard, un tercero sin relación de fork con la línea
+    anterior, atribuye su propio código al mismo artículo de forma
+    independiente.
+  - El AssemblyInfo.cs que entró en este repositorio en enero de 2020
+    declara «Copyright ©  2007», sin titular.
+
+NO se ha podido comparar el código heredado con el código del artículo:
+CodeProject dejó de operar, su dominio está aparcado y el artículo ya no
+está disponible en su dirección canónica. Por tanto **se desconoce si el
+código que entró en este repositorio coincide con el que acompañaba a ese
+artículo**, y en qué medida.
+
+Ante esa incertidumbre, este proyecto adopta la postura conservadora de
+tratar CPOL 1.02 como vinculante sobre la capa heredada y de cumplir sus
+obligaciones, en lugar de asumir que no aplica. El texto íntegro de la
+licencia se conserva en:
 
     https://spdx.org/licenses/CPOL-1.02.html
 
-El núcleo heredado de RightKeyboard deriva de esa obra. Las obligaciones de
-CPOL 1.02 siguen vigentes sobre esa capa y sobre cualquier distribución que
-la contenga, incluidos los binarios de este proyecto. En particular:
+Las obligaciones de CPOL 1.02 se observan sobre esa capa y sobre cualquier
+distribución que la contenga, incluidos los binarios de este proyecto. En
+particular:
 
   - Sección 3(c): las obras derivadas requieren una nota visible en cada
     archivo modificado indicando cómo, cuándo y dónde se modificó.
@@ -40,25 +59,29 @@ La obra se entrega «tal cual», sin garantías de ningún tipo, según establec
 la sección 6 de CPOL 1.02.
 
 
-2. Forks intermedios (2015-2020) — licencia no declarada
---------------------------------------------------------
+2. Repositorios anteriores (2020) — licencia no declarada
+---------------------------------------------------------
 
-El código llegó a este repositorio a través de tres forks sucesivos:
+El código llegó a este repositorio por esta vía:
 
-    agabor/RightKeyboard   (repositorio creado en 2015)
-    gmcouto/RightKeyboard  (enero de 2020)
-    mnivet/RightKeyboard   (mayo de 2020)
+    gmcouto/RightKeyboard  (enero de 2020)  ── código importado de origen
+                                                externo en un único commit
+      └─ mnivet/RightKeyboard  (mayo de 2020, fork de gmcouto)
+           └─ este repositorio  (junio de 2026, fork de mnivet)
 
-Ninguno de los tres incluye un archivo de licencia. Se comprobó el 19 de julio
-de 2026 mediante la API de GitHub: los tres responden sin licencia declarada.
+agabor/RightKeyboard (2015) NO forma parte de esta línea. Se comprobó que
+gmcouto no es un fork de GitHub de ningún repositorio y que su código difiere
+del de agabor. Se cita en la sección 1 únicamente como testimonio
+independiente de la atribución, no como antecesor.
+
+Ninguno de estos repositorios incluye un archivo de licencia. Se comprobó el
+19 de julio de 2026 mediante la API de GitHub: todos responden sin licencia
+declarada.
 
 En consecuencia, **se desconoce bajo qué términos esos autores liberaron sus
 propias modificaciones**. No consta declaración expresa ni autorización
 específica. Esta incertidumbre se declara abiertamente en lugar de suponer
 unos términos que nadie escribió.
-
-Los README de gmcouto y mnivet sí atribuyen la obra al artículo de CodeProject
-citado en la sección 1.
 
 
 3. Cambios de este fork (desde junio de 2026) — Licencia MIT
@@ -112,10 +135,15 @@ transmita el descargo de CPOL.
 
 Se declara expresamente, en lugar de suponerlo:
 
-  - Los términos bajo los que los autores de los forks intermedios liberaron
-    sus modificaciones (sección 2).
-  - El titular concreto del copyright de 2007 registrado en el
-    AssemblyInfo.cs heredado, que consta como «Copyright ©  2007» sin nombre.
-    La autoría del artículo de origen sí está identificada en la sección 1.
+  - Si el código heredado coincide con el que acompañaba al artículo de 2007,
+    y en qué medida. No ha podido compararse porque el artículo ya no está
+    disponible. La atribución de la sección 1 descansa en el testimonio de
+    terceros, no en una verificación directa.
+  - Los términos bajo los que los autores de los repositorios anteriores
+    liberaron sus propias modificaciones (sección 2).
+  - El titular concreto del copyright registrado en el AssemblyInfo.cs
+    heredado, que consta como «Copyright ©  2007» sin nombre.
 
-Si alguno de estos puntos se aclara, este documento debe actualizarse.
+Si alguno de estos puntos se aclara —por ejemplo, si aparece una copia
+verificable del código del artículo original—, este documento debe
+actualizarse. La postura conservadora de la sección 1 se mantiene entretanto.

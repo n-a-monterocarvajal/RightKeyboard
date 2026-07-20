@@ -67,9 +67,11 @@ La opción de Windows **Permitir usar un método de entrada diferente para cada 
 
 ## Origen y estado legal
 
-Este fork conserva el trabajo previo de los autores y colaboradores de RightKeyboard. El código proviene del artículo «Using multiple keyboards with different layouts on the same machine», publicado en CodeProject el 23 de octubre de 2007 (`codeproject.com/Articles/20994/`), a través de los forks sucesivos de [agabor](https://github.com/agabor/RightKeyboard), [gmcouto](https://github.com/gmcouto/RightKeyboard) y [mnivet](https://github.com/mnivet/RightKeyboard). CodeProject dejó de operar y esa dirección ya no responde.
+Este fork conserva el trabajo previo de los autores y colaboradores de RightKeyboard. El código llegó aquí desde [gmcouto](https://github.com/gmcouto/RightKeyboard), que lo importó de un origen externo en enero de 2020, a través de su fork [mnivet](https://github.com/mnivet/RightKeyboard).
 
-El artículo de origen fue publicado por Antoine Aubry bajo la Code Project Open License 1.02. Ninguno de los forks intermedios declara licencia para sus propias modificaciones.
+Ese origen se atribuye al artículo «Using multiple keyboards with different layouts on the same machine», publicado por Antoine Aubry en CodeProject el 23 de octubre de 2007 bajo la Code Project Open License 1.02. La atribución descansa en las declaraciones de gmcouto y de [agabor](https://github.com/agabor/RightKeyboard) —un tercero independiente que atribuye su propio código al mismo artículo—, no en una comparación directa: CodeProject dejó de operar y el artículo ya no está disponible, de modo que **se desconoce si el código heredado coincide con el que lo acompañaba**. Ante esa incertidumbre el proyecto trata CPOL 1.02 como vinculante.
+
+Ninguno de los repositorios anteriores declara licencia para sus propias modificaciones.
 
 El proyecto se distribuye en tres capas, detalladas en [LICENSE](LICENSE): la obra original de 2007 bajo CPOL 1.02, los forks intermedios sin licencia declarada, y los cambios introducidos en este repositorio desde el fork bajo licencia MIT. Ninguna capa relicencia a otra.
 
