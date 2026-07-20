@@ -71,6 +71,7 @@ El orden en que se abordan estos pendientes, junto con la validación física, l
 - Medir de forma reproducible la latencia de apertura de Configuración y del selector.
 - Revisar microtextos de la UI que aún suenan excesivamente técnicos.
 - Decidir cómo se atiende CPOL 3(c): notas de modificación por archivo, o el historial de Git documentado como equivalente. El resto de la licencia quedó resuelto el 19 de julio de 2026 en [LICENSE](LICENSE).
+- Incluir un actualizador en la app (observado en 1.5.4). Hoy la actualización es manual: descargar y ejecutar el instalador de la nueva versión. Evaluar un mecanismo dentro de la app que consulte la última Release publicada, avise al usuario y facilite la descarga/instalación. Definir origen de la comprobación (por ejemplo, la API de Releases de GitHub), cadencia y opt-in, verificación de integridad con el SHA-256 ya publicado por versión, y cómo convive con el instalador de Inno Setup y la sustitución de la carpeta compartida del núcleo y la Configuración WinUI. Respetar la restricción CPOL 5(d): la distribución debe seguir siendo gratuita.
 
 ## Referencias históricas
 
