@@ -90,7 +90,8 @@ internal sealed class SettingsDialog : FluentForm
         leftPanel.Controls.Add(new Label
         {
             AutoSize = true,
-            Text = "Dispositivos conocidos",
+            Text = "Dispositivos detectados",
+            AccessibleName = "Dispositivos detectados",
             Font = FluentTypography.CreateSemiboldFont(Font.Size),
             Margin = new Padding(0, 0, 0, 10)
         }, 0, 0);
@@ -101,7 +102,7 @@ internal sealed class SettingsDialog : FluentForm
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
             Padding = new Padding(0, 0, 8, 0),
-            AccessibleName = "Dispositivos conocidos",
+            AccessibleName = "Dispositivos detectados",
             AccessibleDescription = "Incluye dispositivos conectados, desconectados e ignorados."
         };
         deviceList.SizeChanged += (_, _) => ResizeDeviceButtons();

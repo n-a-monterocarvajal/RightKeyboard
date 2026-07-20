@@ -1,8 +1,8 @@
 namespace RightKeyboard;
 
-internal readonly record struct DevicePresentation(string State, string Mode)
+internal readonly record struct DevicePresentation(string State, bool Ignored, string? LayoutName)
 {
-    public string SecondaryText => $"{State} · {Mode}";
+    public string SecondaryText => string.Join(" · ", GetSummaryParts());
 
     public string GetListText(string displayName, int maximumNameLength = 30)
     {
@@ -14,9 +14,31 @@ internal readonly record struct DevicePresentation(string State, string Mode)
     }
 
     public string GetAccessibleName(string displayName) =>
-        $"{displayName}. Estado: {State}. Preferencia: {Mode}.";
+        $"{displayName}. {string.Join(". ", GetSummaryParts())}.";
 
-    public static DevicePresentation Create(bool connected, bool ignored, Layout? layout) => new(
+    public static DevicePresentation Create(bool connected, bool ignored, Layout? layout) =>
+        Create(connected, ignored, layout?.Name);
+
+    public static DevicePresentation Create(bool connected, bool ignored, string? layoutName) => new(
         connected ? "Conectado" : "Desconectado",
-        ignored ? "Ignorado" : layout?.Name ?? "Sin distribución");
+        ignored,
+        layoutName);
+
+    private IEnumerable<string> GetSummaryParts()
+    {
+        yield return State;
+        if (Ignored)
+        {
+            yield return "Ignorado";
+        }
+
+        if (LayoutName is not null)
+        {
+            yield return LayoutName;
+        }
+        else if (!Ignored)
+        {
+            yield return "Sin distribución";
+        }
+    }
 }
