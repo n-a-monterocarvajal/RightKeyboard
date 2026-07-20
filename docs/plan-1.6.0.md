@@ -16,7 +16,7 @@ La versión se declara en dos sitios que deben moverse juntos: `RightKeyboard/Ri
 
 ## Advertencia sobre la publicación
 
-Publicar binarios choca con el carril B: no existe `LICENSE` en el repositorio y el README lo declara públicamente. `1.5.0` ya se promovió como estable pese al criterio explícito de no hacerlo antes de resolver la procedencia. Antes de publicar `1.5.1` hay que decidir si es una publicación pública o solo un corte interno de versión.
+El bloqueo por licencia se levantó el 19 de julio de 2026: existe `LICENSE` y la procedencia está trazada, según el carril B. Queda la restricción de CPOL 5(d) —no vender, arrendar ni alquilar la obra por sí sola— con la que la publicación gratuita del instalador es compatible. Sigue en pie decidir si `1.5.1` es una publicación pública o solo un corte interno de versión.
 
 ## Carril A — etapas de código
 
@@ -24,7 +24,7 @@ Secuenciales. Cada una es una sesión, una rama, un PR y un bump de versión.
 
 | Etapa | Versión | Asunto | Estado |
 |---|---|---|---|
-| 9 | — | Sincronizar documentación con el código | Pendiente |
+| 9 | — | Sincronizar documentación con el código | Completada |
 | 10 | 1.5.1 | Publicar lo acumulado | Pendiente |
 | 11 | 1.5.2 | Guardia de cambios sin guardar | Pendiente |
 | 12 | 1.5.3 | Coherencia de Ignorar y Agrupar | Pendiente |
@@ -35,15 +35,21 @@ Secuenciales. Cada una es una sesión, una rama, un PR y un bump de versión.
 | 17 | 1.5.8 | Instrumentar el foco del selector | Pendiente |
 | 18 | 1.6.0 | Extraer contratos compartidos y cerrar versión | Pendiente |
 
-### Etapa 9 — Sincronizar documentación con el código
+### Etapa 9 — Sincronizar documentación con el código · completada el 19 de julio de 2026
 
-Va primero porque `1.5.1` no debe publicarse con documentación que contradice al producto, empezando por el README público.
+Fue primero porque `1.5.1` no debía publicarse con documentación que contradice al producto, empezando por el README público. Sin cambios de código ni bump de versión.
 
-- Exportar/importar e «Iniciar con Windows» figuran como pendientes en seis o más lugares, incluido el README, pese a estar implementados.
-- `ROADMAP.md` mantiene en «Alcance consolidado» la decisión revertida de conservar WinForms y no adoptar WinUI 3.
-- AUT-15 sigue «Pendiente» en `docs/calidad-1.5.md` aunque CI y `TreatWarningsAsErrors` existen.
-- Agrupar identidades y detección preventiva aparecen como backlog futuro estando implementadas.
-- `.agent-context/01-estado-actual.md` afirma que no hay configuración `.github`.
+Corregido:
+
+- Exportar/importar e «Iniciar con Windows» figuraban como pendientes en `README.md`, `docs/distribucion-1.5.md`, `docs/calidad-1.5.md`, `docs/releases/1.5.0.md` y `.agent-context/03-problemas-conocidos.md` pese a estar implementados. Ahora se describen como disponibles, con la portabilidad entre equipos declarada sin certificar.
+- `ROADMAP.md` marca explícitamente como revertida la decisión de conservar WinForms y no adoptar WinUI 3, conservando vigentes los criterios visuales.
+- AUT-15 y AUT-13 pasan a «Cubierto» en `docs/calidad-1.5.md`, con la evidencia concreta; el riesgo 5 pasa a resuelto y el 4 baja de Alto a Medio.
+- Agrupar identidades y detección preventiva de HID ambiguos se reclasifican de backlog futuro a implementadas con validación física pendiente, en `ROADMAP.md` y `docs/releases/1.5.0.md`.
+- `.agent-context/01-estado-actual.md` deja de afirmar que no existen `LICENSE` ni configuración `.github`.
+
+Criterio aplicado: lo implementado pero sin validar en hardware se declara así, no como terminado. Las notas de `1.5.0` conservan su lista original como registro y anotan al lado qué se abordó después.
+
+Sigue abierto y no lo resuelve esta etapa: la semántica de «preferencia pendiente» al importar con una distribución ausente. `LoadImport` conserva el dispositivo pero descarta la asociación y solo advierte; falta decidir si es lo deseado. Anotado en `docs/distribucion-1.5.md` y en `.agent-context/03-problemas-conocidos.md`.
 
 ### Etapa 10 — Publicar 1.5.1
 

@@ -96,33 +96,34 @@ No se adoptará hasta resolver satisfactoriamente:
 - acceso y migración de preferencias existentes;
 - impacto sobre la simplicidad de compilación y contribución.
 
-## Exportación de configuración futura
+## Exportación de configuración
 
-La ventana **Configuración** deberá incluir una acción **Exportar** en una actualización posterior. En `1.5.0`, la Configuración WinUI no expone todavía exportación/importación.
+Implementada después de `1.5.0`: la Configuración WinUI expone **Exportar** en la tarjeta Preferencias, y el frontend delega la escritura en el núcleo a través del protocolo IPC.
 
 El archivo exportado:
 
-- será JSON con versión de esquema;
-- incluirá alias, nombres detectados, distribuciones e ignorados;
-- no incluirá handles temporales ni rutas HID internas;
-- propondrá el nombre `RightKeyboard-preferencias-AAAA-MM-DD.json`;
-- podrá guardarse en una ubicación elegida o en `exports\`;
-- no contendrá secretos ni datos ajenos a RightKeyboard.
+- es JSON con versión de esquema;
+- incluye alias, nombres detectados, distribuciones e ignorados;
+- no incluye handles temporales ni rutas HID internas;
+- propone el nombre `RightKeyboard-preferencias-AAAA-MM-DD.json`;
+- puede guardarse en una ubicación elegida o en `exports\`;
+- no contiene secretos ni datos ajenos a RightKeyboard.
 
-## Importación de configuración futura
+## Importación de configuración
 
-La acción **Importar** debe implementarse posteriormente con estos criterios:
+Implementada después de `1.5.0` junto con la exportación. La acción **Importar** cumple estos criterios:
 
-- validar la estructura y versión antes de modificar datos;
-- mostrar un resumen previo de cambios;
-- ofrecer **Combinar** o **Reemplazar**;
-- crear una copia de seguridad automática antes de aplicar;
-- resolver dispositivos mediante identidad y huella persistente;
-- conservar como pendientes los dispositivos que aún no existen en el equipo;
-- informar asociaciones o distribuciones que no pudieron resolverse;
-- no instalar ni eliminar distribuciones de Windows.
+- valida la estructura y versión antes de modificar datos;
+- muestra un resumen previo de cambios;
+- ofrece **Combinar** o **Reemplazar**;
+- crea una copia de seguridad automática antes de aplicar;
+- resuelve dispositivos mediante identidad y huella persistente;
+- informa asociaciones o distribuciones que no pudieron resolverse;
+- no instala ni elimina distribuciones de Windows.
 
-El formato exportado será un contrato portable. Importar no equivaldrá a copiar ciegamente el archivo interno `preferences.json`.
+Queda un criterio sin cumplir del todo: al faltar una distribución, `Configuration.LoadImport` conserva el dispositivo pero descarta esa asociación de la configuración candidata y solo emite una advertencia. No se conserva, por tanto, como «preferencia pendiente» en el sentido previsto aquí. Está registrado en `.agent-context/03-problemas-conocidos.md` y falta decidir si esa semántica es la deseada.
+
+El formato exportado es un contrato portable. Importar no equivale a copiar ciegamente el archivo interno `preferences.json`. La portabilidad entre dos equipos distintos sigue sin certificarse: la fila AUT-12 de [calidad-1.5.md](calidad-1.5.md) continúa pendiente.
 
 ## Publicación final
 
@@ -141,5 +142,5 @@ Los ZIP autocontenido y dependiente del framework dejarán de ser descargas púb
 - Conservar preferencias durante una actualización.
 - Mostrar RightKeyboard como aplicación instalada.
 - Iniciar con Windows por defecto y permitir desactivarlo desde ambos lugares.
-- Exportar e importar configuración con vista previa y respaldo cuando esa función sea incorporada a la Configuración WinUI.
+- Exportar e importar configuración con vista previa y respaldo desde la Configuración WinUI. Implementado; falta la validación física de las filas FIS-08 y FIS-09.
 - Desinstalar binarios sin borrar preferencias salvo confirmación expresa.

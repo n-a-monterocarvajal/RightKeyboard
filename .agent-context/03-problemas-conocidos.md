@@ -16,13 +16,13 @@ Prioridades: **P0** compromete privacidad/datos o estabilidad crítica; **P1** d
 
 Agregar una prueba directa sobre el evento JSON sería buena mejora, pero ya no es bloqueante de publicación.
 
-## P1 — funciones disponibles solo en fallback, no en WinUI
+## Resuelto — paridad de exportar, importar e inicio automático en WinUI
 
-**Síntoma:** exportar, importar y cambiar inicio automático existen en `SettingsDialog` (fallback), pero no en `SettingsWindow` ni en el protocolo IPC. En una instalación normal el usuario no puede invocarlas.
+**Síntoma original:** exportar, importar y cambiar inicio automático existían en `SettingsDialog` (fallback), pero no en `SettingsWindow` ni en el protocolo IPC. En una instalación normal el usuario no podía invocarlas.
 
-**Causa raíz:** la migración WinUI se integró por fases y nunca migró estas tres operaciones.
+**Estado:** las tres operaciones existen en la Configuración WinUI (`ExportButton_Click`, `ImportButton_Click`, `StartupCheckBox_Click`) y viajan por acciones IPC validadas (`ExportAction`, `ImportPreviewAction`, `ImportApplyAction` y las de startup). El núcleo conserva la autoridad: WinUI solo elige el archivo y muestra la vista previa; `Configuration.Export`, `LoadImport` y `ApplyImport` hacen la escritura y el respaldo. Importar ofrece combinar, reemplazar o cancelar.
 
-**Acción:** diseñar comandos IPC validados para exportar/importar/startup, añadir controles WinUI y pruebas. No permitir que WinUI escriba archivos o registro directamente si rompe la autoridad del núcleo.
+**Pendiente:** la validación física de FIS-07, FIS-08 y FIS-09, y la portabilidad entre dos equipos, que sigue registrada abajo como riesgo abierto.
 
 ## Implementado, pendiente de validación física — exclusión por firma HID parcial (Etapa 5)
 
@@ -72,7 +72,7 @@ Queda un punto abierto: CPOL 3(c) pide una nota en cada archivo modificado indic
 
 ## P2 — cobertura automatizada limitada
 
-No hay pruebas de `SettingsIpcServer` extremo a extremo, StartupManager/registro, SetupAPI real, ventana foreground, WinUI, instalador o migración real de `config.txt`. `ConfigurationTests.Version2File_IsMigratedInMemory` no cubre el archivo legado 1.4. Tampoco hay CI ni advertencias como error.
+No hay pruebas de `SettingsIpcServer` extremo a extremo, SetupAPI real, ventana foreground, WinUI, instalador o migración real de `config.txt`. `ConfigurationTests.Version2File_IsMigratedInMemory` no cubre el archivo legado 1.4. `StartupManagerTests` sí cubre el registro, sobre una subclave desechable de `HKCU`. Existen CI en Windows (`.github/workflows/ci.yml`) y advertencias como error (`Directory.Build.props`).
 
 ## Limitaciones aceptadas
 
