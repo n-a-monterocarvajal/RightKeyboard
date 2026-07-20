@@ -24,6 +24,7 @@ public sealed class SettingsWindow : Window
     private const nuint MinimumSizeSubclassId = 0x524B0007;
 
     private readonly SettingsIpcClient client;
+    private readonly SettingsEditorStateTracker editorStateTracker = new();
     private readonly ObservableCollection<DeviceRow> rows = [];
     private readonly ListView DeviceList = new();
     private readonly TextBox AliasTextBox = new();
@@ -59,6 +60,10 @@ public sealed class SettingsWindow : Window
     private long lastActivitySequence;
     private bool pollingActivity;
     private bool applyingEditorState;
+    private bool suppressSelectionGuard;
+    private bool closeConfirmed;
+    private bool closeConfirmationPending;
+    private ListViewItem? acceptedDeviceItem;
     private Visual? activityVisual;
     private Visual? activityHintVisual;
     private bool activityHintVisible;
@@ -82,6 +87,7 @@ public sealed class SettingsWindow : Window
         activityHintTimer.Interval = TimeSpan.FromMilliseconds(1400);
         activityHintTimer.Tick += HideAliasEditingMessage;
         Activated += OnActivated;
+        AppWindow.Closing += AppWindow_Closing;
         Closed += (_, _) =>
         {
             activityTimer.Stop();
@@ -366,6 +372,7 @@ public sealed class SettingsWindow : Window
         LayoutComboBox.Header = "Distribución";
         LayoutComboBox.HorizontalAlignment = HorizontalAlignment.Stretch;
         LayoutComboBox.CornerRadius = new CornerRadius(8);
+        LayoutComboBox.SelectionChanged += EditorField_Changed;
         editorFields.Children.Add(LayoutComboBox);
         IgnoredCheckBox.Content = "Ignorar eventos de este dispositivo";
         IgnoredCheckBox.Checked += IgnoredCheckBox_Changed;
@@ -695,6 +702,7 @@ public sealed class SettingsWindow : Window
 
     private void AliasTextBox_TextChanged(object sender, TextChangedEventArgs e)
     {
+        TrackEditorState();
         if (!applyingEditorState && AliasTextBox.FocusState != FocusState.Unfocused)
         {
             ShowAliasEditingMessage();
@@ -717,6 +725,7 @@ public sealed class SettingsWindow : Window
                 applyingEditorState = true;
                 AliasTextBox.Text = row.DisplayName;
                 applyingEditorState = false;
+                TrackEditorState();
             }
             DeviceList.Focus(FocusState.Programmatic);
         }
@@ -810,53 +819,65 @@ public sealed class SettingsWindow : Window
     private void ApplySnapshot(SettingsSnapshot value, string? identityToSelect = null)
     {
         snapshot = value;
-        rows.Clear();
-        DeviceList.Items.Clear();
-        Dictionary<string, SettingsDevice> devicesByIdentity = value.Devices
-            .ToDictionary(device => device.Identity, StringComparer.OrdinalIgnoreCase);
-        foreach (SettingsDeviceGroup group in value.Groups.OrderBy(
-                     group => group.DisplayName, StringComparer.CurrentCultureIgnoreCase))
+        suppressSelectionGuard = true;
+        try
         {
-            SettingsLayout? groupLayout = value.Layouts.FirstOrDefault(candidate =>
-                candidate.Identifier == group.LayoutIdentifier);
-            DeviceRow groupRow = new(group, groupLayout, devicesByIdentity);
-            AddRow(groupRow);
-            foreach (string memberIdentity in group.MemberIdentities)
+            acceptedDeviceItem = null;
+            editorStateTracker.Clear();
+            rows.Clear();
+            DeviceList.Items.Clear();
+            Dictionary<string, SettingsDevice> devicesByIdentity = value.Devices
+                .ToDictionary(device => device.Identity, StringComparer.OrdinalIgnoreCase);
+            foreach (SettingsDeviceGroup group in value.Groups.OrderBy(
+                         group => group.DisplayName, StringComparer.CurrentCultureIgnoreCase))
             {
-                if (devicesByIdentity.TryGetValue(memberIdentity, out SettingsDevice? member))
+                SettingsLayout? groupLayout = value.Layouts.FirstOrDefault(candidate =>
+                    candidate.Identifier == group.LayoutIdentifier);
+                DeviceRow groupRow = new(group, groupLayout, devicesByIdentity);
+                AddRow(groupRow);
+                foreach (string memberIdentity in group.MemberIdentities)
                 {
-                    AddRow(new DeviceRow(member, group.Id));
+                    if (devicesByIdentity.TryGetValue(memberIdentity, out SettingsDevice? member))
+                    {
+                        AddRow(new DeviceRow(member, group.Id));
+                    }
                 }
             }
-        }
 
-        IEnumerable<(SettingsDevice Device, SettingsLayout? Layout)> orderedDevices = value.Devices
-            .Where(device => device.GroupId is null)
-            .Select(device =>
+            IEnumerable<(SettingsDevice Device, SettingsLayout? Layout)> orderedDevices = value.Devices
+                .Where(device => device.GroupId is null)
+                .Select(device =>
+                {
+                    SettingsLayout? layout = value.Layouts.FirstOrDefault(candidate =>
+                        candidate.Identifier == device.LayoutIdentifier);
+                    return (Device: device, Layout: layout);
+                })
+                .OrderBy(item => DeviceSortRank(item.Device, item.Layout))
+                .ThenBy(item => item.Device.DisplayName, StringComparer.CurrentCultureIgnoreCase);
+
+            foreach ((SettingsDevice device, SettingsLayout? layout) in orderedDevices)
             {
-                SettingsLayout? layout = value.Layouts.FirstOrDefault(candidate =>
-                    candidate.Identifier == device.LayoutIdentifier);
-                return (Device: device, Layout: layout);
-            })
-            .OrderBy(item => DeviceSortRank(item.Device, item.Layout))
-            .ThenBy(item => item.Device.DisplayName, StringComparer.CurrentCultureIgnoreCase);
+                AddRow(new DeviceRow(device, layout));
+            }
 
-        foreach ((SettingsDevice device, SettingsLayout? layout) in orderedDevices)
+            LayoutComboBox.Items.Clear();
+            LayoutComboBox.Items.Add("Sin distribución");
+            foreach (SettingsLayout layout in value.Layouts)
+            {
+                LayoutComboBox.Items.Add(layout);
+            }
+
+            DeviceRow? selected = rows.FirstOrDefault(row =>
+                string.Equals(row.Identity, identityToSelect, StringComparison.OrdinalIgnoreCase)) ?? rows.FirstOrDefault();
+            DeviceList.SelectedItem = DeviceList.Items.OfType<ListViewItem>()
+                .FirstOrDefault(item => ReferenceEquals(item.Tag, selected));
+        }
+        finally
         {
-            AddRow(new DeviceRow(device, layout));
+            suppressSelectionGuard = false;
         }
 
-        LayoutComboBox.Items.Clear();
-        LayoutComboBox.Items.Add("Sin distribución");
-        foreach (SettingsLayout layout in value.Layouts)
-        {
-            LayoutComboBox.Items.Add(layout);
-        }
-
-        DeviceRow? selected = rows.FirstOrDefault(row =>
-            string.Equals(row.Identity, identityToSelect, StringComparison.OrdinalIgnoreCase)) ?? rows.FirstOrDefault();
-        DeviceList.SelectedItem = DeviceList.Items.OfType<ListViewItem>()
-            .FirstOrDefault(item => ReferenceEquals(item.Tag, selected));
+        ApplySelectedDevice(DeviceList.SelectedItem as ListViewItem);
         SetEditorEnabled(DeviceList.SelectedItem is not null);
     }
 
@@ -909,41 +930,92 @@ public sealed class SettingsWindow : Window
         return item;
     }
 
-    private void DeviceList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void DeviceList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (SelectedRow is not DeviceRow row)
+        if (suppressSelectionGuard)
         {
+            return;
+        }
+
+        ListViewItem? requestedItem = DeviceList.SelectedItem as ListViewItem;
+        if (ReferenceEquals(requestedItem, acceptedDeviceItem))
+        {
+            return;
+        }
+
+        if (acceptedDeviceItem is not null && editorStateTracker.IsDirty)
+        {
+            SetSelectedItemWithoutHandling(acceptedDeviceItem);
+            if (!await ConfirmDiscardChangesAsync())
+            {
+                acceptedDeviceItem.Focus(FocusState.Programmatic);
+                return;
+            }
+
+            SetSelectedItemWithoutHandling(requestedItem);
+        }
+
+        ApplySelectedDevice(requestedItem);
+    }
+
+    private void ApplySelectedDevice(ListViewItem? item)
+    {
+        acceptedDeviceItem = item;
+        if (item?.Tag is not DeviceRow row)
+        {
+            editorStateTracker.Clear();
             SetEditorEnabled(false);
             return;
         }
 
         applyingEditorState = true;
-        AliasTextBox.Text = row.DisplayName;
-        DetectedNameText.Text = row.IsGroup
-            ? $"Grupo lógico con {row.MemberCount} identidades técnicas"
-            : $"Detectado: {row.DetectedName}";
-        TechnicalIdText.Text = row.IsGroup
-            ? "Selecciona una identidad secundaria para ver o separarla."
-            : $"Identificador: {row.TechnicalId}";
-        StatusText.Text = row.IsGroup
-            ? $"Estado: {(row.Connected ? "Algún miembro conectado" : "Desconectado")}"
-            : $"Estado: {(row.Connected ? "Conectado" : "Desconectado")} · Última detección: {row.LastSeenUtc.ToLocalTime():g}";
-        IgnoredCheckBox.IsChecked = row.Ignored;
-        LayoutComboBox.SelectedItem = row.Layout is null
-            ? LayoutComboBox.Items[0]
-            : LayoutComboBox.Items.OfType<SettingsLayout>()
-                .FirstOrDefault(candidate => candidate.Identifier == row.Layout.Identifier);
-        GroupTargetComboBox.Items.Clear();
-        foreach (DeviceRow candidate in rows.Where(candidate =>
-                     candidate.CanBeGroupTarget &&
-                     !string.Equals(candidate.GroupId, row.GroupId, StringComparison.OrdinalIgnoreCase) &&
-                     !string.Equals(candidate.TargetIdentity, row.TargetIdentity, StringComparison.OrdinalIgnoreCase)))
+        try
         {
-            GroupTargetComboBox.Items.Add(candidate);
+            AliasTextBox.Text = row.DisplayName;
+            DetectedNameText.Text = row.IsGroup
+                ? $"Grupo lógico con {row.MemberCount} identidades técnicas"
+                : $"Detectado: {row.DetectedName}";
+            TechnicalIdText.Text = row.IsGroup
+                ? "Selecciona una identidad secundaria para ver o separarla."
+                : $"Identificador: {row.TechnicalId}";
+            StatusText.Text = row.IsGroup
+                ? $"Estado: {(row.Connected ? "Algún miembro conectado" : "Desconectado")}"
+                : $"Estado: {(row.Connected ? "Conectado" : "Desconectado")} · Última detección: {row.LastSeenUtc.ToLocalTime():g}";
+            IgnoredCheckBox.IsChecked = row.Ignored;
+            LayoutComboBox.SelectedItem = row.Layout is null
+                ? LayoutComboBox.Items[0]
+                : LayoutComboBox.Items.OfType<SettingsLayout>()
+                    .FirstOrDefault(candidate => candidate.Identifier == row.Layout.Identifier);
+            GroupTargetComboBox.Items.Clear();
+            foreach (DeviceRow candidate in rows.Where(candidate =>
+                         candidate.CanBeGroupTarget &&
+                         !string.Equals(candidate.GroupId, row.GroupId, StringComparison.OrdinalIgnoreCase) &&
+                         !string.Equals(candidate.TargetIdentity, row.TargetIdentity, StringComparison.OrdinalIgnoreCase)))
+            {
+                GroupTargetComboBox.Items.Add(candidate);
+            }
+            GroupTargetComboBox.SelectedIndex = -1;
         }
-        GroupTargetComboBox.SelectedIndex = -1;
-        applyingEditorState = false;
+        finally
+        {
+            applyingEditorState = false;
+        }
+
+        editorStateTracker.Load(CreateEditorState());
         SetEditorEnabled(true);
+    }
+
+    private void SetSelectedItemWithoutHandling(ListViewItem? item)
+    {
+        suppressSelectionGuard = true;
+        try
+        {
+            DeviceList.SelectedItem = item;
+        }
+        finally
+        {
+            suppressSelectionGuard = false;
+        }
     }
 
     private async Task ReloadDiagnosticsAsync()
@@ -1015,8 +1087,66 @@ public sealed class SettingsWindow : Window
         }
     }
 
-    private void IgnoredCheckBox_Changed(object sender, RoutedEventArgs e) =>
+    private void IgnoredCheckBox_Changed(object sender, RoutedEventArgs e)
+    {
         LayoutComboBox.IsEnabled = SaveButton.IsEnabled && IgnoredCheckBox.IsChecked != true;
+        TrackEditorState();
+    }
+
+    private void EditorField_Changed(object sender, SelectionChangedEventArgs e) => TrackEditorState();
+
+    private void TrackEditorState() => editorStateTracker.Update(CreateEditorState(), applyingEditorState);
+
+    private SettingsEditorState CreateEditorState() => new(
+        AliasTextBox.Text,
+        (LayoutComboBox.SelectedItem as SettingsLayout)?.Identifier,
+        IgnoredCheckBox.IsChecked == true);
+
+    private async Task<bool> ConfirmDiscardChangesAsync()
+    {
+        if (!editorStateTracker.IsDirty)
+        {
+            return true;
+        }
+
+        bool discard = await ShowOverlayAsync(
+            "Cambios sin guardar",
+            "Cambiaste el alias, la distribución o el estado ignorado. Si continúas, esos cambios se descartarán.",
+            "Descartar cambios");
+        return editorStateTracker.CanLeave(discard
+            ? UnsavedChangesDecision.Discard
+            : UnsavedChangesDecision.KeepEditing);
+    }
+
+    private async void AppWindow_Closing(
+        Microsoft.UI.Windowing.AppWindow sender,
+        Microsoft.UI.Windowing.AppWindowClosingEventArgs args)
+    {
+        if (closeConfirmed || !editorStateTracker.IsDirty)
+        {
+            return;
+        }
+
+        args.Cancel = true;
+        if (closeConfirmationPending)
+        {
+            return;
+        }
+
+        closeConfirmationPending = true;
+        try
+        {
+            if (await ConfirmDiscardChangesAsync())
+            {
+                closeConfirmed = true;
+                Close();
+            }
+        }
+        finally
+        {
+            closeConfirmationPending = false;
+        }
+    }
 
     private async void SaveButton_Click(object sender, RoutedEventArgs e) => await SaveSelectedAsync();
 
