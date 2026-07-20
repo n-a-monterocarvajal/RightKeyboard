@@ -4,6 +4,13 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [Sin publicar]
 
+## [1.5.4] - 2026-07-20
+
+### Configuración
+
+- La lista se llama ahora «Dispositivos detectados» de forma coherente en Configuración WinUI y en el respaldo WinForms, incluidos sus nombres accesibles.
+- Las filas muestran por separado la conexión, el estado «Ignorado» y la distribución asignada, para que ignorar un teclado no oculte si sigue conectado; el lector de pantalla anuncia la misma información.
+
 ## [1.5.3] - 2026-07-19
 
 ### Configuración

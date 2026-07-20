@@ -16,22 +16,36 @@ public sealed class DevicePresentationTests
         Assert.Multiple(() =>
         {
             Assert.That(presentation.State, Is.EqualTo(expectedState));
-            Assert.That(presentation.Mode, Is.EqualTo(spanish.Name));
-            Assert.That(presentation.GetAccessibleName("Teclado oficina"), Does.Contain($"Estado: {expectedState}"));
+            Assert.That(presentation.LayoutName, Is.EqualTo(spanish.Name));
+            Assert.That(presentation.GetAccessibleName("Teclado oficina"), Does.Contain(expectedState));
         });
     }
 
-    [Test]
-    public void Create_PriorizaIgnoradoYSinDistribucion()
+    [TestCase(true, false, null, "Conectado · Sin distribución")]
+    [TestCase(false, false, null, "Desconectado · Sin distribución")]
+    [TestCase(true, true, null, "Conectado · Ignorado")]
+    [TestCase(false, true, null, "Desconectado · Ignorado")]
+    [TestCase(true, false, "español (Chile) - Latinoamericano", "Conectado · español (Chile) - Latinoamericano")]
+    [TestCase(false, true, "español (Chile) - Latinoamericano", "Desconectado · Ignorado · español (Chile) - Latinoamericano")]
+    public void Create_CombinaConexionIgnoradoYDistribucionSinOcultarInformacion(
+        bool connected,
+        bool ignored,
+        string? layoutName,
+        string expected)
     {
-        DevicePresentation ignored = DevicePresentation.Create(connected: false, ignored: true, spanish);
-        DevicePresentation unassigned = DevicePresentation.Create(connected: true, ignored: false, layout: null);
+        DevicePresentation presentation = DevicePresentation.Create(connected, ignored, layoutName);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(ignored.SecondaryText, Is.EqualTo("Desconectado · Ignorado"));
-            Assert.That(unassigned.SecondaryText, Is.EqualTo("Conectado · Sin distribución"));
-        });
+        Assert.That(presentation.SecondaryText, Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void GetAccessibleName_AnunciaConexionIgnoradoYDistribucion()
+    {
+        DevicePresentation presentation = DevicePresentation.Create(connected: true, ignored: true, spanish);
+
+        Assert.That(
+            presentation.GetAccessibleName("Teclado oficina"),
+            Is.EqualTo($"Teclado oficina. Conectado. Ignorado. {spanish.Name}."));
     }
 
     [Test]
@@ -41,6 +55,6 @@ public sealed class DevicePresentationTests
 
         string text = presentation.GetListText("Teclado oficina con un alias demasiado largo", maximumNameLength: 20);
 
-        Assert.That(text, Is.EqualTo("Teclado oficina con…\r\nDesconectado · Ignorado"));
+        Assert.That(text, Is.EqualTo($"Teclado oficina con…\r\nDesconectado · Ignorado · {spanish.Name}"));
     }
 }

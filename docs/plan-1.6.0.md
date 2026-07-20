@@ -28,7 +28,7 @@ Secuenciales. Cada una es una sesión, una rama, un PR y un bump de versión.
 | 10 | 1.5.1 | Publicar lo acumulado | Completada |
 | 11 | 1.5.2 | Guardia de cambios sin guardar | Completada |
 | 12 | 1.5.3 | Coherencia de Ignorar y Agrupar | Completada |
-| 13 | 1.5.4 | Nomenclatura y estado de fila | Pendiente |
+| 13 | 1.5.4 | Nomenclatura y estado de fila | Completada |
 | 14 | 1.5.5 | Pulido visual del panel | Pendiente |
 | 15 | 1.5.6 | Exploración de pulsaciones sintéticas | Pendiente |
 | 16 | 1.5.7 | Fallback verificable ante caída del frontend | Pendiente |
@@ -106,10 +106,25 @@ Evidencia local:
 - La VM solo tenía una fila conocida. No fue posible comprobar visualmente una selección real de destino ni cancelar el cambio entre dos filas; ambas interacciones quedan cubiertas por las pruebas y la lógica compartida, pero no se dan por validadas en la interfaz de esta VM.
 - `git diff --check`: sin errores.
 
-### Etapa 13 — Nomenclatura y estado de fila (1.5.4)
+### Etapa 13 — Nomenclatura y estado de fila (1.5.4) · completada el 20 de julio de 2026
 
-- Unificar hacia «detectados» el encabezado de la lista, en la ventana WinUI y en el diálogo WinForms. El subtítulo ya dice «Administra los teclados detectados» desde beta 6; el encabezado quedó sin actualizar.
-- Hacer que WinUI trate «Ignorado» como eje independiente de Conectado/Desconectado, siguiendo la semántica ya establecida en `DevicePresentation`. Hoy lo sustituye, de modo que no se puede saber si un dispositivo ignorado está conectado.
+Resultado:
+
+- El encabezado y el nombre accesible de la lista dicen «Dispositivos detectados» en Configuración WinUI y en el respaldo WinForms. Se conserva «recordados» donde describe el inventario persistido y no la detección.
+- `DevicePresentation` compone conexión, Ignorado y distribución como ejes independientes. WinUI reutiliza esa regla en `DeviceRow` y WinForms conserva la misma salida, sin cambiar persistencia ni ordenamiento.
+- Una fila ignorada muestra si está conectada o desconectada y conserva la distribución asignada. El nombre accesible anuncia los mismos componentes que el resumen visual.
+- Ambos proyectos avanzaron conjuntamente a `1.5.4` y el registro de cambios describe el impacto para el usuario.
+
+Evidencia local:
+
+- `dotnet test RightKeyboard.sln -c Release`: 182/182 pruebas superadas, sin omitidas; son las 176 anteriores y 6 casos nuevos para las cuatro combinaciones de conexión e Ignorado, distribución y nombre accesible.
+- `dotnet build RightKeyboard.sln -c Release --no-restore`: compilación correcta, 0 advertencias y 0 errores.
+- Interfaz WinUI real: versión 1.5.4, encabezado y lista accesible «Dispositivos detectados», y fila `Conectado · Sin distribución`. Tras guardar Ignorar, la misma fila mostró `Conectado · Ignorado` y su nombre accesible anunció ambos estados.
+- Marcar Ignorar deshabilitó inmediatamente Distribución y Agrupar. La confirmación de cierre detectó el cambio; cancelar conservó la edición, guardar limpió el estado sucio y la preferencia original quedó restaurada al terminar.
+- La VM solo tenía una fila conectada y sin distribución asignada. No fue posible validar visualmente una fila desconectada ni una combinación real con distribución; ambas quedan cubiertas por la regla compartida y las pruebas automatizadas, pero no se dan por validadas visualmente.
+- El respaldo WinForms no se abrió visualmente: en esta disposición Release solo se alcanza como fallback desde el menú de bandeja. Su encabezado y filas consumen, respectivamente, el texto actualizado y la misma `DevicePresentation` comprobada.
+- Publicación previa al squash: 590 archivos, 271.316.185 bytes, ambos ejecutables con versión de archivo 1.5.4.0; instalador y SHA-256 completos y coincidentes. Se reconstruirán desde el commit fusionado antes de publicar la Release.
+- `git diff --check`: sin errores.
 
 ### Etapa 14 — Pulido visual del panel (1.5.5)
 

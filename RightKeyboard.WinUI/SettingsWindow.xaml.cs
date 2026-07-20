@@ -191,12 +191,14 @@ public sealed class SettingsWindow : Window
         Grid devicesHeader = new() { ColumnSpacing = 8 };
         devicesHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         devicesHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        devicesHeader.Children.Add(new TextBlock
+        TextBlock devicesTitle = new()
         {
-            Text = "Dispositivos conocidos",
+            Text = "Dispositivos detectados",
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             VerticalAlignment = VerticalAlignment.Center
-        });
+        };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(devicesTitle, "Dispositivos detectados");
+        devicesHeader.Children.Add(devicesTitle);
         Button reload = new() { Content = "Recargar", VerticalAlignment = VerticalAlignment.Center };
         reload.CornerRadius = new CornerRadius(8);
         buttons.Add(reload);
@@ -207,6 +209,7 @@ public sealed class SettingsWindow : Window
         Grid.SetRow(DeviceList, 1);
         DeviceList.Background = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
         DeviceList.BorderThickness = new Thickness(0);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(DeviceList, "Dispositivos detectados");
         DeviceList.SelectionChanged += DeviceList_SelectionChanged;
         devicesPanel.Children.Add(DeviceList);
         Border devicesCard = new()
@@ -1834,9 +1837,9 @@ public sealed class DeviceRow
         Connected = device.Connected;
         Ignored = device.Ignored;
         Layout = layout;
-        string state = device.Ignored ? "Ignorado" : device.Connected ? "Conectado" : "Desconectado";
-        Summary = layout is null ? state : $"{state} · {layout.Name}";
-        AccessibleName = $"{DisplayName}. {Summary}";
+        DevicePresentation presentation = DevicePresentation.Create(device.Connected, device.Ignored, layout?.Name);
+        Summary = presentation.SecondaryText;
+        AccessibleName = presentation.GetAccessibleName(DisplayName);
     }
 
     internal DeviceRow(SettingsDevice device, string groupId)
