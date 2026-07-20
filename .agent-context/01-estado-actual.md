@@ -1,6 +1,6 @@
 # Estado actual real
 
-Snapshot actualizado el **2026-07-19** durante la Etapa 7. Contrastar siempre con `git status`, `git log -1 --oneline` y los metadatos de versión del checkout actual.
+Snapshot actualizado el **2026-07-19**, primero durante la Etapa 7 y revisado en la Etapa 9. Contrastar siempre con `git status`, `git log -1 --oneline` y los metadatos de versión del checkout actual.
 
 ## Resumen ejecutivo
 
@@ -36,8 +36,8 @@ Snapshot actualizado el **2026-07-19** durante la Etapa 7. Contrastar siempre co
 - La Etapa 7 verificó visualmente en esta VM las variantes normal y `RIGHTKEYBOARD_DIAGNOSTICS` a 100 %, incluidas la composición inicial y la mínima. Quedan pendientes 125 %, DPI mixto/dos monitores, texto ampliado y evidencia física equivalente porque la VM no permite demostrarlos con suficiente fiabilidad.
 - Accesibilidad completa, contraste alto, Windows 10, sesión remota, suspensión y ciclos prolongados carecen de evidencia completa en el repo.
 - Hay CI Windows y `TreatWarningsAsErrors`; las pruebas físicas siguen siendo manuales.
-- No existe `LICENSE`; distribuir o aceptar contribuciones externas mantiene riesgo legal.
-- No hay archivos de issues versionados ni configuración `.github`; el backlog utilizable está repartido entre documentos y esta carpeta.
+- `LICENSE` existe desde el 19 de julio de 2026, con tres capas separadas y la atribución de origen declarada como no verificada. Queda abierto CPOL 3(c): decidir entre notas por archivo o documentar el historial de Git como equivalente. Ver `docs/procedencia-y-licencia.md`.
+- Existe `.github/workflows/ci.yml`, que compila y prueba en Windows en cada push a `master` y cada pull request. No hay plantillas de issues ni issues versionados; el backlog utilizable está repartido entre documentos y esta carpeta.
 
 ## No es placeholder ni mock
 

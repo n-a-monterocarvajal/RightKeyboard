@@ -4,30 +4,32 @@
 
 ## 1.5.1 — robustez de detección y mantenimiento
 
-La siguiente actualización debería concentrarse en mejorar los casos donde un periférico HID se presenta como teclado sin serlo y en reducir trabajo de diagnóstico manual.
+Este bloque describía el alcance de la siguiente actualización. Dos de sus tres frentes ya están implementados y a la espera de publicarse en `1.5.1`; se conservan aquí con su estado real porque de ambos sigue pendiente la validación física.
 
-### Robustecer diagnóstico y logs
+### Robustecer diagnóstico y logs — pendiente
 
 - Revisar qué campos se registran para que el diagnóstico siga siendo útil sin exponer contenido de teclas.
 - Añadir señales suficientes para entender falsos positivos de periféricos como presentadores USB, mouse avanzados o interfaces virtuales.
 - Mantener el diagnóstico como herramienta de compilación de desarrollo, no como flujo de usuario final.
 
-### Mejorar detección preventiva de no-teclados
+### Mejorar detección preventiva de no-teclados — implementado, sin validación física
 
-- Evaluar reglas conservadoras por firma HID parcial: `VID`, `PID`, interfaz, colección, enumerador y capacidades Raw Input.
-- No bloquear automáticamente teclados reales por coincidencias débiles.
-- Si una firma se ignora manualmente, estudiar que esa decisión sobreviva a cambios de ruta o puerto USB cuando sea seguro.
+Implementado y sin publicar. Ignorar manualmente un dispositivo de huella vacía registra su firma HID parcial (enumerador, `VID`, `PID`, interfaz, colección y capacidades Raw Input); una identidad nueva con esa firma se suprime sin abrir el selector solo cuando la coincidencia es inequívoca. La regla no opera sobre teclados con huella y se retira al reactivar el dispositivo o asignarle distribución. Los tres criterios originales se cumplen en el código.
 
-### Agrupar identidades del mismo dispositivo
+**Pendiente:** validar con el presentador Baseus real (`VID=2571`, `PID=4104`) y ejecutar el cambio de puerto de la matriz física. Esta VM no permite producir esa evidencia.
 
-Cuando Windows entrega identidades distintas para el mismo teclado al cambiar de puerto USB, la UI podría permitir anidar o fusionar manualmente esas identidades bajo un mismo dispositivo lógico.
+### Agrupar identidades del mismo dispositivo — implementado, sin validación física
 
-**Criterios iniciales:**
+Implementado y sin publicar. La Configuración WinUI permite agrupar manualmente identidades que el usuario reconoce como el mismo teclado, sobre el esquema 5 de preferencias y el protocolo IPC v2.
+
+**Criterios, todos cumplidos en el código:**
 
 - El usuario puede seleccionar dos o más identidades conocidas y tratarlas como el mismo teclado.
 - La asociación de distribución, alias e ignorado se administra en el dispositivo lógico.
-- La operación es reversible.
+- La operación es reversible: al separar reaparecen las preferencias individuales latentes.
 - La app nunca fusiona automáticamente dispositivos ambiguos sin intervención del usuario.
+
+**Pendiente:** validar con dos teclados físicos, reconexión y cambio de puerto.
 
 ## Observaciones sobre la Configuración WinUI
 
@@ -151,7 +153,9 @@ El modelo de datos separará el nombre del idioma del nombre de la distribución
 
 ### Ajuste visual para Windows 11
 
-Se conservará WinForms y el proceso liviano. No se incorporará WinUI 3 solo para este diálogo. La actualización contemplará:
+> **Decisión revertida.** El plan original era conservar WinForms y no incorporar WinUI 3 solo para este diálogo. Durante la línea 1.5 el proyecto adoptó WinUI 3: el selector y la Configuración son un frontend WinUI bajo demanda (`ui/RightKeyboard.WinUI.exe`), y el diálogo WinForms permanece únicamente como respaldo cuando el frontend no puede lanzarse. Los criterios visuales de más abajo siguen vigentes; lo que cambió es la tecnología con que se cumplen.
+
+La actualización contemplaba, y el resultado WinUI conserva:
 
 - espaciado y dimensiones acordes con Windows 11;
 - jerarquía tipográfica más clara;

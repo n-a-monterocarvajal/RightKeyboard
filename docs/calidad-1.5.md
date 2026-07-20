@@ -6,13 +6,15 @@ La migración de ventanas a WinUI 3 quedó integrada en 1.5.0 mediante un fronte
 
 ## Estado de 1.5.0 estable
 
-`1.5.0` se promueve como estable inicial el 9 de julio de 2026, tras pruebas físicas iterativas de las betas 6 y 7. Los pendientes aceptados para la línea 1.5.x son:
+`1.5.0` se promueve como estable inicial el 9 de julio de 2026, tras pruebas físicas iterativas de las betas 6 y 7. Los pendientes que se aceptaron entonces para la línea 1.5.x han evolucionado así:
 
-- robustecer la variante de diagnóstico de desarrollo sin reincorporarla al flujo normal de usuario;
-- mejorar la detección preventiva de periféricos HID ambiguos;
-- estudiar agrupación manual de identidades cuando el mismo teclado cambia de puerto USB;
-- completar funciones de exportación/importación e inicio con Windows en la Configuración WinUI;
-- revisar microtextos de interfaz.
+- robustecer la variante de diagnóstico de desarrollo sin reincorporarla al flujo normal de usuario: **pendiente**;
+- mejorar la detección preventiva de periféricos HID ambiguos: **implementado**, pendiente de validación física;
+- agrupación manual de identidades cuando el mismo teclado cambia de puerto USB: **implementado**, pendiente de validación física;
+- completar funciones de exportación/importación e inicio con Windows en la Configuración WinUI: **implementado**; la portabilidad entre equipos sigue sin certificar (AUT-12, FIS-09);
+- revisar microtextos de interfaz: **pendiente**.
+
+Nada de lo anterior está publicado todavía. El corte de versión correspondiente es `1.5.1` y su orden de ejecución está en [plan-1.6.0.md](plan-1.6.0.md).
 
 ## Estado histórico de beta 1
 
@@ -46,9 +48,9 @@ Integración auditada el 30 de junio de 2026 sobre la etiqueta pública `v1.5.0-
 | AUT-10 | Unidad | Editar, olvidar y limpiar preferencias | Cubierto | Las colecciones quedan coherentes y el borrado persiste. |
 | AUT-11 | Unidad | Exportar, combinar, reemplazar y respaldar | Cubierto | La aplicación transaccional crea respaldos únicos y conserva la memoria ante fallos de escritura. |
 | AUT-12 | Integración | Importar en otro equipo por huella, con distribuciones ausentes | Pendiente | Resuelve lo posible, conserva pendientes e informa lo no resuelto. |
-| AUT-13 | Integración | Clave de inicio por usuario | Pendiente | Crear, leer y quitar `HKCU\\...\\Run` es idempotente y conserva rutas con espacios. |
+| AUT-13 | Integración | Clave de inicio por usuario | Cubierto | Crear, leer y quitar `HKCU\\...\\Run` es idempotente y conserva rutas con espacios. `StartupManagerTests` opera sobre una subclave desechable de `HKCU`, no sobre la clave `Run` real. |
 | AUT-14 | Integración | Cambio de inventario por `WM_INPUT_DEVICE_CHANGE` | Pendiente | Refresca dispositivos sin perder estado ni bloquear entrada. |
-| AUT-15 | Build | Release tratada con advertencias como error | Pendiente | La solución compila sin advertencias con una política explícita. |
+| AUT-15 | Build | Release tratada con advertencias como error | Cubierto | La solución compila sin advertencias con una política explícita. `Directory.Build.props` activa `TreatWarningsAsErrors` para los tres proyectos y `.github/workflows/ci.yml` compila y prueba en Windows en cada push a `master` y cada pull request. |
 
 ## Matriz física y de sistema
 
@@ -113,8 +115,8 @@ Registrar para cada ejecución: fecha, commit, Windows, arquitectura, escala/DPI
 1. **Bloqueante — distribución:** el instalador se compila de forma reproducible, pero todavía no se ha probado en una cuenta estándar ni se han validado actualización y desinstalación.
 2. **Alto — portabilidad:** la importación combina identidades almacenadas; falta demostrar resolución entre equipos por huella y manejo visible de distribuciones no disponibles.
 3. **Alto — hardware:** las pruebas unitarias del MX Master 3S usan su nombre, no sus colecciones HID reales.
-4. **Alto — inicio:** la instancia única y el cierre coordinado están implementados; faltan pruebas de registro, inicio de sesión y activación predeterminada por el instalador.
-5. **Medio — automatización:** no hay configuración de integración continua ni política que convierta advertencias en errores.
+4. **Medio — inicio:** la instancia única y el cierre coordinado están implementados, y `StartupManagerTests` cubre la escritura y lectura del registro. Faltan las pruebas de inicio de sesión real y de activación predeterminada por el instalador (FIS-07).
+5. **Resuelto — automatización:** existen integración continua en Windows (`.github/workflows/ci.yml`) y política de advertencias como errores (`Directory.Build.props`). Las pruebas físicas siguen siendo manuales.
 6. **Medio — evidencia:** faltan resultados físicos trazables para DPI, accesibilidad, suspensión y consumo.
 
 ## Registro de certificación
