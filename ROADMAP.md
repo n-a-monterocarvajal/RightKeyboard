@@ -54,7 +54,15 @@ Por explorar. `API.TryReadKeyboardEvent` ya descarta los eventos con `Header.Dev
 
 ### Nomenclatura de la lista
 
-Se revisó si el panel izquierdo debía titularse «Dispositivos detectados». **No procede.** No existe esa distinción en la documentación ni en el historial del repositorio, y la lista incluye dispositivos desconectados, que por definición no se están detectando. Todo lo que aparece tiene un registro de preferencia, así que «Dispositivos conocidos» describe mejor el contenido.
+El encabezado del panel izquierdo debe decir «Dispositivos detectados». La primera revisión lo descartó por error, buscando la cadena exacta en lugar del término: el commit `0bf1758` (4 de julio de 2026, beta 6) ya había cambiado el subtítulo a «Administra los teclados detectados.» y dejó el encabezado sin actualizar. El cambio de microcopia está registrado en `docs/beta-6-pendientes.md`.
+
+«Detectados» describe correctamente el contenido: la lista incluye todo lo que la aplicación ha visto alguna vez, porque `TouchDevice` da de alta la preferencia al enumerar el dispositivo. Por eso comprende desconectados, ignorados y dispositivos que el usuario nunca configuró. Corregir también el diálogo WinForms de respaldo.
+
+Asunto contiguo: en WinUI «Ignorado» sustituye a Conectado/Desconectado, mientras que en WinForms son ejes independientes (`DevicePresentation`). Hoy no se puede saber si un dispositivo ignorado está conectado.
+
+## Orden de ejecución
+
+El orden en que se abordan estos pendientes, junto con la validación física, las mediciones y la licencia, está en [Plan camino a 1.6.0](docs/plan-1.6.0.md), que además lleva el estado de cada etapa.
 
 ## Pendientes funcionales de la línea 1.5
 
