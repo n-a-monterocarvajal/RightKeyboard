@@ -32,6 +32,14 @@ Agregar una prueba directa sobre el evento JSON sería buena mejora, pero ya no 
 
 **Pendiente:** validar en la estación física con el Baseus real (confirmar si su huella es vacía; si no lo es, la recuperación por huella ya cubría su reconexión y la firma cubre el resto de HID débiles) y ejecutar el cambio de puerto de la matriz.
 
+## P1 — el desplegable de «Agrupar con otra identidad» aparece vacío (observado en 1.5.4)
+
+**Síntoma:** en la Configuración WinUI de 1.5.4 el desplegable para «Agrupar con otra identidad» se muestra vacío, sin candidatos seleccionables, de modo que la agrupación manual no puede utilizarse.
+
+**Sospecha inicial:** revisar el filtrado de candidatos endurecido en 1.5.3 —una identidad ignorada dejó de poder agrupar o aparecer como destino— y la construcción de la lista de destinos en `SettingsWindow` y su acción IPC; confirmar si el filtro excluye de más o si la lista sencillamente no se está poblando.
+
+**Pendiente:** reproducir con al menos dos identidades no ignoradas, localizar dónde se arma la lista de destinos y validar el arreglo con hardware o identidades simuladas.
+
 ## P1 — foco del selector depende de heurísticas Win32
 
 `AllowSetForegroundWindow`, `AttachThreadInput`, `SetForegroundWindow`, `SetFocus`, un pulso topmost temporal y un retry a 180 ms intentan cooperar con las reglas de foco de Windows. La ventana puede estar delante sin que el `TextBox` tenga foco. No convertirla en topmost permanente. Instrumentar tiempos/resultado de foreground y probar varias aplicaciones antes de cambiar la secuencia.
@@ -65,6 +73,12 @@ Existe `LICENSE` en la raíz, con tres capas: obra original de 2007 de Antoine A
 Restricción vigente que condiciona la distribución: por CPOL 5(d) la obra **no puede venderse, arrendarse ni alquilarse por sí sola**, aunque los aportes propios sean MIT. Distribuirla gratis sí es compatible.
 
 Queda un punto abierto: CPOL 3(c) pide una nota en cada archivo modificado indicando cómo, cuándo y dónde se cambió. Hoy esa trazabilidad solo está en el historial de Git. Decidir si se añaden las notas o se documenta el historial como equivalente.
+
+## P2 — indicador gráfico de conexión en «Dispositivos detectados»
+
+1.5.4 separó en cada fila la conexión, el estado «Ignorado» y la distribución como texto. Falta un elemento gráfico que distinga de un vistazo «Conectado» de «Desconectado»: se propone una «bolita» verde o roja junto a la palabra, según corresponda, tanto en la Configuración WinUI como en el respaldo WinForms.
+
+**Accesibilidad:** el indicador no debe depender solo del color. Conservar el texto de estado y su anuncio para el lector de pantalla, de forma coherente con la separación introducida en 1.5.4.
 
 ## P2 — primera detección no admite solo modificadores/auxiliares
 
