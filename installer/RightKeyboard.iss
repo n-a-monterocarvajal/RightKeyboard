@@ -49,6 +49,9 @@ Name: "startup"; Description: "Iniciar RightKeyboard con Windows"; Flags: checke
 ; runtime .NET. Ahora comparte carpeta con el núcleo: la carpeta anterior debe eliminarse
 ; para que una actualización no deje ~109 MB huérfanos en disco.
 Type: filesandordirs; Name: "{app}\ui"
+; El runtime autocontenido nombra una copia de mscordaccore con su versión completa.
+; [Files] instala la copia vigente, pero no retira la de un runtime anterior.
+Type: files; Name: "{app}\mscordaccore_amd64_amd64_*.dll"
 
 [Files]
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs

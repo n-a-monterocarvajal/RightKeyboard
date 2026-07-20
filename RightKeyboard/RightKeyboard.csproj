@@ -8,7 +8,7 @@
     <ApplicationIcon>ico_input0002.ico</ApplicationIcon>
     <AssemblyName>RightKeyboard</AssemblyName>
     <RootNamespace>RightKeyboard</RootNamespace>
-    <Version>1.5.0</Version>
+    <Version>1.5.1</Version>
     <Authors>Colaboradores de RightKeyboard</Authors>
     <Description>Asocia cada teclado físico con una distribución de teclado de Windows.</Description>
     <ApplicationManifest>app.manifest</ApplicationManifest>

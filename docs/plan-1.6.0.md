@@ -25,7 +25,7 @@ Secuenciales. Cada una es una sesión, una rama, un PR y un bump de versión.
 | Etapa | Versión | Asunto | Estado |
 |---|---|---|---|
 | 9 | — | Sincronizar documentación con el código | Completada |
-| 10 | 1.5.1 | Publicar lo acumulado | Pendiente |
+| 10 | 1.5.1 | Publicar lo acumulado | Completada |
 | 11 | 1.5.2 | Guardia de cambios sin guardar | Pendiente |
 | 12 | 1.5.3 | Coherencia de Ignorar y Agrupar | Pendiente |
 | 13 | 1.5.4 | Nomenclatura y estado de fila | Pendiente |
@@ -53,15 +53,17 @@ Criterio aplicado: lo implementado pero sin validar en hardware se declara así,
 
 Sigue abierto y no lo resuelve esta etapa: la semántica de «preferencia pendiente» al importar con una distribución ausente. `LoadImport` conserva el dispositivo pero descarta la asociación y solo advierte; falta decidir si es lo deseado. Anotado en `docs/distribucion-1.5.md` y en `.agent-context/03-problemas-conocidos.md`.
 
-### Etapa 10 — Publicar 1.5.1
+### Etapa 10 — Publicar 1.5.1 · completada el 19 de julio de 2026
 
 Corte de versión de todo lo acumulado desde `1.5.0`, sin funcionalidad nueva.
 
-- Bump a `1.5.1` en los dos `.csproj`.
-- Cerrar la sección `[Sin publicar]` de `CHANGELOG.md` como `[1.5.1]` con fecha.
-- Redactar `docs/releases/1.5.1.md` siguiendo la convención de `docs/releases/1.5.0.md`.
-- Compilar el instalador y verificar tamaño, contenido y SHA-256.
-- Ejecutar la prueba de actualización sobre una instalación previa, que es la que valida el `[InstallDelete]` de la carpeta heredada.
+- Versión `1.5.1` declarada en los dos `.csproj`, con `CHANGELOG.md` cerrado y notas inmutables en `docs/releases/1.5.1.md`.
+- Publicación pública y gratuita aprobada; CPOL 5(d) impide vender, arrendar o alquilar la obra por sí sola, pero no su distribución gratuita.
+- Suite Release en verde: 161/161 pruebas, sin omitidas.
+- Instalador compilado con Inno Setup 7.0.2: 65.787.471 bytes, publicación de 590 archivos y SHA-256 `93eebe4b551011017555b9a2d79b4d68d5750b6861208bc7c5b1f1bd9d863d99`.
+- Actualización aislada desde el instalador 1.5.0 publicado: código 0, sin reinicio, ambos ensamblados en 1.5.1.0, carpeta `ui` heredada eliminada y contenido final idéntico a la publicación. La prueba detectó además una copia DAC versionada del runtime anterior; `[InstallDelete]` la retira antes de copiar la vigente.
+
+Pendientes declarados en la nota de la versión: exclusión por firma HID y agrupación de identidades sin validar con hardware físico, y portabilidad de exportar/importar entre dos equipos sin certificar. La matriz manual completa del instalador en cuentas estándar de Windows 10 y Windows 11 sigue abierta en el carril C.
 
 ### Etapa 11 — Guardia de cambios sin guardar (1.5.2)
 
