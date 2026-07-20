@@ -56,6 +56,14 @@ El grupo lógico tiene un solo alias/layout efectivo y muestra debajo sus identi
 
 **Pendiente:** validar en la estación física con dos teclados, reconexión y cambio de puerto. Esta VM no dispone de passthrough directo de dispositivos.
 
+## P2 — evaluar la agrupación de identidades ignoradas (observado en 1.5.4)
+
+Hoy la agrupación manual excluye por diseño a las identidades ignoradas: nunca se plantea el caso de «Agrupar» miembros ignorados (ver arriba, «No se admiten miembros ignorados», y el filtrado endurecido en 1.5.3). Es una decisión de nuestra lógica, no una limitación del hardware.
+
+**Caso a evaluar:** un mismo dispositivo ignorado que reaparece con identidades técnicas distintas al conectarse en puertos diferentes en ocasiones diversas —por ejemplo el presentador que se enchufa a dos puertos distintos—. Sin poder agruparlas, cada puerto se ignora por separado y la intención de «ignorar este dispositivo» no se traslada a todas sus identidades.
+
+**Pendiente:** decidir si tiene sentido permitir agrupar identidades ignoradas (o propagar el estado ignorado a un grupo lógico), definir la semántica de alias/distribución/estado para un grupo cuyos miembros están ignorados, y confirmar que no reintroduce selectores falsos ni fusiones automáticas. Relacionado con el bug P1 del desplegable vacío.
+
 ## Implementado, pendiente de validación DPI ampliada — disposición y mínimo de Configuración (Etapa 7)
 
 La Configuración WinUI reúne Exportar, Importar y Limpiar en Preferencias, y mantiene aparte el inicio con Windows en Sistema, sin alterar la lista jerárquica de grupos e identidades técnicas. `SettingsWindow` impone 900 × 640 píxeles lógicos como mínimo mediante `WM_GETMINMAXINFO`, recalculado con el DPI de la ventana. El editor conserva una altura operativa, fija Guardar/Olvidar fuera de su scroll y la lista de dispositivos absorbe la reducción vertical. La variante diagnóstica añade sus controles dentro de Sistema; el build normal no crea esa subsección ni reserva su espacio.
