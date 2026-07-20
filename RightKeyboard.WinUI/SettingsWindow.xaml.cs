@@ -60,6 +60,7 @@ public sealed class SettingsWindow : Window
     private long lastActivitySequence;
     private bool pollingActivity;
     private bool applyingEditorState;
+    private bool editorEnabled;
     private bool suppressSelectionGuard;
     private bool closeConfirmed;
     private bool closeConfirmationPending;
@@ -369,21 +370,23 @@ public sealed class SettingsWindow : Window
         DeviceDetailsPanel.Children.Add(TechnicalIdText);
         DeviceDetailsPanel.Children.Add(StatusText);
         editorFields.Children.Add(DeviceDetailsPanel);
+        IgnoredCheckBox.Content = "Ignorar eventos de este dispositivo";
+        IgnoredCheckBox.Checked += IgnoredCheckBox_Changed;
+        IgnoredCheckBox.Unchecked += IgnoredCheckBox_Changed;
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(
+            IgnoredCheckBox,
+            "Impide usar este dispositivo para cambiar la distribución o agrupar identidades.");
+        editorFields.Children.Add(IgnoredCheckBox);
         LayoutComboBox.Header = "Distribución";
         LayoutComboBox.HorizontalAlignment = HorizontalAlignment.Stretch;
         LayoutComboBox.CornerRadius = new CornerRadius(8);
         LayoutComboBox.SelectionChanged += EditorField_Changed;
         editorFields.Children.Add(LayoutComboBox);
-        IgnoredCheckBox.Content = "Ignorar eventos de este dispositivo";
-        IgnoredCheckBox.Checked += IgnoredCheckBox_Changed;
-        IgnoredCheckBox.Unchecked += IgnoredCheckBox_Changed;
-        editorFields.Children.Add(IgnoredCheckBox);
         GroupTargetComboBox.Header = "Agrupar con otra identidad";
         GroupTargetComboBox.PlaceholderText = "Selecciona una identidad técnica";
         GroupTargetComboBox.HorizontalAlignment = HorizontalAlignment.Stretch;
         GroupTargetComboBox.CornerRadius = new CornerRadius(8);
-        GroupTargetComboBox.SelectionChanged += (_, _) =>
-            GroupButton.IsEnabled = GroupTargetComboBox.IsEnabled && GroupTargetComboBox.SelectedItem is DeviceRow;
+        GroupTargetComboBox.SelectionChanged += (_, _) => SetEditorEnabled(editorEnabled);
         editorFields.Children.Add(GroupTargetComboBox);
         GroupButton.Content = "Agrupar identidades";
         GroupButton.CornerRadius = new CornerRadius(8);
@@ -1089,7 +1092,12 @@ public sealed class SettingsWindow : Window
 
     private void IgnoredCheckBox_Changed(object sender, RoutedEventArgs e)
     {
-        LayoutComboBox.IsEnabled = SaveButton.IsEnabled && IgnoredCheckBox.IsChecked != true;
+        if (applyingEditorState)
+        {
+            return;
+        }
+
+        SetEditorEnabled(editorEnabled);
         TrackEditorState();
     }
 
@@ -1722,24 +1730,40 @@ public sealed class SettingsWindow : Window
 
     private void SetEditorEnabled(bool enabled)
     {
+        editorEnabled = enabled;
         DeviceRow? row = SelectedRow;
-        bool logicalPreference = enabled && row is not null && !row.IsGroupMember;
-        AliasTextBox.IsEnabled = logicalPreference;
-        LayoutComboBox.IsEnabled = logicalPreference && IgnoredCheckBox.IsChecked != true;
-        IgnoredCheckBox.IsEnabled = logicalPreference && row is { IsGroup: false };
-        IgnoredCheckBox.Visibility = row is { IsGroup: false, IsGroupMember: false }
+        SettingsEditorRowKind rowKind = row switch
+        {
+            { IsGroupMember: true } => SettingsEditorRowKind.GroupMember,
+            { IsGroup: true } => SettingsEditorRowKind.Group,
+            not null => SettingsEditorRowKind.Device,
+            _ => SettingsEditorRowKind.None
+        };
+        SettingsEditorAvailability availability = SettingsEditorAvailability.Create(
+            enabled,
+            rowKind,
+            IgnoredCheckBox.IsChecked == true,
+            GroupTargetComboBox.SelectedItem is DeviceRow);
+        if (availability.ClearInvalidGroupTargetSelection)
+        {
+            GroupTargetComboBox.SelectedIndex = -1;
+        }
+
+        AliasTextBox.IsEnabled = availability.AliasEnabled;
+        LayoutComboBox.IsEnabled = availability.LayoutEnabled;
+        IgnoredCheckBox.IsEnabled = availability.IgnoredEnabled;
+        IgnoredCheckBox.Visibility = availability.ShowIgnored
             ? Visibility.Visible
             : Visibility.Collapsed;
-        SaveButton.IsEnabled = logicalPreference;
-        ForgetButton.IsEnabled = enabled && row is { IsGroup: false, IsGroupMember: false };
-        GroupTargetComboBox.IsEnabled = logicalPreference && row is { Ignored: false };
-        GroupButton.IsEnabled = GroupTargetComboBox.IsEnabled && GroupTargetComboBox.SelectedItem is DeviceRow;
-        bool canGroup = row is not null && !row.IsGroupMember;
-        GroupTargetComboBox.Visibility = canGroup ? Visibility.Visible : Visibility.Collapsed;
-        GroupButton.Visibility = canGroup ? Visibility.Visible : Visibility.Collapsed;
-        UngroupButton.IsEnabled = enabled && row?.IsGroupMember == true;
-        UngroupButton.Visibility = row?.IsGroupMember == true ? Visibility.Visible : Visibility.Collapsed;
-        GroupButtonsPanel.Visibility = canGroup || row?.IsGroupMember == true
+        SaveButton.IsEnabled = availability.SaveEnabled;
+        ForgetButton.IsEnabled = availability.ForgetEnabled;
+        GroupTargetComboBox.IsEnabled = availability.GroupTargetEnabled;
+        GroupButton.IsEnabled = availability.GroupButtonEnabled;
+        GroupTargetComboBox.Visibility = availability.ShowGrouping ? Visibility.Visible : Visibility.Collapsed;
+        GroupButton.Visibility = availability.ShowGrouping ? Visibility.Visible : Visibility.Collapsed;
+        UngroupButton.IsEnabled = availability.UngroupEnabled;
+        UngroupButton.Visibility = availability.ShowUngroup ? Visibility.Visible : Visibility.Collapsed;
+        GroupButtonsPanel.Visibility = availability.ShowGrouping || availability.ShowUngroup
             ? Visibility.Visible
             : Visibility.Collapsed;
         DeviceDetailsPanel.Visibility = row is null ? Visibility.Collapsed : Visibility.Visible;
@@ -1871,7 +1895,9 @@ public sealed class DeviceRow
     public bool Ignored { get; }
     public bool IsGroup { get; }
     public bool IsGroupMember { get; }
-    public bool CanBeGroupTarget => !IsGroup && !IsGroupMember && !Ignored;
+    public bool CanBeGroupTarget => SettingsEditorAvailability.CanBeGroupTarget(
+        IsGroup ? SettingsEditorRowKind.Group : IsGroupMember ? SettingsEditorRowKind.GroupMember : SettingsEditorRowKind.Device,
+        Ignored);
     public int MemberCount { get; }
     internal SettingsLayout? Layout { get; }
 

@@ -833,6 +833,25 @@ public sealed class ConfigurationTests
     }
 
     [Test]
+    public void GroupDevices_IgnoredGoverningDevice_IsRejectedWithoutMutation()
+    {
+        Configuration configuration = new();
+        KeyboardDevice first = Device("device:port-a", "MODEL-A", "Teclado A");
+        KeyboardDevice second = Device("device:port-b", "MODEL-B", "Teclado B");
+        configuration.Ignore(first);
+        configuration.TouchDevice(second);
+
+        Assert.That(
+            () => configuration.GroupDevices(first.Identity, second.Identity),
+            Throws.InvalidOperationException.With.Message.Contains("Reactiva"));
+        Assert.Multiple(() =>
+        {
+            Assert.That(configuration.DeviceGroups, Is.Empty);
+            Assert.That(configuration.IgnoredDevices, Does.Contain(first.Identity));
+        });
+    }
+
+    [Test]
     public void GroupedConfiguration_RoundTrip_PreservesLogicalPreferenceAndTechnicalMembers()
     {
         string path = Path.Combine(temporaryDirectory, "grouped-v5.json");

@@ -157,6 +157,23 @@ internal sealed class SettingsDialog : FluentForm
         editor.Controls.Add(technicalIdLabel);
         editor.Controls.Add(statusLabel);
 
+        ignoredCheckBox = new CheckBox
+        {
+            AutoSize = true,
+            Text = "Ignorar eventos de este dispositivo",
+            Margin = new Padding(0, 0, 0, 16),
+            AccessibleDescription = "Impide que RightKeyboard cambie la distribución o agrupe esta identidad."
+        };
+        ignoredCheckBox.CheckedChanged += (_, _) =>
+        {
+            if (!applyingEditorState)
+            {
+                SetEditorEnabled(selectedIdentity is not null);
+            }
+            TrackEditorState();
+        };
+        editor.Controls.Add(ignoredCheckBox);
+
         editor.Controls.Add(SectionLabel("Distribución"));
         layoutComboBox = new ComboBox
         {
@@ -172,20 +189,6 @@ internal sealed class SettingsDialog : FluentForm
         layoutComboBox.Items.AddRange(layouts.Cast<object>().ToArray());
         layoutComboBox.SelectedIndexChanged += (_, _) => TrackEditorState();
         editor.Controls.Add(layoutComboBox);
-
-        ignoredCheckBox = new CheckBox
-        {
-            AutoSize = true,
-            Text = "Ignorar eventos de este dispositivo",
-            Margin = new Padding(0, 0, 0, 16),
-            AccessibleDescription = "Impide que RightKeyboard cambie la distribución al recibir eventos del dispositivo."
-        };
-        ignoredCheckBox.CheckedChanged += (_, _) =>
-        {
-            layoutComboBox.Enabled = !ignoredCheckBox.Checked;
-            TrackEditorState();
-        };
-        editor.Controls.Add(ignoredCheckBox);
 
         FlowLayoutPanel preferenceActions = new()
         {
@@ -489,11 +492,20 @@ internal sealed class SettingsDialog : FluentForm
 
     private void SetEditorEnabled(bool enabled)
     {
-        customNameTextBox.Enabled = enabled;
-        layoutComboBox.Enabled = enabled && !ignoredCheckBox.Checked;
-        ignoredCheckBox.Enabled = enabled &&
-            (selectedIdentity is null || configuration.GetGroup(selectedIdentity) is null);
-        saveButton.Enabled = enabled;
+        SettingsEditorRowKind rowKind = selectedIdentity is null
+            ? SettingsEditorRowKind.None
+            : configuration.GetGroup(selectedIdentity) is null
+                ? SettingsEditorRowKind.Device
+                : SettingsEditorRowKind.Group;
+        SettingsEditorAvailability availability = SettingsEditorAvailability.Create(
+            enabled,
+            rowKind,
+            ignoredCheckBox.Checked,
+            hasSelectedGroupTarget: false);
+        customNameTextBox.Enabled = availability.AliasEnabled;
+        layoutComboBox.Enabled = availability.LayoutEnabled;
+        ignoredCheckBox.Enabled = availability.IgnoredEnabled;
+        saveButton.Enabled = availability.SaveEnabled;
         forgetButton.Enabled = enabled;
     }
 
