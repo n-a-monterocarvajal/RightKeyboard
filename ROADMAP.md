@@ -68,7 +68,7 @@ El orden en que se abordan estos pendientes, junto con la validación física, l
 
 - Medir de forma reproducible la latencia de apertura de Configuración y del selector.
 - Revisar microtextos de la UI que aún suenan excesivamente técnicos.
-- Resolver/documentar la licencia heredada del fork antes de ampliar contribuciones externas.
+- Decidir cómo se atiende CPOL 3(c): notas de modificación por archivo, o el historial de Git documentado como equivalente. El resto de la licencia quedó resuelto el 19 de julio de 2026 en [LICENSE](LICENSE).
 
 ## Referencias históricas
 

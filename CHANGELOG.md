@@ -4,6 +4,8 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [Sin publicar]
 
+- El proyecto declara licencia por primera vez. `LICENSE` separa tres capas: la obra original de 2007 de Antoine Aubry bajo CPOL 1.02, los forks intermedios sin licencia declarada, y los cambios de este fork bajo MIT. Se restaura además la atribución al artículo de origen, que este fork había perdido y los anteriores sí conservaban. Por CPOL 5(d), RightKeyboard no puede venderse, arrendarse ni alquilarse por sí solo.
+
 - El instalador se compila con Inno Setup 7.0.2. El script busca primero `Inno Setup 7` y conserva la línea 6 como respaldo. `SetupArchitecture` permanece en `x86`: las declaraciones `external` de `kernel32.dll` de la sección `[Code]` asumen un `THandle` de 4 bytes.
 - El núcleo y la Configuración WinUI se instalan en una sola carpeta y comparten una única copia del runtime .NET 10. Antes se publicaban por separado, con dos copias completas: la publicación baja de 813 archivos y 407,8 MB a 595 archivos y 299,1 MB. Al actualizar desde 1.5.0 el instalador elimina la carpeta `ui` heredada.
 - La publicación del núcleo activa `PublishReadyToRun`, igualando la opción del frontend para que la salida compartida sea determinista.

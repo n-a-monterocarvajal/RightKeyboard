@@ -105,11 +105,13 @@ P1 registrado en `.agent-context/03-problemas-conocidos.md`: el foco depende de 
 
 Refactor diferido a 1.6: mover los DTO de IPC, `VersionPresentation` y modelos compartidos a una biblioteca para que el frontend WinUI no referencie el ejecutable WinForms. Cierra la versión.
 
-## Carril B — Licencia
+## Carril B — Licencia · resuelto el 19 de julio de 2026
 
-No es trabajo de código y no lleva bump, pero bloquea publicar binarios y abrir contribuciones. Es el único ítem con exposición legal y no tiene ningún avance.
+Existe `LICENSE` en la raíz, con tres capas declaradas por separado: la obra original de 2007 de Antoine Aubry bajo CPOL 1.02, los forks intermedios sin licencia declarada, y los cambios de este fork bajo MIT. La procedencia está trazada en `docs/procedencia-y-licencia.md` y la atribución restaurada en el README.
 
-No existe `LICENSE` ni `COPYING` en el repositorio. Está registrado como P1 en `.agent-context/03-problemas-conocidos.md`, en `.agent-context/01-estado-actual.md`, en `.agent-context/05-siguientes-pasos.md`, en `ROADMAP.md` y públicamente en el README. El trabajo es identificar la licencia del upstream del fork y añadir archivo y atribución compatibles.
+Esto desbloquea la etapa 10, con una restricción que hay que respetar: por CPOL 5(d) la obra no puede venderse, arrendarse ni alquilarse por sí sola. La publicación gratuita del instalador sí es compatible.
+
+Queda un punto abierto de cumplimiento: CPOL 3(c) pide una nota en cada archivo modificado indicando cómo, cuándo y dónde se cambió. Hoy esa trazabilidad solo está en el historial de Git. Decidir si se añaden las notas a los archivos que descienden del volcado original o si se documenta el historial como mecanismo equivalente.
 
 ## Carril C — Validación física
 

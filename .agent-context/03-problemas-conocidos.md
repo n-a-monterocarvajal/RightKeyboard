@@ -58,11 +58,13 @@ La Configuración WinUI reúne Exportar, Importar y Limpiar en Preferencias, y m
 
 El esquema puede resolver layouts por identificador o nombre, pero no hay prueba entre dos equipos reales. Además, al faltar un layout, `LoadImport` conserva el dispositivo pero elimina esa asociación de la configuración candidata y solo emite advertencia; comprobar que esta semántica es la deseada antes de llamarla «preferencia pendiente».
 
-## P1 — licencia ausente
+## Licencia — resuelto el 19 de julio de 2026
 
-El fork heredado no contiene `LICENSE`. No presentar 1.5 como jurídicamente lista para distribución/contribuciones sin resolver procedencia y licencia.
+Existe `LICENSE` en la raíz, con tres capas: obra original de 2007 de Antoine Aubry bajo CPOL 1.02, forks intermedios sin licencia declarada, y cambios de este fork bajo MIT. Procedencia trazada en `docs/procedencia-y-licencia.md`.
 
-Procedencia ya trazada el 19 de julio de 2026 en `docs/procedencia-y-licencia.md`: el origen es el artículo de CodeProject núm. 20994 (2007), vía `agabor` → `gmcouto` → `mnivet`, y ninguno de los cuatro repositorios declara licencia. Falta confirmar autor y pie de licencia del artículo en la instantánea del archivo web, porque CodeProject cerró. Hasta tener ese dato no se puede elegir la licencia de salida: si el origen es CPOL, la obra derivada arrastra sus términos.
+Restricción vigente que condiciona la distribución: por CPOL 5(d) la obra **no puede venderse, arrendarse ni alquilarse por sí sola**, aunque los aportes propios sean MIT. Distribuirla gratis sí es compatible.
+
+Queda un punto abierto: CPOL 3(c) pide una nota en cada archivo modificado indicando cómo, cuándo y dónde se cambió. Hoy esa trazabilidad solo está en el historial de Git. Decidir si se añaden las notas o se documenta el historial como equivalente.
 
 ## P2 — primera detección no admite solo modificadores/auxiliares
 
