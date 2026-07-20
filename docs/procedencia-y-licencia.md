@@ -23,16 +23,19 @@ El artículo original es «Using multiple keyboards with different layouts on th
 - **Ninguno de los cuatro repositorios de la cadena contiene un archivo de licencia.** Comprobado mediante la API de GitHub sobre `agabor`, `gmcouto`, `mnivet` y este repositorio: los cuatro responden sin licencia declarada. La ausencia es heredada desde el origen.
 - `codeproject.com` dejó de operar: el dominio está aparcado en GoDaddy. La fuente autorizada de los términos originales ya no está disponible en su dirección canónica. Existe una instantánea en el archivo web con fecha del 19 de mayo de 2024.
 
-## Pendiente de confirmar
+## Confirmado
 
-Dos datos, ambos en la página archivada del artículo:
+El artículo declara **Code Project Open License (CPOL) 1.02** y su autor es **Antoine Aubry**. Confirmado el 19 de julio de 2026 sobre la instantánea archivada, dado que el sitio original ya no opera.
 
-1. El nombre del autor original.
-2. El texto exacto del pie de licencia.
+Con ese dato se resolvió la licencia del proyecto. El resultado está en el archivo `LICENSE` de la raíz, estructurado en tres capas: la obra original de 2007 bajo CPOL 1.02, los forks intermedios sin licencia declarada, y los cambios de este fork bajo MIT. Ninguna capa relicencia a otra.
 
-Por qué importa la precisión: CodeProject publicaba por omisión bajo la **Code Project Open License (CPOL)**, pero un artículo podía declarar otros términos, así que la suposición no sustituye a la comprobación. Si el origen resulta ser CPOL, condiciona la licencia de salida de este fork: una obra derivada arrastra esos términos y no puede relicenciarse sin más a una licencia permisiva. CPOL además no está aprobada por la OSI y su compatibilidad con licencias copyleft es discutida.
+Las obligaciones de CPOL que sobreviven a la licencia MIT de los aportes nuevos son las secciones 3(c), 5(a), 5(d) y 6. La de mayor consecuencia práctica es 5(d): la obra no puede venderse, arrendarse ni alquilarse por sí sola, con independencia de que los aportes propios sean MIT. CPOL además no está aprobada por la OSI y su compatibilidad con licencias copyleft es discutida, lo que conviene tener presente si alguna vez se integra código de terceros bajo esas licencias.
 
-Mientras estos dos datos no se confirmen, la licencia de salida de RightKeyboard no puede elegirse con fundamento.
+## Cumplimiento pendiente de CPOL 3(c)
+
+La sección 3(c) de CPOL exige «a prominent notice in each changed file stating how, when and where You changed that file». Los archivos heredados de la obra original se han reescrito ampliamente a lo largo de las líneas 1.4 y 1.5 sin incorporar esas notas: hoy la trazabilidad de los cambios descansa únicamente en el historial de Git.
+
+Conviene decidir si se añaden esas notas a los archivos que descienden del volcado original, o si se documenta el historial de Git como mecanismo equivalente. Es el único punto de CPOL que este repositorio no atiende de forma explícita.
 
 ## Situación de la atribución
 

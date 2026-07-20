@@ -69,7 +69,11 @@ La opción de Windows **Permitir usar un método de entrada diferente para cada 
 
 Este fork conserva el trabajo previo de los autores y colaboradores de RightKeyboard. El código proviene del artículo «Using multiple keyboards with different layouts on the same machine», publicado en CodeProject el 23 de octubre de 2007 (`codeproject.com/Articles/20994/`), a través de los forks sucesivos de [agabor](https://github.com/agabor/RightKeyboard), [gmcouto](https://github.com/gmcouto/RightKeyboard) y [mnivet](https://github.com/mnivet/RightKeyboard). CodeProject dejó de operar y esa dirección ya no responde.
 
-Ninguno de los repositorios de esa cadena incluye un archivo `LICENSE`, de modo que la licencia aplicable sigue sin determinarse. Antes de distribuir binarios o aceptar contribuciones externas hay que aclararla y documentarla. La investigación de procedencia está en [Procedencia y licencia](docs/procedencia-y-licencia.md).
+El artículo de origen fue publicado por Antoine Aubry bajo la Code Project Open License 1.02. Ninguno de los forks intermedios declara licencia para sus propias modificaciones.
+
+El proyecto se distribuye en tres capas, detalladas en [LICENSE](LICENSE): la obra original de 2007 bajo CPOL 1.02, los forks intermedios sin licencia declarada, y los cambios introducidos en este repositorio desde el fork bajo licencia MIT. Ninguna capa relicencia a otra.
+
+Consecuencia práctica: por la sección 5(d) de CPOL, **RightKeyboard no puede venderse, arrendarse ni alquilarse por sí solo**, aunque los aportes de este fork sean MIT. Distribuirlo gratuitamente es compatible con las tres capas. La investigación de procedencia está en [Procedencia y licencia](docs/procedencia-y-licencia.md).
 
 ## Idioma del proyecto
 

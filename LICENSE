@@ -1,0 +1,121 @@
+RightKeyboard — Licencia
+========================
+
+Este proyecto es una obra derivada con capas de distinta procedencia y distinta
+licencia. Cada capa se declara por separado. Ninguna capa relicencia a otra.
+
+Última revisión: 19 de julio de 2026.
+La investigación de procedencia está en docs/procedencia-y-licencia.md.
+
+
+1. Obra original (2007) — Code Project Open License 1.02
+--------------------------------------------------------
+
+Autor: Antoine Aubry.
+Publicada como el artículo número 20994, «Using multiple keyboards with
+different layouts on the same machine», en CodeProject, el 23 de octubre
+de 2007.
+Licencia declarada: The Code Project Open License (CPOL) 1.02.
+
+CodeProject dejó de operar y su dominio ya no aloja el artículo. El texto
+íntegro de la licencia se conserva en:
+
+    https://spdx.org/licenses/CPOL-1.02.html
+
+El núcleo heredado de RightKeyboard deriva de esa obra. Las obligaciones de
+CPOL 1.02 siguen vigentes sobre esa capa y sobre cualquier distribución que
+la contenga, incluidos los binarios de este proyecto. En particular:
+
+  - Sección 3(c): las obras derivadas requieren una nota visible en cada
+    archivo modificado indicando cómo, cuándo y dónde se modificó.
+  - Sección 5(a): no se pueden retirar los avisos de copyright, patente,
+    marca ni atribución, ni sus descargos asociados.
+  - Sección 5(d): la obra no puede venderse, arrendarse ni alquilarse por sí
+    sola. Puede incluirse dentro de una distribución de software mayor que sí
+    se venda, pero la obra por sí misma no.
+  - Sección 6: el descargo de responsabilidad debe transmitirse siempre que se
+    distribuya la obra o una obra derivada.
+
+La obra se entrega «tal cual», sin garantías de ningún tipo, según establece
+la sección 6 de CPOL 1.02.
+
+
+2. Forks intermedios (2015-2020) — licencia no declarada
+--------------------------------------------------------
+
+El código llegó a este repositorio a través de tres forks sucesivos:
+
+    agabor/RightKeyboard   (repositorio creado en 2015)
+    gmcouto/RightKeyboard  (enero de 2020)
+    mnivet/RightKeyboard   (mayo de 2020)
+
+Ninguno de los tres incluye un archivo de licencia. Se comprobó el 19 de julio
+de 2026 mediante la API de GitHub: los tres responden sin licencia declarada.
+
+En consecuencia, **se desconoce bajo qué términos esos autores liberaron sus
+propias modificaciones**. No consta declaración expresa ni autorización
+específica. Esta incertidumbre se declara abiertamente en lugar de suponer
+unos términos que nadie escribió.
+
+Los README de gmcouto y mnivet sí atribuyen la obra al artículo de CodeProject
+citado en la sección 1.
+
+
+3. Cambios de este fork (desde junio de 2026) — Licencia MIT
+-------------------------------------------------------------
+
+Copyright (c) 2026 n-a-monterocarvajal y colaboradores de este repositorio.
+
+Esta licencia se aplica **únicamente a los cambios introducidos en este
+repositorio a partir del fork**, y no relicencia la obra original ni los
+aportes descritos en las secciones 1 y 2.
+
+Por la presente se concede permiso, sin cargo, a cualquier persona que obtenga
+una copia de este software y de los archivos de documentación asociados (el
+«Software»), para utilizar el Software sin restricción, incluidos sin
+limitación los derechos a usar, copiar, modificar, fusionar, publicar,
+distribuir, sublicenciar y/o vender copias del Software, y a permitir a las
+personas a las que se les proporcione el Software que lo hagan, con sujeción a
+las siguientes condiciones:
+
+El aviso de copyright anterior y este aviso de permiso se incluirán en todas
+las copias o partes sustanciales del Software.
+
+EL SOFTWARE SE PROPORCIONA «TAL CUAL», SIN GARANTÍA DE NINGÚN TIPO, EXPRESA O
+IMPLÍCITA, INCLUIDAS, ENTRE OTRAS, LAS GARANTÍAS DE COMERCIABILIDAD, IDONEIDAD
+PARA UN FIN DETERMINADO Y NO INFRACCIÓN. EN NINGÚN CASO LOS AUTORES O TITULARES
+DEL COPYRIGHT SERÁN RESPONSABLES DE NINGUNA RECLAMACIÓN, DAÑO U OTRA
+RESPONSABILIDAD, YA SEA EN UNA ACCIÓN CONTRACTUAL, EXTRACONTRACTUAL O DE OTRO
+TIPO, DERIVADA DE, FUERA DE O EN CONEXIÓN CON EL SOFTWARE O EL USO U OTRO TIPO
+DE ACCIONES EN EL SOFTWARE.
+
+
+4. Efecto combinado
+-------------------
+
+Los binarios distribuidos contienen las tres capas. Cuando las condiciones
+concurren, se aplica la más restrictiva de las que alcanzan a cada parte.
+
+La consecuencia práctica más relevante es que **RightKeyboard no puede
+venderse, arrendarse ni alquilarse por sí solo**, por la sección 5(d) de CPOL
+1.02, con independencia de que los aportes de la sección 3 sean MIT. La
+licencia MIT de esos aportes permite venderlos, pero no puede levantar la
+restricción que pesa sobre la capa heredada con la que se distribuyen.
+
+Distribuir el programa de forma gratuita, incluido el instalador, es
+compatible con las tres capas siempre que se conserven las atribuciones y se
+transmita el descargo de CPOL.
+
+
+5. Lo que se desconoce
+----------------------
+
+Se declara expresamente, en lugar de suponerlo:
+
+  - Los términos bajo los que los autores de los forks intermedios liberaron
+    sus modificaciones (sección 2).
+  - El titular concreto del copyright de 2007 registrado en el
+    AssemblyInfo.cs heredado, que consta como «Copyright ©  2007» sin nombre.
+    La autoría del artículo de origen sí está identificada en la sección 1.
+
+Si alguno de estos puntos se aclara, este documento debe actualizarse.
