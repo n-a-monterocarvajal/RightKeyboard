@@ -67,7 +67,9 @@ La opción de Windows **Permitir usar un método de entrada diferente para cada 
 
 ## Origen y estado legal
 
-Este fork conserva el trabajo previo de los autores y colaboradores de RightKeyboard. El historial recibido no incluye un archivo `LICENSE`; antes de distribuir binarios o aceptar contribuciones externas conviene aclarar y documentar la licencia aplicable.
+Este fork conserva el trabajo previo de los autores y colaboradores de RightKeyboard. El código proviene del artículo «Using multiple keyboards with different layouts on the same machine», publicado en CodeProject el 23 de octubre de 2007 (`codeproject.com/Articles/20994/`), a través de los forks sucesivos de [agabor](https://github.com/agabor/RightKeyboard), [gmcouto](https://github.com/gmcouto/RightKeyboard) y [mnivet](https://github.com/mnivet/RightKeyboard). CodeProject dejó de operar y esa dirección ya no responde.
+
+Ninguno de los repositorios de esa cadena incluye un archivo `LICENSE`, de modo que la licencia aplicable sigue sin determinarse. Antes de distribuir binarios o aceptar contribuciones externas hay que aclararla y documentarla. La investigación de procedencia está en [Procedencia y licencia](docs/procedencia-y-licencia.md).
 
 ## Idioma del proyecto
 

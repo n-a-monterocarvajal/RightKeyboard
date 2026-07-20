@@ -62,6 +62,8 @@ El esquema puede resolver layouts por identificador o nombre, pero no hay prueba
 
 El fork heredado no contiene `LICENSE`. No presentar 1.5 como jurídicamente lista para distribución/contribuciones sin resolver procedencia y licencia.
 
+Procedencia ya trazada el 19 de julio de 2026 en `docs/procedencia-y-licencia.md`: el origen es el artículo de CodeProject núm. 20994 (2007), vía `agabor` → `gmcouto` → `mnivet`, y ninguno de los cuatro repositorios declara licencia. Falta confirmar autor y pie de licencia del artículo en la instantánea del archivo web, porque CodeProject cerró. Hasta tener ese dato no se puede elegir la licencia de salida: si el origen es CPOL, la obra derivada arrastra sus términos.
+
 ## P2 — primera detección no admite solo modificadores/auxiliares
 
 `RawKeyboardEvent.CanStartMapping` exige key-down utilizable y no modificador. `Ctrl`, `Shift`, `Alt`, Windows, `Fn` y varias multimedia no abren el selector por sí solas; una vez configurado sí aplican la asociación. Es deliberado para evitar falsos positivos. Véase `docs/limitaciones-conocidas-1.5.md`.
