@@ -4,6 +4,13 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [Sin publicar]
 
+## [1.5.5] - 2026-07-21
+
+### Configuración
+
+- El botón para recargar los dispositivos usa ahora un icono del sistema que se adapta al tema, sin perder su nombre accesible «Recargar» ni la ayuda que explica la acción.
+- Las casillas de Ignorar, inicio con Windows y diagnóstico muestran un glifo con esquinas redondeadas coherentes con el resto del panel WinUI.
+
 ## [1.5.4] - 2026-07-20
 
 ### Configuración

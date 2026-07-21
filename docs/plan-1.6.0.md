@@ -29,7 +29,7 @@ Secuenciales. Cada una es una sesión, una rama, un PR y un bump de versión.
 | 11 | 1.5.2 | Guardia de cambios sin guardar | Completada |
 | 12 | 1.5.3 | Coherencia de Ignorar y Agrupar | Completada |
 | 13 | 1.5.4 | Nomenclatura y estado de fila | Completada |
-| 14 | 1.5.5 | Pulido visual del panel | Pendiente |
+| 14 | 1.5.5 | Pulido visual del panel | Completada |
 | 15 | 1.5.6 | Exploración de pulsaciones sintéticas | Pendiente |
 | 16 | 1.5.7 | Fallback verificable ante caída del frontend | Pendiente |
 | 17 | 1.5.8 | Instrumentar el foco del selector | Pendiente |
@@ -126,12 +126,25 @@ Evidencia local:
 - Publicación previa al squash: 590 archivos, 271.316.185 bytes, ambos ejecutables con versión de archivo 1.5.4.0; instalador y SHA-256 completos y coincidentes. Se reconstruirán desde el commit fusionado antes de publicar la Release.
 - `git diff --check`: sin errores.
 
-### Etapa 14 — Pulido visual del panel (1.5.5)
+### Etapa 14 — Pulido visual del panel (1.5.5) · completada el 21 de julio de 2026
 
-Va después de la 12 y la 13 porque las tres editan la misma zona.
+Resultado:
 
-- Sustituir el texto del botón Recargar por un icono del sistema, conservando nombre accesible y descripción emergente.
-- Redondear las casillas sobrescribiendo el recurso de tema `CheckBoxCornerRadius`. La propiedad `CornerRadius` del control no afecta al glifo: los `CheckBox` son los únicos controles que hoy no fijan radio, frente al `CornerRadius(8)` del resto.
+- «Recargar» conserva ese nombre accesible y la ayuda «Recarga la lista de dispositivos detectados.», pero muestra `Symbol.Refresh` en un botón de 36 × 36 píxeles lógicos. El glifo y los estados visuales proceden de WinUI y heredan el tema; el identificador estable es `ReloadDevicesButton`.
+- La raíz de Configuración sobrescribe localmente `CheckBoxCornerRadius` con radio 4, proporcionado al radio 8 de los controles del panel. El recurso alcanza Ignorar, Iniciar con Windows y Diagnóstico cuando está compilado, sin depender de `CornerRadius` en cada `CheckBox` ni alterar el selector.
+- El respaldo WinForms conserva sus casillas nativas y no tiene un botón Recargar visible equivalente. La inspección de `SettingsDialog` y `FluentWindowStyler` no mostró un cambio paralelo necesario ni una incoherencia nueva.
+- Ambos proyectos avanzaron conjuntamente a `1.5.5`; no se modificaron persistencia, agrupación, ordenamiento, semántica de filas ni la guardia de cambios sin guardar.
+
+Evidencia local:
+
+- `dotnet test RightKeyboard.sln -c Release`: 185/185 pruebas superadas, sin omitidas; son las 182 anteriores y 3 nuevas para el contrato visual de nombre, ayuda y proporción de radios.
+- `dotnet build RightKeyboard.sln -c Release --no-restore`: compilación correcta, 0 advertencias y 0 errores.
+- Interfaz WinUI real en esta VM, en tema claro y oscuro: versión 1.5.5 visible, icono alineado en el encabezado, glifo de Ignorar redondeado en estados marcado y desmarcado, y casilla Iniciar con Windows coherente. Diagnóstico no estaba disponible en esta compilación y no se da por validado visualmente. La VM tampoco aporta evidencia válida de materiales, DPI mixto, varios monitores ni hardware físico.
+- UI Automation anunció «Recargar», la descripción completa y `ReloadDevicesButton`. Activar el botón recargó la lista; se observaron los estados normal, hover y foco. La herramienta no permite congelar el instante pulsado, y deshabilitado no aplica porque Recargar permanece habilitado; esos estados no se dan por validados de forma independiente. El tooltip comparte la descripción comprobada por UI Automation, pero su ventana emergente no llegó a quedar visible en la captura y no se da por validada visualmente.
+- Marcar Ignorar siguió deshabilitando inmediatamente Distribución, el destino y Agrupar; desmarcarlo restauró el estado anterior sin persistir cambios. Las filas y sus nombres accesibles conservaron conexión, Ignorado y distribución.
+- La alineación quedó comprobada a 1080 × 720. Los intentos de arrastre automatizado no llevaron la ventana a 900 × 640, por lo que el tamaño mínimo exacto no se da por validado visualmente en esta sesión.
+- Publicación previa al squash: 590 archivos, 271.324.377 bytes, ambos ejecutables con versión de archivo 1.5.5.0; instalador de 65.797.947 bytes y SHA-256 `fc5440c6a9b439d5028ed6b27d4b2afbe0148049e5e8d7a65d3d0321abc288cf`, coincidente con su archivo. Se reconstruirá desde el commit fusionado antes de publicar la Release.
+- `git diff --check`: sin errores.
 
 ### Etapa 15 — Exploración de pulsaciones sintéticas (1.5.6)
 
