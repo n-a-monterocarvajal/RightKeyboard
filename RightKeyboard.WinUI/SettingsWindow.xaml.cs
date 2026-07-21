@@ -102,6 +102,8 @@ public sealed class SettingsWindow : Window
     private UIElement BuildContent()
     {
         Grid root = new() { Padding = new Thickness(24, 0, 24, 24), RowSpacing = 16 };
+        root.Resources["CheckBoxCornerRadius"] = new CornerRadius(
+            SettingsPanelVisualContract.CheckBoxGlyphCornerRadius);
         contentRoot = root;
         root.Background = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
         root.ActualThemeChanged += (_, _) => ApplyFluentResources();
@@ -199,8 +201,23 @@ public sealed class SettingsWindow : Window
         };
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(devicesTitle, "Dispositivos detectados");
         devicesHeader.Children.Add(devicesTitle);
-        Button reload = new() { Content = "Recargar", VerticalAlignment = VerticalAlignment.Center };
-        reload.CornerRadius = new CornerRadius(8);
+        Button reload = new()
+        {
+            Content = new SymbolIcon(Symbol.Refresh),
+            Width = 36,
+            Height = 36,
+            Padding = new Thickness(0),
+            VerticalAlignment = VerticalAlignment.Center,
+            CornerRadius = new CornerRadius(SettingsPanelVisualContract.ControlCornerRadius)
+        };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(reload, "ReloadDevicesButton");
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(
+            reload,
+            SettingsPanelVisualContract.ReloadAccessibleName);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(
+            reload,
+            SettingsPanelVisualContract.ReloadToolTip);
+        ToolTipService.SetToolTip(reload, SettingsPanelVisualContract.ReloadToolTip);
         buttons.Add(reload);
         reload.Click += ReloadButton_Click;
         Grid.SetColumn(reload, 1);
