@@ -87,4 +87,73 @@ public sealed class SettingsEditorAvailabilityTests
             Assert.That(availability.ClearInvalidGroupTargetSelection, Is.False);
         });
     }
+
+    [Test]
+    public void IsGroupTargetCandidate_DosDispositivosSueltos_OfreceElOtroComoDestino()
+    {
+        // Regresión: al seleccionar un dispositivo suelto, otro dispositivo suelto debe
+        // aparecer en el desplegable. Ambos tienen GroupId nulo y eso no significa que
+        // compartan grupo.
+        Assert.That(
+            SettingsEditorAvailability.IsGroupTargetCandidate(
+                candidateCanBeGroupTarget: true,
+                candidateGroupId: null,
+                candidateTargetIdentity: "Notebook",
+                selectedGroupId: null,
+                selectedTargetIdentity: "Escritorio2"),
+            Is.True);
+    }
+
+    [Test]
+    public void IsGroupTargetCandidate_LaPropiaFilaSeleccionada_NoEsDestino()
+    {
+        Assert.That(
+            SettingsEditorAvailability.IsGroupTargetCandidate(
+                candidateCanBeGroupTarget: true,
+                candidateGroupId: null,
+                candidateTargetIdentity: "Escritorio2",
+                selectedGroupId: null,
+                selectedTargetIdentity: "Escritorio2"),
+            Is.False);
+    }
+
+    [Test]
+    public void IsGroupTargetCandidate_CandidatoNoAgrupable_NoEsDestino()
+    {
+        // p. ej. un dispositivo ignorado, un grupo o un miembro de grupo.
+        Assert.That(
+            SettingsEditorAvailability.IsGroupTargetCandidate(
+                candidateCanBeGroupTarget: false,
+                candidateGroupId: null,
+                candidateTargetIdentity: "Control Baseus",
+                selectedGroupId: null,
+                selectedTargetIdentity: "Escritorio2"),
+            Is.False);
+    }
+
+    [Test]
+    public void IsGroupTargetCandidate_OrigenGrupo_OfreceDispositivosSueltos()
+    {
+        Assert.That(
+            SettingsEditorAvailability.IsGroupTargetCandidate(
+                candidateCanBeGroupTarget: true,
+                candidateGroupId: null,
+                candidateTargetIdentity: "Notebook",
+                selectedGroupId: "grupo-1",
+                selectedTargetIdentity: "Escritorio2"),
+            Is.True);
+    }
+
+    [Test]
+    public void IsGroupTargetCandidate_MismoGrupoReal_NoSeDuplicaComoDestino()
+    {
+        Assert.That(
+            SettingsEditorAvailability.IsGroupTargetCandidate(
+                candidateCanBeGroupTarget: true,
+                candidateGroupId: "grupo-1",
+                candidateTargetIdentity: "Notebook",
+                selectedGroupId: "grupo-1",
+                selectedTargetIdentity: "Escritorio2"),
+            Is.False);
+    }
 }

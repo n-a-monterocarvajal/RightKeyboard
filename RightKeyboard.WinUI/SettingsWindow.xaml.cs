@@ -1029,9 +1029,12 @@ public sealed class SettingsWindow : Window
                     .FirstOrDefault(candidate => candidate.Identifier == row.Layout.Identifier);
             GroupTargetComboBox.Items.Clear();
             foreach (DeviceRow candidate in rows.Where(candidate =>
-                         candidate.CanBeGroupTarget &&
-                         !string.Equals(candidate.GroupId, row.GroupId, StringComparison.OrdinalIgnoreCase) &&
-                         !string.Equals(candidate.TargetIdentity, row.TargetIdentity, StringComparison.OrdinalIgnoreCase)))
+                         SettingsEditorAvailability.IsGroupTargetCandidate(
+                             candidate.CanBeGroupTarget,
+                             candidate.GroupId,
+                             candidate.TargetIdentity,
+                             row.GroupId,
+                             row.TargetIdentity)))
             {
                 GroupTargetComboBox.Items.Add(candidate);
             }

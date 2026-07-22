@@ -4,15 +4,17 @@ Observaciones recogidas al usar la versión 1.5.4. No son notas de publicación 
 
 Cada punto describe lo observado, lo que se sabe del código y lo que quedaría por decidir o hacer. Al convertir uno en trabajo real, trasládese al backlog (`.agent-context/05-siguientes-pasos.md`), a `ROADMAP.md` o a `docs/plan-1.6.0.md` según corresponda, y déjese aquí la referencia.
 
-## 1. El desplegable de «Agrupar con otra identidad» aparece vacío
+## 1. El desplegable de «Agrupar con otra identidad» aparece vacío — **corregido en 1.5.5.2, pendiente de validación física**
 
-**Tipo:** defecto. La función de agrupación manual no puede utilizarse.
+**Tipo:** defecto. La función de agrupación manual no podía utilizarse (persistía en 1.5.5.1).
 
-**Síntoma:** en la Configuración WinUI de 1.5.4 el desplegable «Agrupar con otra identidad» se muestra vacío, sin candidatos seleccionables.
+**Síntoma:** en la Configuración WinUI el desplegable «Agrupar con otra identidad» se mostraba vacío, sin candidatos seleccionables, al seleccionar un dispositivo suelto.
 
-**Sospecha inicial:** revisar el filtrado de candidatos endurecido en 1.5.3 —una identidad ignorada dejó de poder agrupar o aparecer como destino— y la construcción de la lista de destinos en `SettingsWindow` (poblado de `GroupTargetComboBox`, condición `CanBeGroupTarget`) y su acción IPC. Confirmar si el filtro excluye de más o si la lista sencillamente no se está poblando.
+**Causa:** el filtro de candidatos en `SettingsWindow.ApplySelectedDevice` excluía todo candidato cuyo `GroupId` coincidiera con el de la fila seleccionada, comparando con `string.Equals`. Los destinos válidos (`CanBeGroupTarget`) son siempre dispositivos sueltos con `GroupId` nulo; al seleccionar otro dispositivo suelto (también `GroupId` nulo), `string.Equals(null, null)` daba verdadero y se excluían todos. La agrupación desde un grupo ya existente sí funcionaba porque su `GroupId` no es nulo, por eso el defecto parecía parcial.
 
-**Pendiente:** reproducir con al menos dos identidades no ignoradas, localizar dónde se arma la lista de destinos y validar el arreglo con hardware o identidades simuladas.
+**Arreglo:** la elegibilidad de destino se extrajo a `SettingsEditorAvailability.IsGroupTargetCandidate` (función pura con pruebas NUnit) y «sin grupo» (nulo) deja de tratarse como «el mismo grupo»: solo se excluye un candidato cuando ambos comparten un grupo real no nulo. Ver `SettingsEditorAvailabilityTests`.
+
+**Pendiente:** validación física con al menos dos identidades no ignoradas en la estación real (agrupar y separar), fuera de la cobertura unitaria.
 
 ## 2. Indicador gráfico de conexión en «Dispositivos detectados»
 

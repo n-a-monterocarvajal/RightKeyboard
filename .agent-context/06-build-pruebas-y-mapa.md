@@ -102,7 +102,7 @@ Workflows vigentes:
 | Workflow | Archivo | Se ejecuta | Qué hace |
 |---|---|---|---|
 | CI | `.github/workflows/ci.yml` | push a `master`, cada pull request, manual (`workflow_dispatch`) | `dotnet restore` + `dotnet build -c Release` (solución completa; WinUI mapea a x64) + `dotnet test`. Advertencias como errores. Sin artefactos. |
-| Compilación distribuible | `.github/workflows/build-package.yml` | manual (`workflow_dispatch`) o etiqueta `v*` | Instala Inno Setup y ejecuta `scripts/build-installer.ps1`; sube `RightKeyboard-<versión>-Setup.exe` y su `-SHA256.txt` como artefacto (retención 7 días). |
+| Compilación distribuible | `.github/workflows/build-package.yml` | manual (`workflow_dispatch`) o etiqueta `v*` | Entrada `artifact`: `installer` (por defecto, `scripts/build-installer.ps1` → instalador Inno Setup) o `zip` (`scripts/build-portable-zip.ps1` → ZIP portable autocontenido para pruebas). Ambas suben binario + `-SHA256.txt` (retención 7 días). |
 | Dependabot | `.github/dependabot.yml` | semanal (lunes) | PRs agrupados de NuGet y GitHub Actions. |
 
 Reglas obligatorias para agentes:
