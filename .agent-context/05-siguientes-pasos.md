@@ -109,7 +109,7 @@ Probar equipo A→B, layout ausente y dispositivo desconectado. Decidir si una a
 
 Las notas recogidas al usar cada versión viven en `docs/notas-de-uso-<versión>.md` (p. ej. `docs/notas-de-uso-1.5.4.md`), separadas de este backlog porque aún no están priorizadas ni convertidas en criterios de aceptación. Revísalas al planificar: cada punto es candidato a entrar aquí, en `ROADMAP.md` o en `docs/plan-1.6.0.md`. Al promover uno, déjalo referenciado desde el documento de notas para no duplicar el seguimiento.
 
-Pendientes abiertos en `docs/notas-de-uso-1.5.4.md`: desplegable de agrupación vacío (defecto), indicador gráfico de conexión, evaluación de agrupar identidades ignoradas, actualizador en la app y regla de orden «Conectados arriba».
+Pendientes abiertos en `docs/notas-de-uso-1.5.4.md`: indicador gráfico de conexión, evaluación de agrupar identidades ignoradas, actualizador en la app y regla de orden «Conectados arriba». El desplegable de agrupación vacío quedó **corregido en 1.5.5.2** (`SettingsEditorAvailability.IsGroupTargetCandidate`), pendiente solo de validación física.
 
 ## Puerta propuesta
 
