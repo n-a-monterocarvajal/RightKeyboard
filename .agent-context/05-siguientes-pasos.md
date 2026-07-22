@@ -80,9 +80,9 @@ Reducir textos «tipo máquina» en Configuración, selector, errores e instalad
 - invariantes de orden de dispositivos;
 - pruebas UI automatizables para overlay/foco cuando la infraestructura lo permita.
 
-### 10. Añadir CI y política de warnings
+### 10. Añadir CI y política de warnings — **implementado**
 
-Workflow Windows para restore/build/test, SDK fijado por `global.json`; considerar `TreatWarningsAsErrors` después de limpiar baseline. El instalador puede permanecer job manual por Inno Setup/licencia.
+Workflow Windows para restore/build/test, SDK fijado por `global.json`; `TreatWarningsAsErrors` activo en `Directory.Build.props`. Hecho: `.github/workflows/ci.yml` (push a `master`, PR y manual) con caché NuGet, cancelación de ejecuciones obsoletas, timeout y permisos mínimos. El instalador quedó como job manual (`.github/workflows/build-package.yml`, disparo manual o etiqueta `v*`) que ejecuta `scripts/build-installer.ps1` y publica el instalador + SHA-256 como artefacto de 7 días; Inno Setup se instala en el runner. Dependabot semanal agrupado (`.github/dependabot.yml`) para NuGet y GitHub Actions. Documentación: `docs/automatizacion-ci-cd.md`. Pendiente: firma Authenticode/MSIX (requiere certificado y secretos) y decidir si se automatiza la GitHub Release.
 
 ### 11. Extraer contratos compartidos
 
