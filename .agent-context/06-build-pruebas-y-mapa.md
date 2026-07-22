@@ -102,7 +102,7 @@ Workflows vigentes:
 | Workflow | Archivo | Se ejecuta | Qué hace |
 |---|---|---|---|
 | CI | `.github/workflows/ci.yml` | push a `master`, cada pull request, manual (`workflow_dispatch`) | `dotnet restore` + `dotnet build -c Release` (solución completa; WinUI mapea a x64) + `dotnet test`. Advertencias como errores. Sin artefactos. |
-| Compilación distribuible | `.github/workflows/build-package.yml` | manual (`workflow_dispatch`) o etiqueta `v*` | Entrada `artifact`: `installer` (por defecto, `scripts/build-installer.ps1` → instalador Inno Setup) o `zip` (`scripts/build-portable-zip.ps1` → ZIP portable autocontenido para pruebas). Ambas suben binario + `-SHA256.txt` (retención 7 días). |
+| Compilación distribuible | `.github/workflows/build-package.yml` | manual (`workflow_dispatch`) o etiqueta `v*` | Entrada `artifact`: `installer` (por defecto, `scripts/build-installer.ps1` → instalador Inno Setup) o `zip` (`scripts/build-portable-zip.ps1` → ZIP portable autocontenido para pruebas). Ambas suben binario + `-SHA256.txt` (retención 7 días). Entrada `publish=yes` (solo con `installer`): un job aparte con `contents: write` crea la GitHub Release `vX.Y.Z` con los dos assets. |
 | Dependabot | `.github/dependabot.yml` | semanal (lunes) | PRs agrupados de NuGet y GitHub Actions. |
 
 Reglas obligatorias para agentes:
@@ -126,12 +126,17 @@ Limitación registrada: el instalador y los binarios se generan **sin firmar**; 
 
 No publicar por inferencia. Requiere solicitud humana explícita. Secuencia esperada:
 
-1. árbol limpio y commit exacto;
-2. build/test Release;
-3. instalador + SHA-256 desde ese commit;
-4. push de `codex/version-1.5`;
-5. tag/release prerelease y dos assets;
-6. verificar digest remoto y tag.
+1. árbol limpio y commit exacto en `master` (CHANGELOG fechado con la versión);
+2. build/test Release verde en CI;
+3. compilación distribuible en modalidad `installer` con `publish=yes` sobre `master`;
+   el job `publish` crea el tag `vX.Y.Z`, sube el instalador + `-SHA256.txt` y redacta
+   las notas desde el CHANGELOG (Release firmada por `github-actions[bot]`);
+4. verificar la Release, el tag, los dos assets y el SHA-256 publicado.
+
+Alternativa manual (como hasta 1.5.5.1): compilar el `installer` sin `publish`, descargar
+los dos assets del artefacto y crear la Release a mano. Nota histórica: la línea 1.5.x se
+publicó como Release estable (no prerelease). Antes de 1.5.5.2 la Release se creaba a mano;
+desde 1.5.5.2 el workflow puede crearla con `publish=yes`.
 
 ## Mapa del repositorio
 

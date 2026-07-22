@@ -8,8 +8,13 @@ name: Compilación distribuible
 #     + SHA-256, vía scripts/build-portable-zip.ps1, para probar en una estación que
 #     no es la de desarrollo sin instalar nada.
 # No se ejecuta en cada commit ni pull request; solo manualmente o al empujar una
-# etiqueta de versión (v*, siempre en modalidad installer). El resultado es un
-# artefacto descargable con retención breve, no una GitHub Release.
+# etiqueta de versión (v*, siempre en modalidad installer). El resultado normal es un
+# artefacto descargable con retención breve.
+#
+# Publicación (entrada "publish"=yes, solo con artifact=installer): un job aparte
+# —con permiso contents: write acotado a ese job— crea una GitHub Release vX.Y.Z
+# con el instalador y su SHA-256 desde Actions, usando el GITHUB_TOKEN del runner
+# (sin tokens personales). Por defecto no publica.
 
 on:
   workflow_dispatch:
@@ -26,6 +31,14 @@ on:
         options:
           - installer
           - zip
+      publish:
+        description: 'Publicar una GitHub Release (solo con artifact=installer)'
+        required: false
+        default: 'no'
+        type: choice
+        options:
+          - 'no'
+          - 'yes'
   push:
     tags:
       - 'v*'
@@ -44,6 +57,8 @@ jobs:
     name: Compilación distribuible (Windows, x64, Release)
     runs-on: windows-latest
     timeout-minutes: 45
+    outputs:
+      version: ${{ steps.version.outputs.version }}
 
     steps:
       - name: Checkout
@@ -115,3 +130,69 @@ jobs:
             artifacts/portable/RightKeyboard-*-portable-SHA256.txt
           retention-days: 7
           if-no-files-found: error
+
+  # Publica la GitHub Release solo cuando se pide explícitamente (publish=yes) en
+  # modalidad installer. Job aparte para acotar contents: write a la publicación;
+  # el job de compilación permanece de solo lectura. Corre en Ubuntu (gh preinstalado)
+  # y reutiliza el instalador que subió el job anterior.
+  publish:
+    name: Publicar GitHub Release
+    needs: package
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.publish == 'yes' && github.event.inputs.artifact == 'installer' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Descargar el instalador compilado
+        uses: actions/download-artifact@v4
+        with:
+          name: RightKeyboard-${{ needs.package.outputs.version }}-win-x64-installer
+          path: dist
+
+      # Crea el tag vX.Y.Z sobre el commit actual y la Release con los dos assets.
+      # Las notas salen de la sección del CHANGELOG de esa versión más el resumen de
+      # descargas y el SHA-256 real del instalador recién compilado.
+      - name: Crear la GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version='${{ needs.package.outputs.version }}'
+          setup=$(ls dist/RightKeyboard-*-Setup.exe)
+          shafile=$(ls dist/RightKeyboard-*-SHA256.txt)
+          sha=$(cut -d' ' -f1 "$shafile")
+
+          {
+            echo "## RightKeyboard $version"
+            echo
+            awk -v ver="$version" '
+              index($0, "## [" ver "]") == 1 { flag=1; next }
+              flag && index($0, "## [") == 1 { flag=0 }
+              flag { print }
+            ' CHANGELOG.md
+            echo "### Descargas"
+            echo
+            echo "- \`$(basename "$setup")\`"
+            echo "- \`$(basename "$shafile")\`"
+            echo
+            echo "SHA-256 del instalador: \`$sha\`"
+          } > notes.md
+
+          if gh release view "v$version" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "La Release v$version ya existe; no se recrea." >&2
+            exit 1
+          fi
+
+          gh release create "v$version" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "RightKeyboard $version" \
+            --notes-file notes.md \
+            --latest \
+            "$setup" "$shafile"
+          echo "Release v$version publicada."
