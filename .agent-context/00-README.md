@@ -27,6 +27,7 @@ No se duplican especificaciones que ya están bien escritas:
 - Modelo de instalación por usuario: `docs/distribucion-1.5.md`, `installer/RightKeyboard.iss` e `installer/PRUEBAS.md`.
 - Automatización de GitHub Actions (CI, compilación distribuible y Dependabot): `docs/automatizacion-ci-cd.md`; reglas para agentes en `06-build-pruebas-y-mapa.md`.
 - Limitaciones funcionales deliberadas: `docs/limitaciones-conocidas-1.5.md`.
+- Observaciones de uso sin triar por versión: `docs/notas-de-uso-<versión>.md` (p. ej. `docs/notas-de-uso-1.5.4.md`). Léelas al buscar pendientes; al convertir una en trabajo, trasládala al backlog y deja la referencia.
 
 Cuando esos documentos contradicen este snapshot, debe prevalecer primero el código del commit actual y después `01-estado-actual.md`. Muchos documentos públicos conservan contexto histórico y no son una fotografía vigente.
 

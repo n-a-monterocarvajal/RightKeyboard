@@ -72,6 +72,8 @@ El orden en que se abordan estos pendientes, junto con la validación física, l
 - Revisar microtextos de la UI que aún suenan excesivamente técnicos.
 - Decidir cómo se atiende CPOL 3(c): notas de modificación por archivo, o el historial de Git documentado como equivalente. El resto de la licencia quedó resuelto el 19 de julio de 2026 en [LICENSE](LICENSE).
 
+Las observaciones de uso todavía sin triar de cada versión se recogen aparte, en `docs/notas-de-uso-<versión>.md` (por ejemplo [notas de uso 1.5.4](docs/notas-de-uso-1.5.4.md)), y se articulan en este backlog o en [Plan camino a 1.6.0](docs/plan-1.6.0.md) al convertirse en trabajo.
+
 ## Referencias históricas
 
 - [Continuación 1.5](docs/continuacion-1.5.md): especificación y observaciones iniciales de alpha.

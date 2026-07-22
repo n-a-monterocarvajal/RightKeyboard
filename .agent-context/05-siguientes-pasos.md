@@ -105,6 +105,12 @@ Mover DTO de IPC, `VersionPresentation` y modelos compartidos a una biblioteca p
 
 Probar equipo A→B, layout ausente y dispositivo desconectado. Decidir si una asociación no resoluble debe conservarse como pendiente en vez de descartarse con warning.
 
+## Observaciones de uso sin triar
+
+Las notas recogidas al usar cada versión viven en `docs/notas-de-uso-<versión>.md` (p. ej. `docs/notas-de-uso-1.5.4.md`), separadas de este backlog porque aún no están priorizadas ni convertidas en criterios de aceptación. Revísalas al planificar: cada punto es candidato a entrar aquí, en `ROADMAP.md` o en `docs/plan-1.6.0.md`. Al promover uno, déjalo referenciado desde el documento de notas para no duplicar el seguimiento.
+
+Pendientes abiertos en `docs/notas-de-uso-1.5.4.md`: desplegable de agrupación vacío (defecto), indicador gráfico de conexión, evaluación de agrupar identidades ignoradas, actualizador en la app y regla de orden «Conectados arriba».
+
 ## Puerta propuesta
 
 Para `1.5.1`, priorizar diagnóstico de desarrollo/detección preventiva antes que nuevas superficies UI grandes. Para `1.6`, considerar exportación/importación completa y refactor de contratos compartidos si no se resolvió en 1.5.x.
