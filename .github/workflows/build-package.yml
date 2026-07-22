@@ -1,11 +1,15 @@
 name: Compilación distribuible
 
-# Compilación limpia en Release que produce la salida distribuible del proyecto:
-# el instalador Inno Setup por usuario (RightKeyboard-<versión>-Setup.exe) más su
-# archivo SHA-256, tal como los genera scripts/build-installer.ps1. No se ejecuta
-# en cada commit ni pull request; solo manualmente o al empujar una etiqueta de
-# versión (v*). El resultado es un artefacto descargable con retención breve, no
-# una GitHub Release.
+# Compilación limpia en Release que produce una salida distribuible del proyecto.
+# Dos modalidades (entrada "artifact"):
+#   - installer (por defecto): instalador Inno Setup por usuario
+#     (RightKeyboard-<versión>-Setup.exe) + SHA-256, vía scripts/build-installer.ps1.
+#   - zip: ZIP portable autocontenido (RightKeyboard-<versión>-win-x64-portable.zip)
+#     + SHA-256, vía scripts/build-portable-zip.ps1, para probar en una estación que
+#     no es la de desarrollo sin instalar nada.
+# No se ejecuta en cada commit ni pull request; solo manualmente o al empujar una
+# etiqueta de versión (v*, siempre en modalidad installer). El resultado es un
+# artefacto descargable con retención breve, no una GitHub Release.
 
 on:
   workflow_dispatch:
@@ -14,6 +18,14 @@ on:
         description: 'Versión a estampar (vacío = usar la del proyecto en RightKeyboard.csproj)'
         required: false
         default: ''
+      artifact:
+        description: 'Qué generar'
+        required: false
+        default: 'installer'
+        type: choice
+        options:
+          - installer
+          - zip
   push:
     tags:
       - 'v*'
@@ -29,7 +41,7 @@ concurrency:
 
 jobs:
   package:
-    name: Instalador Inno Setup (Windows, x64, Release)
+    name: Compilación distribuible (Windows, x64, Release)
     runs-on: windows-latest
     timeout-minutes: 45
 
@@ -42,10 +54,11 @@ jobs:
         with:
           global-json-file: global.json
 
-      # Los runners de GitHub no traen Inno Setup preinstalado. build-installer.ps1
-      # detecta ISCC.exe en las rutas estándar de Program Files y en el shim de PATH
-      # que crea Chocolatey, así que no hace falta pasar -IsccPath.
+      # Los runners de GitHub no traen Inno Setup preinstalado. Solo se instala para la
+      # modalidad installer. build-installer.ps1 detecta ISCC.exe en las rutas estándar
+      # de Program Files y en el shim de PATH de Chocolatey, así que no hace falta -IsccPath.
       - name: Instalar Inno Setup
+        if: ${{ github.event.inputs.artifact != 'zip' }}
         run: choco install innosetup --no-progress -y
 
       - name: Determinar versión
@@ -66,21 +79,39 @@ jobs:
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           Write-Host "Versión de compilación: $version"
 
-      # Publica núcleo + WinUI autocontenidos (win-x64, ReadyToRun) en una sola
-      # carpeta, compila el instalador Inno Setup y escribe el SHA-256. El script
-      # es la fuente canónica del procedimiento de distribución del proyecto.
+      # Modalidad installer: publica núcleo + WinUI autocontenidos (win-x64, ReadyToRun)
+      # en una sola carpeta, compila el instalador Inno Setup y escribe el SHA-256.
       - name: Compilar instalador distribuible
+        if: ${{ github.event.inputs.artifact != 'zip' }}
         shell: pwsh
         run: ./scripts/build-installer.ps1 -Version ${{ steps.version.outputs.version }}
 
-      # Artefacto descargable desde la ejecución de Actions. El nombre identifica
-      # aplicación, versión, arquitectura y modalidad (instalador por usuario).
-      - name: Publicar artefacto
+      # Modalidad zip: misma publicación autocontenida, comprimida en un ZIP portable
+      # (sin instalador) para pruebas rápidas.
+      - name: Compilar ZIP portable autocontenido
+        if: ${{ github.event.inputs.artifact == 'zip' }}
+        shell: pwsh
+        run: ./scripts/build-portable-zip.ps1 -Version ${{ steps.version.outputs.version }}
+
+      # El nombre del artefacto identifica aplicación, versión, arquitectura y modalidad.
+      - name: Publicar artefacto (instalador)
+        if: ${{ github.event.inputs.artifact != 'zip' }}
         uses: actions/upload-artifact@v4
         with:
           name: RightKeyboard-${{ steps.version.outputs.version }}-win-x64-installer
           path: |
             artifacts/installer/RightKeyboard-*-Setup.exe
             artifacts/installer/RightKeyboard-*-SHA256.txt
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Publicar artefacto (ZIP portable)
+        if: ${{ github.event.inputs.artifact == 'zip' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: RightKeyboard-${{ steps.version.outputs.version }}-win-x64-portable
+          path: |
+            artifacts/portable/RightKeyboard-*-portable.zip
+            artifacts/portable/RightKeyboard-*-portable-SHA256.txt
           retention-days: 7
           if-no-files-found: error

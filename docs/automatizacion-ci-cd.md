@@ -14,7 +14,7 @@ compilaciones programadas, artefactos permanentes y jobs redundantes.
 | Workflow | Archivo | Disparadores | Runner | Resultado |
 |---|---|---|---|---|
 | CI | `.github/workflows/ci.yml` | push a `master`, pull request, manual | `windows-latest` | Restaura, compila Release y ejecuta pruebas. Sin artefactos. |
-| Compilación distribuible | `.github/workflows/build-package.yml` | manual, etiquetas `v*` | `windows-latest` | Instalador Inno Setup + SHA-256 como artefacto descargable (7 días). |
+| Compilación distribuible | `.github/workflows/build-package.yml` | manual, etiquetas `v*` | `windows-latest` | Instalador Inno Setup (o ZIP portable) + SHA-256 como artefacto descargable (7 días). |
 | Dependabot | `.github/dependabot.yml` | semanal (lunes) | — | Pull requests agrupados de NuGet y GitHub Actions. |
 
 ## 1. Integración continua (`ci.yml`)
@@ -67,31 +67,45 @@ dispara CI.
 ### Cómo iniciarla
 
 - **Manual:** pestaña *Actions* → *Compilación distribuible* → *Run workflow*.
-  Admite una entrada `version` opcional; si se deja vacía se usa la del proyecto
-  (`RightKeyboard/RightKeyboard.csproj`).
-- **Por etiqueta:** al empujar una etiqueta `v*` (p. ej. `v1.5.5.1`), la versión
-  se deriva del nombre de la etiqueta sin el prefijo `v`.
+  Entradas:
+  - `version` (opcional): si se deja vacía se usa la del proyecto
+    (`RightKeyboard/RightKeyboard.csproj`).
+  - `artifact`: `installer` (por defecto) o `zip`.
+- **Por etiqueta:** al empujar una etiqueta `v*` (p. ej. `v1.5.5.2`), la versión
+  se deriva del nombre de la etiqueta sin el prefijo `v` y se genera el `installer`.
 
 No se ejecuta en cada commit ni en cada pull request.
 
+### Modalidades
+
+- **`installer`** (vía normal de distribución): ejecuta `scripts/build-installer.ps1`
+  y produce el instalador Inno Setup por usuario + SHA-256.
+- **`zip`** (artefacto de diagnóstico): ejecuta `scripts/build-portable-zip.ps1` y
+  produce un **ZIP portable autocontenido** (`RightKeyboard-<versión>-win-x64-portable.zip`)
+  + SHA-256, sin instalador. Sirve para probar una compilación en una estación que no
+  es la de desarrollo: se descomprime y se ejecuta `RightKeyboard.exe` sin instalar
+  .NET ni el Windows App SDK. No sustituye al instalador ni a una versión formal
+  (coherente con `docs/distribucion-1.5.md`).
+
 ### Qué artefacto genera y dónde se descarga
 
-Realiza una compilación limpia en `Release` invocando `scripts/build-installer.ps1`,
-que es el procedimiento de distribución canónico del proyecto:
-
-- publica núcleo y WinUI autocontenidos para `win-x64` (ReadyToRun) en una sola
-  carpeta compartida;
-- compila el instalador Inno Setup por usuario;
-- calcula el SHA-256.
+Realiza una compilación limpia en `Release`. En ambas modalidades publica núcleo y
+WinUI autocontenidos para `win-x64` (ReadyToRun) en una sola carpeta compartida y
+calcula el SHA-256; la diferencia es el empaquetado final.
 
 Salida publicada como artefacto de la ejecución de Actions, descargable desde la
 página de la ejecución (sección *Artifacts*):
 
-- `RightKeyboard-<versión>-Setup.exe`
-- `RightKeyboard-<versión>-SHA256.txt`
+- Modalidad `installer` (`scripts/build-installer.ps1`) → artefacto
+  `RightKeyboard-<versión>-win-x64-installer`, con:
+  - `RightKeyboard-<versión>-Setup.exe`
+  - `RightKeyboard-<versión>-SHA256.txt`
+- Modalidad `zip` (`scripts/build-portable-zip.ps1`) → artefacto
+  `RightKeyboard-<versión>-win-x64-portable`, con:
+  - `RightKeyboard-<versión>-win-x64-portable.zip`
+  - `RightKeyboard-<versión>-win-x64-portable-SHA256.txt`
 
-El artefacto se llama `RightKeyboard-<versión>-win-x64-installer` e identifica
-aplicación, versión, arquitectura (x64) y modalidad (instalador por usuario).
+Cada nombre identifica aplicación, versión, arquitectura (x64) y modalidad.
 
 ### Cuánto se conserva
 
