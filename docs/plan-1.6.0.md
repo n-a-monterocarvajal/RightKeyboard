@@ -12,7 +12,7 @@ La revisión del ejecutable del 19 de julio de 2026 dejó observaciones de inter
 
 ## Mecánica de versión
 
-La versión se declara en dos sitios que deben moverse juntos: `RightKeyboard/RightKeyboard.csproj` y `RightKeyboard.WinUI/RightKeyboard.WinUI.csproj`. `scripts/build-installer.ps1` la lee del primero cuando no se pasa `-Version`. Cada etapa de mantenimiento cierra con su bump, su entrada en `CHANGELOG.md`, una etiqueta `vX.Y.Z` y una Release de GitHub con instalador y SHA-256 después del squash y del CI en verde.
+La versión se declara en dos sitios que deben moverse juntos: `RightKeyboard/RightKeyboard.csproj` y `RightKeyboard.WinUI/RightKeyboard.WinUI.csproj`. `scripts/build-installer.ps1` la lee del primero cuando no se pasa `-Version`. Cada etapa de mantenimiento cierra con su bump, su entrada en `CHANGELOG.md`, una etiqueta `vX.Y.Z` —o `vX.Y.Z.W` para una corrección puntual— y una Release de GitHub con instalador y SHA-256 después del squash y del CI en verde.
 
 ## Advertencia sobre la publicación
 
@@ -29,7 +29,7 @@ Secuenciales. Cada una es una sesión, una rama, un PR y un bump de versión.
 | 11 | 1.5.2 | Guardia de cambios sin guardar | Completada |
 | 12 | 1.5.3 | Coherencia de Ignorar y Agrupar | Completada |
 | 13 | 1.5.4 | Nomenclatura y estado de fila | Completada |
-| 14 | 1.5.5 | Pulido visual del panel | Completada |
+| 14 | 1.5.5 / 1.5.5.1 | Pulido visual del panel | Completada con corrección |
 | 15 | 1.5.6 | Exploración de pulsaciones sintéticas | Pendiente |
 | 16 | 1.5.7 | Fallback verificable ante caída del frontend | Pendiente |
 | 17 | 1.5.8 | Instrumentar el foco del selector | Pendiente |
@@ -144,6 +144,26 @@ Evidencia local:
 - Marcar Ignorar siguió deshabilitando inmediatamente Distribución, el destino y Agrupar; desmarcarlo restauró el estado anterior sin persistir cambios. Las filas y sus nombres accesibles conservaron conexión, Ignorado y distribución.
 - La alineación quedó comprobada a 1080 × 720. Los intentos de arrastre automatizado no llevaron la ventana a 900 × 640, por lo que el tamaño mínimo exacto no se da por validado visualmente en esta sesión.
 - Publicación previa al squash: 590 archivos, 271.324.377 bytes, ambos ejecutables con versión de archivo 1.5.5.0; instalador de 65.797.947 bytes y SHA-256 `fc5440c6a9b439d5028ed6b27d4b2afbe0148049e5e8d7a65d3d0321abc288cf`, coincidente con su archivo. Se reconstruirá desde el commit fusionado antes de publicar la Release.
+- `git diff --check`: sin errores.
+
+#### Corrección 1.5.5.1 · 22 de julio de 2026
+
+Una revisión posterior en una estación física invalidó dos conclusiones visuales de la VM: las casillas seguían mostrando el glifo con ángulos rectos y el icono de Recargar aparecía recortado y destacado como un botón convencional. `v1.5.5` permanece inmutable como registro de lo publicado; la corrección se entrega como `v1.5.5.1`.
+
+Resultado:
+
+- El template incluido con WinUI 2.2 no consulta `CheckBoxCornerRadius`: inicializa la propiedad desde `ControlCornerRadius` y enlaza esa propiedad con el rectángulo del glifo. Las tres casillas reciben ahora ese recurso en su propio ámbito y fijan el mismo radio 4 en la propiedad consumida por el template.
+- `ApplyFluentResources` reescribía el padding cero del botón Recargar con 14 píxeles por lado, dejando solo 8 píxeles útiles y recortando el glifo. Recargar queda fuera de ese lote genérico y usa el glifo Fluent `E72C` de 16 píxeles dentro de un objetivo de 32 × 32, proporcionado al título «Dispositivos detectados».
+- Fondo y borde son transparentes en reposo. WinUI conserva el resaltado sutil en hover, pulsado y foco, además del nombre accesible, la ayuda y el comportamiento de recarga.
+- Ambos proyectos avanzaron juntos a `1.5.5.1`; el instalador admite ahora versiones de tres o cuatro componentes. La etapa 15 conserva `1.5.6`.
+
+Evidencia local:
+
+- `dotnet test RightKeyboard.sln -c Release`: 187/187 pruebas superadas, sin omitidas; son las 185 anteriores y dos casos nuevos para proporción visual y presentación de la versión de cuatro componentes.
+- `dotnet build RightKeyboard.sln -c Release --no-restore`: compilación correcta, 0 advertencias y 0 errores.
+- Interfaz WinUI real en esta VM, en temas claro y oscuro: versión 1.5.5.1 visible; icono completo, centrado y transparente en reposo; respuesta sutil al activarlo; UI Automation conserva «Recargar», su descripción y `ReloadDevicesButton`. Ignorar mostró esquinas redondeadas marcado y desmarcado y siguió gobernando Distribución y Agrupar en vivo.
+- Diagnóstico no estaba disponible en esta compilación. Su casilla consume el mismo helper, pero no se da por validada visualmente. La corrección tampoco se da por revalidada todavía en una estación física; allí debe repetirse la comprobación que detectó el defecto de 1.5.5.
+- Publicación previa al squash: 590 archivos, 271.324.391 bytes, ambos ejecutables con versión de archivo 1.5.5.1; instalador de 65.794.637 bytes y SHA-256 `41555ea6a19623c26748f53ee62defa98023f7a3492f49503d64ac01e7c465b0`, coincidente con su archivo. Se reconstruirá desde el commit fusionado antes de publicar la Release.
 - `git diff --check`: sin errores.
 
 ### Etapa 15 — Exploración de pulsaciones sintéticas (1.5.6)

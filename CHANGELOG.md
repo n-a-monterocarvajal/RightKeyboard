@@ -4,6 +4,13 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [Sin publicar]
 
+## [1.5.5.1] - 2026-07-22
+
+### Configuración
+
+- El icono de Recargar queda centrado y proporcionado junto al título «Dispositivos detectados», sin fondo ni borde en reposo; WinUI conserva una respuesta sutil al pasar el puntero, pulsar y enfocar.
+- Las casillas usan ahora el recurso que consume realmente el template incluido con WinUI 2.2, de modo que las esquinas redondeadas se aplican al glifo y no solo al contenedor.
+
 ## [1.5.5] - 2026-07-21
 
 ### Configuración

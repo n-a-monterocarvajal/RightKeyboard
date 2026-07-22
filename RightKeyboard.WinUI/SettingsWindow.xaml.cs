@@ -102,8 +102,6 @@ public sealed class SettingsWindow : Window
     private UIElement BuildContent()
     {
         Grid root = new() { Padding = new Thickness(24, 0, 24, 24), RowSpacing = 16 };
-        root.Resources["CheckBoxCornerRadius"] = new CornerRadius(
-            SettingsPanelVisualContract.CheckBoxGlyphCornerRadius);
         contentRoot = root;
         root.Background = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
         root.ActualThemeChanged += (_, _) => ApplyFluentResources();
@@ -203,12 +201,20 @@ public sealed class SettingsWindow : Window
         devicesHeader.Children.Add(devicesTitle);
         Button reload = new()
         {
-            Content = new SymbolIcon(Symbol.Refresh),
-            Width = 36,
-            Height = 36,
+            Content = new FontIcon
+            {
+                Glyph = "\uE72C",
+                FontSize = SettingsPanelVisualContract.ReloadIconSize
+            },
+            Width = SettingsPanelVisualContract.ReloadButtonSize,
+            Height = SettingsPanelVisualContract.ReloadButtonSize,
+            MinWidth = SettingsPanelVisualContract.ReloadButtonSize,
+            MinHeight = SettingsPanelVisualContract.ReloadButtonSize,
             Padding = new Thickness(0),
             VerticalAlignment = VerticalAlignment.Center,
-            CornerRadius = new CornerRadius(SettingsPanelVisualContract.ControlCornerRadius)
+            CornerRadius = new CornerRadius(SettingsPanelVisualContract.ReloadButtonCornerRadius),
+            Background = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0)),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0))
         };
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(reload, "ReloadDevicesButton");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(
@@ -218,7 +224,6 @@ public sealed class SettingsWindow : Window
             reload,
             SettingsPanelVisualContract.ReloadToolTip);
         ToolTipService.SetToolTip(reload, SettingsPanelVisualContract.ReloadToolTip);
-        buttons.Add(reload);
         reload.Click += ReloadButton_Click;
         Grid.SetColumn(reload, 1);
         devicesHeader.Children.Add(reload);
@@ -322,6 +327,7 @@ public sealed class SettingsWindow : Window
             VerticalAlignment = VerticalAlignment.Center
         });
         StartupCheckBox.Content = "Iniciar con Windows";
+        ApplyRoundedCheckBoxResources(StartupCheckBox);
         StartupCheckBox.Click += StartupCheckBox_Click;
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(
             StartupCheckBox,
@@ -341,6 +347,7 @@ public sealed class SettingsWindow : Window
             diagnosticsRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             diagnosticsRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             DiagnosticsCheckBox.Content = "Diagnóstico detallado";
+            ApplyRoundedCheckBoxResources(DiagnosticsCheckBox);
             DiagnosticsCheckBox.VerticalAlignment = VerticalAlignment.Center;
             DiagnosticsCheckBox.Click += DiagnosticsCheckBox_Click;
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(
@@ -391,6 +398,7 @@ public sealed class SettingsWindow : Window
         DeviceDetailsPanel.Children.Add(StatusText);
         editorFields.Children.Add(DeviceDetailsPanel);
         IgnoredCheckBox.Content = "Ignorar eventos de este dispositivo";
+        ApplyRoundedCheckBoxResources(IgnoredCheckBox);
         IgnoredCheckBox.Checked += IgnoredCheckBox_Changed;
         IgnoredCheckBox.Unchecked += IgnoredCheckBox_Changed;
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(
@@ -512,6 +520,16 @@ public sealed class SettingsWindow : Window
         dark["ButtonForegroundPressed"] = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF));
         button.Resources.ThemeDictionaries["Light"] = light;
         button.Resources.ThemeDictionaries["Dark"] = dark;
+    }
+
+    private static void ApplyRoundedCheckBoxResources(CheckBox checkBox)
+    {
+        CornerRadius radius = new(SettingsPanelVisualContract.CheckBoxGlyphCornerRadius);
+        // WinUI 2.2 inicializa la propiedad desde ControlCornerRadius y su template
+        // enlaza esa propiedad con el rectángulo del glifo. La clave usada en 1.5.5
+        // (CheckBoxCornerRadius) no forma parte de ese template y no tenía efecto.
+        checkBox.Resources["ControlCornerRadius"] = radius;
+        checkBox.CornerRadius = radius;
     }
 
     private void ConfigureMinimumSize()

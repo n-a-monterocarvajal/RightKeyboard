@@ -26,4 +26,19 @@ public sealed class SettingsPanelVisualContractTests
             SettingsPanelVisualContract.CheckBoxGlyphCornerRadius,
             Is.EqualTo(SettingsPanelVisualContract.ControlCornerRadius / 2));
     }
+
+    [Test]
+    public void Recargar_UsaUnGlifoProporcionadoDentroDeUnObjetivoCompacto()
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.That(SettingsPanelVisualContract.ReloadIconSize, Is.EqualTo(16));
+            Assert.That(
+                SettingsPanelVisualContract.ReloadIconSize,
+                Is.EqualTo(SettingsPanelVisualContract.ReloadButtonSize / 2));
+            Assert.That(
+                SettingsPanelVisualContract.ReloadButtonCornerRadius,
+                Is.LessThan(SettingsPanelVisualContract.ControlCornerRadius));
+        });
+    }
 }
