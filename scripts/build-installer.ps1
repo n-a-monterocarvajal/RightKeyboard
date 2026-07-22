@@ -18,7 +18,7 @@ if (-not $Version) {
     $Version = [string] $project.Project.PropertyGroup.Version
 }
 
-if ($Version -notmatch '^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$') {
+if ($Version -notmatch '^\d+\.\d+\.\d+(?:\.\d+)?(?:-[0-9A-Za-z.-]+)?$') {
     throw "La versión '$Version' no tiene un formato válido."
 }
 

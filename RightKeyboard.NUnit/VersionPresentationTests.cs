@@ -8,6 +8,7 @@ public sealed class VersionPresentationTests
     [TestCase("1.5.0-beta.7", "1.5.0 beta 7")]
     [TestCase("1.5.0-beta.5.2+abc123", "1.5.0 beta 5.2")]
     [TestCase("1.5.0", "1.5.0")]
+    [TestCase("1.5.5.1", "1.5.5.1")]
     public void Format_ProducesReadableVersion(string input, string expected) =>
         Assert.That(VersionPresentation.Format(input), Is.EqualTo(expected));
 }
