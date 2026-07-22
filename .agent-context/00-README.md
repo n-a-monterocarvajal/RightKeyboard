@@ -25,6 +25,7 @@ No se duplican especificaciones que ya están bien escritas:
 - Decisión de separar residente WinForms y frontend WinUI: `docs/arquitectura-winui-1.5.md`.
 - Criterios de aceptación de WinUI, rendimiento y pruebas físicas: `docs/criterios-winui3-1.5.md`.
 - Modelo de instalación por usuario: `docs/distribucion-1.5.md`, `installer/RightKeyboard.iss` e `installer/PRUEBAS.md`.
+- Automatización de GitHub Actions (CI, compilación distribuible y Dependabot): `docs/automatizacion-ci-cd.md`; reglas para agentes en `06-build-pruebas-y-mapa.md`.
 - Limitaciones funcionales deliberadas: `docs/limitaciones-conocidas-1.5.md`.
 
 Cuando esos documentos contradicen este snapshot, debe prevalecer primero el código del commit actual y después `01-estado-actual.md`. Muchos documentos públicos conservan contexto histórico y no son una fotografía vigente.

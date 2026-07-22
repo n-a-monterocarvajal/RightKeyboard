@@ -1,0 +1,86 @@
+name: Compilación distribuible
+
+# Compilación limpia en Release que produce la salida distribuible del proyecto:
+# el instalador Inno Setup por usuario (RightKeyboard-<versión>-Setup.exe) más su
+# archivo SHA-256, tal como los genera scripts/build-installer.ps1. No se ejecuta
+# en cada commit ni pull request; solo manualmente o al empujar una etiqueta de
+# versión (v*). El resultado es un artefacto descargable con retención breve, no
+# una GitHub Release.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versión a estampar (vacío = usar la del proyecto en RightKeyboard.csproj)'
+        required: false
+        default: ''
+  push:
+    tags:
+      - 'v*'
+
+# Mínimo privilegio: solo lectura. El artefacto se publica con upload-artifact,
+# que no requiere permisos de escritura sobre el repositorio.
+permissions:
+  contents: read
+
+concurrency:
+  group: build-package-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    name: Instalador Inno Setup (Windows, x64, Release)
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      # Los runners de GitHub no traen Inno Setup preinstalado. build-installer.ps1
+      # detecta ISCC.exe en las rutas estándar de Program Files y en el shim de PATH
+      # que crea Chocolatey, así que no hace falta pasar -IsccPath.
+      - name: Instalar Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Determinar versión
+        id: version
+        shell: pwsh
+        run: |
+          $version = '${{ github.event.inputs.version }}'
+          if ([string]::IsNullOrWhiteSpace($version) -and '${{ github.ref_type }}' -eq 'tag') {
+            $version = '${{ github.ref_name }}'.TrimStart('v')
+          }
+          if ([string]::IsNullOrWhiteSpace($version)) {
+            [xml]$proj = Get-Content -LiteralPath 'RightKeyboard/RightKeyboard.csproj'
+            $version = ([string]$proj.Project.PropertyGroup.Version).Trim()
+          }
+          if ([string]::IsNullOrWhiteSpace($version)) {
+            throw 'No se pudo determinar la versión a compilar.'
+          }
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Versión de compilación: $version"
+
+      # Publica núcleo + WinUI autocontenidos (win-x64, ReadyToRun) en una sola
+      # carpeta, compila el instalador Inno Setup y escribe el SHA-256. El script
+      # es la fuente canónica del procedimiento de distribución del proyecto.
+      - name: Compilar instalador distribuible
+        shell: pwsh
+        run: ./scripts/build-installer.ps1 -Version ${{ steps.version.outputs.version }}
+
+      # Artefacto descargable desde la ejecución de Actions. El nombre identifica
+      # aplicación, versión, arquitectura y modalidad (instalador por usuario).
+      - name: Publicar artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: RightKeyboard-${{ steps.version.outputs.version }}-win-x64-installer
+          path: |
+            artifacts/installer/RightKeyboard-*-Setup.exe
+            artifacts/installer/RightKeyboard-*-SHA256.txt
+          retention-days: 7
+          if-no-files-found: error

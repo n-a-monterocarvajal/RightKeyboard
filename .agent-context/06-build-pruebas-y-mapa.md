@@ -93,6 +93,35 @@ Datos:
 
 Pruebas de instalación y parámetros silenciosos: `installer/PRUEBAS.md`. El script Inno usa `/MERGETASKS="!startup"` para instalación nueva sin inicio y `/SILENT /BORRARDATOS=1` para desinstalar eliminando datos.
 
+## Validación en GitHub Actions
+
+GitHub Actions forma parte del procedimiento **normal** de validación del repositorio, no de un extra opcional. Documentación técnica completa: `docs/automatizacion-ci-cd.md`.
+
+Workflows vigentes:
+
+| Workflow | Archivo | Se ejecuta | Qué hace |
+|---|---|---|---|
+| CI | `.github/workflows/ci.yml` | push a `master`, cada pull request, manual (`workflow_dispatch`) | `dotnet restore` + `dotnet build -c Release` (solución completa; WinUI mapea a x64) + `dotnet test`. Advertencias como errores. Sin artefactos. |
+| Compilación distribuible | `.github/workflows/build-package.yml` | manual (`workflow_dispatch`) o etiqueta `v*` | Instala Inno Setup y ejecuta `scripts/build-installer.ps1`; sube `RightKeyboard-<versión>-Setup.exe` y su `-SHA256.txt` como artefacto (retención 7 días). |
+| Dependabot | `.github/dependabot.yml` | semanal (lunes) | PRs agrupados de NuGet y GitHub Actions. |
+
+Reglas obligatorias para agentes:
+
+1. CI es parte del procedimiento normal de validación; no es opcional.
+2. Antes de dar por terminada una modificación relevante, revisar el estado del workflow de CI de la rama o PR.
+3. Todo cambio en código, proyectos, dependencias, recursos, manifiestos o configuración de compilación exige verificar la ejecución de CI correspondiente.
+4. Una validación local satisfactoria **no** sustituye la comprobación en un runner limpio de GitHub Actions.
+5. Los fallos de CI no se ignoran ni se ocultan: se corrigen, o se documentan con precisión si dependen de una restricción externa (permisos, facturación, dependencia externa). No modificar el código de la aplicación para enmascarar un fallo de CI.
+6. Para obtener una salida limpia y descargable desde GitHub, usar el workflow «Compilación distribuible» (manual o etiqueta `v*`), no el CI.
+7. Los artefactos de Actions son temporales (7 días) y no sustituyen una versión formal ni una GitHub Release.
+8. Dependabot es parte del mantenimiento ordinario de dependencias.
+9. Las actualizaciones de Dependabot se revisan y se validan por CI antes de integrarse.
+10. No añadir matrices, ejecuciones programadas, artefactos permanentes ni jobs nuevos sin evaluar antes su impacto en el consumo de minutos (repositorio privado).
+11. Los cambios en arquitectura, versión de .NET, Windows App SDK, empaquetado, firma o distribución deben reflejarse también en los workflows y en la documentación (`docs/automatizacion-ci-cd.md` y esta carpeta).
+12. Nombre, ubicación, finalidad y disparadores de cada workflow quedan en la tabla anterior para no reconstruirlos desde los logs.
+
+Limitación registrada: el instalador y los binarios se generan **sin firmar**; no hay firma Authenticode ni MSIX. Los secretos y pasos necesarios para añadirla están descritos en `docs/automatizacion-ci-cd.md`.
+
 ## Publicación
 
 No publicar por inferencia. Requiere solicitud humana explícita. Secuencia esperada:
@@ -127,6 +156,9 @@ No publicar por inferencia. Requiere solicitud humana explícita. Secuencia espe
 | `RightKeyboard.NUnit/` | 161 pruebas unitarias/interop/DTO |
 | `installer/RightKeyboard.iss` | Instalación/actualización/desinstalación por usuario |
 | `scripts/` | Publicación, instalador, SHA-256, prototipo histórico |
+| `.github/workflows/` | CI (`ci.yml`) y compilación distribuible (`build-package.yml`) |
+| `.github/dependabot.yml` | Mantenimiento semanal de NuGet y GitHub Actions |
+| `docs/automatizacion-ci-cd.md` | Documentación técnica de los workflows |
 | `docs/` | Arquitectura, matrices, historia y notas humanas; varias están desactualizadas |
 
 ## Antes de editar

@@ -1,17 +1,48 @@
 name: CI
 
+# Integración continua: restaura, compila en Release (advertencias como errores
+# vía Directory.Build.props) y ejecuta la suite NUnit en un runner Windows.
+# No genera ni conserva artefactos: para una salida descargable se usa el
+# workflow "Compilación distribuible" (.github/workflows/build-package.yml).
+
 on:
   push:
     branches: [ master ]
+    # Solo se omiten cambios que no pueden romper la compilación (documentación,
+    # licencia y metadatos de Git). Cualquier código, proyecto, paquete,
+    # manifiesto, recurso o el propio workflow sí dispara CI.
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '.agent-context/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.gitattributes'
   pull_request:
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '.agent-context/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.gitattributes'
+  workflow_dispatch:
 
+# Mínimo privilegio: CI solo necesita leer el repositorio.
 permissions:
   contents: read
+
+# Cancela ejecuciones anteriores obsoletas de la misma rama o pull request para
+# no gastar minutos en revisiones que ya no interesan.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-test:
     name: Build y pruebas (Windows)
     runs-on: windows-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -21,6 +52,17 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
+
+      # Caché fiable del almacén global de NuGet, invalidada cuando cambia algún
+      # proyecto o el pin del SDK. No depende de packages.lock.json (el repo no
+      # los usa), por lo que no rompe si falta un lockfile.
+      - name: Caché de paquetes NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'global.json') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
 
       - name: Restaurar dependencias
         run: dotnet restore RightKeyboard.sln

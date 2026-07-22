@@ -35,9 +35,9 @@ Snapshot actualizado el **2026-07-19**, primero durante la Etapa 7 y revisado en
 - Reconexión/cambio de puerto funciona cuando Windows mantiene identidad o la huella es única; dos teclados idénticos siguen siendo deliberadamente ambiguos.
 - La Etapa 7 verificó visualmente en esta VM las variantes normal y `RIGHTKEYBOARD_DIAGNOSTICS` a 100 %, incluidas la composición inicial y la mínima. Quedan pendientes 125 %, DPI mixto/dos monitores, texto ampliado y evidencia física equivalente porque la VM no permite demostrarlos con suficiente fiabilidad.
 - Accesibilidad completa, contraste alto, Windows 10, sesión remota, suspensión y ciclos prolongados carecen de evidencia completa en el repo.
-- Hay CI Windows y `TreatWarningsAsErrors`; las pruebas físicas siguen siendo manuales.
+- Hay CI Windows y `TreatWarningsAsErrors`; las pruebas físicas siguen siendo manuales. La automatización de GitHub Actions (CI, compilación distribuible y Dependabot) es parte del procedimiento normal de validación y mantenimiento; ver `docs/automatizacion-ci-cd.md` y `06-build-pruebas-y-mapa.md`.
 - `LICENSE` existe desde el 19 de julio de 2026, con tres capas separadas y la atribución de origen declarada como no verificada. Queda abierto CPOL 3(c): decidir entre notas por archivo o documentar el historial de Git como equivalente. Ver `docs/procedencia-y-licencia.md`.
-- Existe `.github/workflows/ci.yml`, que compila y prueba en Windows en cada push a `master` y cada pull request. No hay plantillas de issues ni issues versionados; el backlog utilizable está repartido entre documentos y esta carpeta.
+- Existen tres automatizaciones de GitHub Actions: `.github/workflows/ci.yml` (compila y prueba en Windows en cada push a `master`, cada pull request y manualmente), `.github/workflows/build-package.yml` (compilación distribuible manual o por etiqueta `v*`, produce el instalador + SHA-256 como artefacto de 7 días) y `.github/dependabot.yml` (revisión semanal agrupada de NuGet y GitHub Actions). Su funcionamiento y reglas para agentes están en `docs/automatizacion-ci-cd.md` y `06-build-pruebas-y-mapa.md`. No hay plantillas de issues ni issues versionados; el backlog utilizable está repartido entre documentos y esta carpeta.
 
 ## No es placeholder ni mock
 
