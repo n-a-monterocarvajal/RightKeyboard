@@ -71,8 +71,11 @@ dispara CI.
   - `version` (opcional): si se deja vacía se usa la del proyecto
     (`RightKeyboard/RightKeyboard.csproj`).
   - `artifact`: `installer` (por defecto) o `zip`.
+  - `publish`: `no` (por defecto) o `yes`. Con `yes` (solo válido con
+    `artifact=installer`) se crea además una **GitHub Release** — ver «Publicación».
 - **Por etiqueta:** al empujar una etiqueta `v*` (p. ej. `v1.5.5.2`), la versión
-  se deriva del nombre de la etiqueta sin el prefijo `v` y se genera el `installer`.
+  se deriva del nombre de la etiqueta sin el prefijo `v` y se genera el `installer`
+  (no publica Release: la publicación se pide explícitamente con `publish=yes`).
 
 No se ejecuta en cada commit ni en cada pull request.
 
@@ -133,9 +136,25 @@ GitHub Release.
     `.msix` resultante. Requiere decidir antes la estrategia de actualización
     fuera de Microsoft Store.
 
-No se publica automáticamente una GitHub Release: el proyecto versiona y publica
-de forma manual y deliberada (ver `.agent-context/06-build-pruebas-y-mapa.md`,
-sección «Publicación»).
+### Publicación de la GitHub Release
+
+Con `publish=yes` (y `artifact=installer`), un **job aparte** (`publish`) crea la
+Release tras compilar el instalador:
+
+- Corre solo cuando se pide explícitamente; nunca en un push de etiqueta ni en el
+  build ordinario. Por defecto no publica.
+- Está aislado del job de compilación para acotar el privilegio: el build es de
+  solo lectura y **solo este job** tiene `contents: write`. Usa el `GITHUB_TOKEN`
+  del runner (`gh release create`), sin tokens personales ni secretos.
+- Crea el tag `vX.Y.Z` sobre el commit compilado y adjunta los dos assets
+  (`RightKeyboard-<versión>-Setup.exe` y `-SHA256.txt`). Las notas salen de la
+  sección de esa versión en `CHANGELOG.md` más el resumen de descargas y el SHA-256
+  real del instalador. La Release aparece firmada por `github-actions[bot]`.
+- Si el tag/Release ya existe, el job falla en vez de recrearlo.
+
+Publicar la Release es deliberado y explícito; el versionado sigue las convenciones
+descritas en `.agent-context/06-build-pruebas-y-mapa.md`, sección «Publicación».
+La firma Authenticode/MSIX del instalador publicado sigue pendiente (ver arriba).
 
 ## 3. Dependabot (`dependabot.yml`)
 
@@ -155,12 +174,15 @@ CI antes de integrarse.
 
 ## 4. Seguridad de los workflows
 
-- Permisos de solo lectura por defecto (`contents: read`); no se conceden permisos
-  de escritura porque ninguna operación los necesita.
-- No se incorporan tokens personales ni se imprimen secretos.
+- Permisos de solo lectura por defecto (`contents: read`). La única excepción es el
+  job `publish` de la compilación distribuible, que necesita `contents: write` para
+  crear la Release; ese permiso está acotado a ese job y solo corre con `publish=yes`.
+- No se incorporan tokens personales ni se imprimen secretos; la publicación usa el
+  `GITHUB_TOKEN` del runner.
 - Solo acciones oficiales (`actions/checkout`, `actions/setup-dotnet`,
-  `actions/cache`, `actions/upload-artifact`), fijadas por etiqueta de versión
-  mayor (`@v4`), coherente con la convención previa del repositorio.
+  `actions/cache`, `actions/upload-artifact`, `actions/download-artifact`), fijadas
+  por etiqueta de versión mayor (`@v4`), coherente con la convención previa del
+  repositorio.
 - No se habilita CodeQL ni servicios de seguridad con licenciamiento adicional.
 
 ## 5. Limitaciones actuales y tareas futuras
@@ -171,8 +193,8 @@ CI antes de integrarse.
   No se añadieron pruebas artificiales para llenar ese hueco.
 - **Sin firma:** ver la sección de firma; queda pendiente decidir e integrar
   Authenticode y/o MSIX con sus secretos.
-- **Sin GitHub Release automática:** la publicación formal sigue el procedimiento
-  manual documentado.
+- **GitHub Release:** se crea desde Actions bajo demanda (`publish=yes`), con el
+  instalador sin firmar. La firma del instalador publicado queda pendiente.
 - **Verificación del runner:** la compilación real debe pasar en un runner limpio
   de GitHub Actions; un build local correcto no lo sustituye. Cualquier cambio en
   la arquitectura, versión de .NET, Windows App SDK, empaquetado, firma o
