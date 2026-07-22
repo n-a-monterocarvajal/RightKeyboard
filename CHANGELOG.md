@@ -4,6 +4,8 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [Sin publicar]
 
+## [1.5.5.2] - 2026-07-22
+
 ### Configuración
 
 - El desplegable «Agrupar con otra identidad» vuelve a listar candidatos al seleccionar un dispositivo suelto. Dos identidades sin grupo se trataban como si compartieran grupo lógico, lo que vaciaba la lista y dejaba inutilizable la agrupación manual; ahora cada dispositivo agrupable se ofrece como destino de los demás.
