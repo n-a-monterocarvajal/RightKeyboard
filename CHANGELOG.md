@@ -4,6 +4,12 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [Sin publicar]
 
+## [1.5.7] - 2026-07-23
+
+### Estabilidad
+
+- Si la Configuración o el selector WinUI arrancan pero fallan antes de mostrar una ventana usable, RightKeyboard abre ahora automáticamente el respaldo WinForms equivalente en lugar de dejar al usuario sin interfaz. El frontend comunica ese fallo de arranque con un código de salida propio, de modo que el núcleo distingue con certeza un fallo temprano de un cierre normal —o de un problema posterior a que la ventana ya fuese usable— y solo recupera cuando corresponde.
+
 ## [1.5.6] - 2026-07-23
 
 ### Detección de teclado

@@ -153,8 +153,10 @@ desde 1.5.5.2 el workflow puede crearla con `publish=yes`.
 | `RightKeyboard/SettingsIpcProtocol.cs` | DTO/acciones de pipe v2, incluida agrupación reversible |
 | `RightKeyboard/SettingsIpcServer.cs` | Autoridad IPC en núcleo |
 | `RightKeyboard/DiagnosticLogger.cs` | Diagnóstico de desarrollo tras `RIGHTKEYBOARD_DIAGNOSTICS` |
+| `RightKeyboard/FrontendExitCodes.cs` | Contrato de código de salida del frontend y decisión de fallback |
 | `RightKeyboard/SettingsDialog.cs` | Configuración WinForms fallback |
 | `RightKeyboard/LayoutSelectionDialog.cs` | Selector WinForms fallback |
+| `RightKeyboard.WinUI/App.xaml.cs` | Arranque del frontend y señal de fallo por código de salida |
 | `RightKeyboard.WinUI/SettingsWindow.xaml.cs` | Configuración WinUI normal |
 | `RightKeyboard.WinUI/LayoutSelectionWindow.cs` | Selector WinUI normal y foco |
 | `RightKeyboard.WinUI/SettingsIpcClient.cs` | Cliente named pipe |

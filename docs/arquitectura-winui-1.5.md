@@ -36,7 +36,7 @@ El núcleo es la autoridad y expone un protocolo local versionado:
 1. el núcleo entrega un snapshot de dispositivos, distribuciones y preferencias;
 2. WinUI devuelve comandos explícitos (guardar dispositivo, limpiar, importar o cambiar inicio automático);
 3. el núcleo valida, persiste y responde con el estado resultante;
-4. si el frontend no arranca o termina inesperadamente, se abre la Configuración WinForms.
+4. si el frontend no arranca, o arranca pero termina con `FrontendExitCodes.StartupFailure` sin llegar a activar su ventana, se abre la Configuración WinForms. Un cierre normal o un fallo posterior a que la ventana ya fuese usable no reabren el fallback.
 
 No se escribe `preferences.json` desde dos procesos simultáneamente.
 
@@ -45,6 +45,8 @@ No se escribe `preferences.json` desde dos procesos simultáneamente.
 El núcleo expone un canal local versionado mediante `NamedPipeServerStream`, limitado al usuario actual. El frontend solicita instantáneas y envía comandos explícitos para guardar, olvidar o limpiar; nunca abre ni escribe `preferences.json` directamente. Cada comando se valida y ejecuta en el hilo de interfaz del núcleo, que sigue siendo la única autoridad de persistencia y enumeración Raw Input.
 
 La opción **Configuración** de la bandeja inicia `RightKeyboard.WinUI.exe` bajo demanda. Solo se admite una ventana a la vez. Si el ejecutable no está instalado o no puede iniciarse, se conserva el diálogo WinForms como fallback funcional.
+
+Desde 1.5.7 ese fallback también cubre el caso en que el frontend arranca pero falla antes de ser usable. El contrato es un código de salida distinguible (`FrontendExitCodes.StartupFailure`, definido en el núcleo y compartido con WinUI): el frontend activa su ventana dentro de un bloque protegido, marca el estado interactivo solo tras activarla y termina con ese código si captura una excepción antes —en `OnLaunched` o vía `Application.UnhandledException`—. El residente engancha la salida del proceso en Configuración y selector y abre el diálogo WinForms equivalente cuando el código indica un fallo de arranque. La recuperación se limita a ese caso: no reabre el fallback ante un cierre normal, un fallo posterior a la interacción ni una terminación externa del proceso.
 
 ## Riesgos abiertos
 

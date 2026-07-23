@@ -15,7 +15,7 @@ RightKeyboard.exe (residente WinForms/Win32)
    └─ --select <identity>: LayoutSelectionWindow
 ```
 
-Si `RightKeyboard.WinUI.exe` falta o no arranca, el residente abre `SettingsDialog` o `LayoutSelectionDialog` (WinForms). El fallback no participa cuando WinUI funciona.
+Si `RightKeyboard.WinUI.exe` falta, `Process.Start` falla o el frontend arranca pero termina con `FrontendExitCodes.StartupFailure` (no llegó a activar su ventana), el residente abre `SettingsDialog` o `LayoutSelectionDialog` (WinForms). El fallback no participa cuando WinUI funciona ni cuando el proceso termina con normalidad o falla después de ser usable. Véase «Fallback verificable por código de salida».
 
 ## Flujo de una pulsación
 
@@ -37,6 +37,12 @@ Raw Input entrega el handle del dispositivo y permite distinguir teclados sin se
 ### Residente liviano + UI en proceso separado
 
 El núcleo conserva WinForms solo para `NotifyIcon`, ventana de mensajes y fallback. WinUI/Windows App SDK se carga bajo demanda en otro proceso y se libera al cerrar. Se descartó XAML Islands y cargar WinUI dentro del residente porque mantendría runtime, dispatcher y recursos durante toda la sesión. Véase `docs/arquitectura-winui-1.5.md`.
+
+### Fallback verificable por código de salida
+
+El residente lanza el frontend WinUI en otro proceso, así que no puede observar directamente si su ventana llegó a ser usable. En vez de suponerlo, el contrato es explícito: `FrontendExitCodes` (en el núcleo, compartido con WinUI por `InternalsVisibleTo`) define `Success = 0` y `StartupFailure = 0x52_4B`. El frontend activa su ventana dentro de un bloque protegido y solo marca `interactiveReached` tras activarla; cualquier excepción anterior —capturada en `OnLaunched` o vista por `Application.UnhandledException`— termina con `StartupFailure`. El residente engancha la salida del proceso en Configuración y selector y abre el respaldo WinForms cuando `FrontendExitCodes.ShouldFallBack(exitCode)` es cierto.
+
+Se eligió un código de salida en lugar de una señal de «listo» por IPC porque es una decisión a nivel de proceso, sin canal vivo que mantener, y porque distingue con certeza el fallo de arranque de un cierre normal. Deliberadamente **no** se recupera ante un cierre normal, un fallo posterior a la interacción ni una terminación externa del proceso: la documentación no promete más recuperación que esa. Se descartó reabrir el fallback ante cualquier salida distinta de cero porque un cierre benigno con código no cero produciría ventanas espurias.
 
 ### El núcleo es la única autoridad de estado
 
