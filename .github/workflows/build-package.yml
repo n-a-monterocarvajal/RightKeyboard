@@ -62,10 +62,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configurar .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
@@ -111,7 +111,7 @@ jobs:
       # El nombre del artefacto identifica aplicación, versión, arquitectura y modalidad.
       - name: Publicar artefacto (instalador)
         if: ${{ github.event.inputs.artifact != 'zip' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: RightKeyboard-${{ steps.version.outputs.version }}-win-x64-installer
           path: |
@@ -122,7 +122,7 @@ jobs:
 
       - name: Publicar artefacto (ZIP portable)
         if: ${{ github.event.inputs.artifact == 'zip' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: RightKeyboard-${{ steps.version.outputs.version }}-win-x64-portable
           path: |
@@ -146,10 +146,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Descargar el instalador compilado
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: RightKeyboard-${{ needs.package.outputs.version }}-win-x64-installer
           path: dist
