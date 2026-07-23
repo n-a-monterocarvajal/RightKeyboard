@@ -4,6 +4,16 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [Sin publicar]
 
+## [1.5.6] - 2026-07-23
+
+### Detección de teclado
+
+- Se confirma que las pulsaciones sintéticas no crean teclados fantasma: la lectura de Raw Input descarta los eventos sin dispositivo de origen (`Header.Device == 0`), que es el caso habitual de la entrada inyectada con `SendInput`, como el pegado del portapapeles. Un segundo filtro conservador excluye del selector los orígenes sin código de escaneo cuya identidad HID está vacía y no procede de un enumerador reconocido. No se añadió ningún filtro nuevo: `ExtraInformation` se mantiene solo como señal de diagnóstico porque no distingue de forma fiable la entrada física de la inyectada. Los teclados virtuales que se enumeran como HID real (escritorio remoto, automatización y teclado en pantalla) quedan a la espera de validación en hardware y sesiones reales.
+
+### Dependencias
+
+- Windows App SDK sube de 2.2.0 a 2.3.1 y el SDK de pruebas `Microsoft.NET.Test.Sdk` de 18.7.0 a 18.8.1 (actualización automática de Dependabot). El salto de Windows App SDK afecta a la Configuración y al selector WinUI; su verificación visual, incluido el pulido de casillas y del icono de Recargar corregido en 1.5.5.1, se confirma en la compilación de CI y queda pendiente de revalidación en una estación física.
+
 ## [1.5.5.2] - 2026-07-22
 
 ### Configuración

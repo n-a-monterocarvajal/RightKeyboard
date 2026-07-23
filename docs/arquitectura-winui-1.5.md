@@ -19,7 +19,7 @@ No se alojará una isla XAML dentro del residente. Cargar WinUI, Windows App SDK
 
 ## Despliegue del prototipo
 
-Se usa Windows App SDK 2.2 estable, compatible desde Windows 10 1809. El proyecto es no empaquetado (`WindowsPackageType=None`) y autocontenido respecto de Windows App SDK para medir una copia reproducible sin instalar runtime global; durante el prototipo, .NET permanece framework-dependent para poder reutilizar el ensamblado del núcleo sin publicar una segunda copia completa de .NET. Esta elección es provisional: Microsoft advierte que el modo autocontenido aumenta tamaño, arranque y memoria al no compartir páginas de código. Antes de integrar el frontend en el instalador se comparará con el modo dependiente del framework y su instalador de runtime.
+Se usa Windows App SDK estable, compatible desde Windows 10 1809 (el prototipo partió de 2.2 y 1.5.6 lo actualizó a 2.3.1). El proyecto es no empaquetado (`WindowsPackageType=None`) y autocontenido respecto de Windows App SDK para medir una copia reproducible sin instalar runtime global; durante el prototipo, .NET permanece framework-dependent para poder reutilizar el ensamblado del núcleo sin publicar una segunda copia completa de .NET. Esta elección es provisional: Microsoft advierte que el modo autocontenido aumenta tamaño, arranque y memoria al no compartir páginas de código. Antes de integrar el frontend en el instalador se comparará con el modo dependiente del framework y su instalador de runtime.
 
 Fuentes oficiales:
 
