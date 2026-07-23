@@ -36,9 +36,13 @@ Agregar una prueba directa sobre el evento JSON sería buena mejora, pero ya no 
 
 `AllowSetForegroundWindow`, `AttachThreadInput`, `SetForegroundWindow`, `SetFocus`, un pulso topmost temporal y un retry a 180 ms intentan cooperar con las reglas de foco de Windows. La ventana puede estar delante sin que el `TextBox` tenga foco. No convertirla en topmost permanente. Instrumentar tiempos/resultado de foreground y probar varias aplicaciones antes de cambiar la secuencia.
 
-## P1 — el fallback no cubre un frontend que arranca y luego cae
+## Resuelto en 1.5.7 — el fallback cubre un frontend que arranca y luego cae
 
-`TryLaunchWinUiSettings` y `TryLaunchWinUiSelector` solo abren WinForms si no encuentran el ejecutable o `Process.Start` falla. Si WinUI crea proceso y después lanza una excepción, Configuración muestra su ventana de error y el selector simplemente termina; el residente no reabre automáticamente el fallback. La afirmación más amplia de recuperación en documentos de arquitectura no coincide con el código. Diseñar una señal de «lista/interactiva» o código de salida distinguible antes de prometer fallback ante crash.
+**Síntoma original:** `TryLaunchWinUiSettings` y `TryLaunchWinUiSelector` solo abrían WinForms si no encontraban el ejecutable o `Process.Start` fallaba. Si WinUI creaba proceso y después lanzaba una excepción, Configuración mostraba su ventana de error y el selector terminaba sin que el residente reabriese el fallback. La afirmación más amplia de recuperación en los documentos de arquitectura no coincidía con el código.
+
+**Estado:** existe un contrato de código de salida en el núcleo, `FrontendExitCodes` (`Success = 0`, `StartupFailure = 0x52_4B`). El frontend WinUI activa su ventana dentro de un bloque protegido y marca `interactiveReached` solo tras activarla; cualquier excepción antes de ese punto —capturada en `OnLaunched` o vista por `UnhandledException`— termina el proceso con `StartupFailure` en vez de dejar una ventana de error indistinguible. El residente engancha la salida del proceso en ambas superficies (`OnSettingsProcessExited` y `CompleteWinUiSelection`) y, cuando `FrontendExitCodes.ShouldFallBack` es cierto, abre el diálogo WinForms equivalente para la misma superficie. El contrato y la decisión están cubiertos por `FrontendExitCodesTests`.
+
+**Alcance declarado (no se promete de más):** la recuperación se activa con certeza ante un fallo *antes* de que la ventana sea usable. Un cierre normal (`Success`), un fallo posterior a la interacción o una terminación externa del proceso (por ejemplo, matarlo desde el Administrador de tareas) no reabren el fallback, porque no representan «el frontend no llegó a ser usable». La validación visual del respaldo tras un fallo real de arranque queda para el carril C: esta VM no fuerza esa caída.
 
 ## Implementado, pendiente de validación física — agrupación manual de identidades (Etapa 6)
 

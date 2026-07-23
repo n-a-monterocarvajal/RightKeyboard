@@ -244,6 +244,11 @@ internal sealed class TrayApplicationContext : ApplicationContext
             return;
         }
 
+        RunWinFormsSelector(device);
+    }
+
+    private void RunWinFormsSelector(KeyboardDevice device)
+    {
         try
         {
             using LayoutSelectionDialog dialog = new(device, configuration.GetDisplayName(device));
@@ -336,8 +341,20 @@ internal sealed class TrayApplicationContext : ApplicationContext
     {
         KeyboardDevice? device = activeSelectionDevice;
         activeSelectionDevice = null;
+        int exitCode = selectionProcess?.ExitCode ?? FrontendExitCodes.Success;
         selectionProcess?.Dispose();
         selectionProcess = null;
+
+        if (device is KeyboardDevice crashedDevice && FrontendExitCodes.ShouldFallBack(exitCode))
+        {
+            // El selector WinUI arrancó pero no llegó a ser usable: se abre el
+            // selector WinForms para el mismo dispositivo. RunWinFormsSelector
+            // libera selectingLayout en su finally.
+            diagnostics?.Write("frontend_fallback", crashedDevice, new { surface = "selector", exitCode });
+            RunWinFormsSelector(crashedDevice);
+            return;
+        }
+
         try
         {
             if (device is KeyboardDevice selectedDevice)
@@ -378,6 +395,11 @@ internal sealed class TrayApplicationContext : ApplicationContext
             return;
         }
 
+        RunWinFormsSettings();
+    }
+
+    private void RunWinFormsSettings()
+    {
         try
         {
             settingsDialog = new SettingsDialog(configuration, devices, SaveConfiguration);
@@ -400,12 +422,42 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
         try
         {
-            settingsProcess = Process.Start(new ProcessStartInfo(executable) { UseShellExecute = false });
-            return settingsProcess is not null;
+            Process? process = Process.Start(new ProcessStartInfo(executable) { UseShellExecute = false });
+            if (process is null)
+            {
+                return false;
+            }
+
+            settingsProcess = process;
+            process.Exited += (_, _) => uiContext.Post(_ => OnSettingsProcessExited(process), null);
+            process.EnableRaisingEvents = true;
+            return true;
         }
         catch
         {
+            settingsProcess = null;
             return false;
+        }
+    }
+
+    private void OnSettingsProcessExited(Process process)
+    {
+        if (!ReferenceEquals(process, settingsProcess))
+        {
+            // Otra instancia ya reemplazó a esta; su propio Exited la gobierna.
+            return;
+        }
+
+        int exitCode = process.ExitCode;
+        settingsProcess = null;
+        process.Dispose();
+
+        if (FrontendExitCodes.ShouldFallBack(exitCode))
+        {
+            // Configuración WinUI arrancó pero no llegó a ser usable: se abre el
+            // diálogo WinForms como respaldo.
+            diagnostics?.Write("frontend_fallback", details: new { surface = "configuracion", exitCode });
+            RunWinFormsSettings();
         }
     }
 

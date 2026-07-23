@@ -31,7 +31,7 @@ Secuenciales. Cada una es una sesión, una rama, un PR y un bump de versión.
 | 13 | 1.5.4 | Nomenclatura y estado de fila | Completada |
 | 14 | 1.5.5 / 1.5.5.1 / 1.5.5.2 | Pulido visual del panel | Completada con dos correcciones |
 | 15 | 1.5.6 | Exploración de pulsaciones sintéticas | Completada |
-| 16 | 1.5.7 | Fallback verificable ante caída del frontend | Pendiente |
+| 16 | 1.5.7 | Fallback verificable ante caída del frontend | Completada |
 | 17 | 1.5.8 | Instrumentar el foco del selector | Pendiente |
 | 18 | 1.6.0 | Extraer contratos compartidos y cerrar versión | Pendiente |
 
@@ -192,9 +192,24 @@ Dependencias del corte: la etapa recoge además el salto de Windows App SDK de 2
 
 Verificación: sin cambios de código, la suite se mantiene en el conteo de 1.5.5.2 y la compilación Release con Windows App SDK 2.3.1 se confirma en CI. La VM de desarrollo (Linux, sin SDK .NET ni destino Windows) no ejecuta la suite ni el frontend WinUI; esa evidencia la aporta el runner Windows del carril A.
 
-### Etapa 16 — Fallback verificable ante caída del frontend (1.5.7)
+### Etapa 16 — Fallback verificable ante caída del frontend (1.5.7) · completada el 23 de julio de 2026
 
-P1 registrado en `.agent-context/03-problemas-conocidos.md`: si WinUI crea proceso y luego lanza una excepción, el residente no reabre el fallback WinForms, y la documentación de arquitectura promete más recuperación de la que el código implementa. Diseñar una señal de «lista/interactiva» o un código de salida distinguible, y alinear la documentación con lo que realmente ocurra.
+P1 registrado en `.agent-context/03-problemas-conocidos.md`: si WinUI crea proceso y luego lanza una excepción, el residente no reabre el fallback WinForms, y la documentación de arquitectura promete más recuperación de la que el código implementa. La etapa diseña un código de salida distinguible y alinea la documentación con lo que el código hace de verdad.
+
+Resultado:
+
+- El núcleo define `FrontendExitCodes` (`Success = 0`, `StartupFailure = 0x52_4B`) como contrato compartido con WinUI por `InternalsVisibleTo`. `ShouldFallBack` centraliza la decisión: solo se recupera ante la señal explícita de fallo de arranque.
+- El frontend WinUI activa su ventana dentro de un bloque protegido y marca el estado interactivo solo tras activarla. Una excepción anterior —capturada en `OnLaunched` o vista por `Application.UnhandledException`— termina el proceso con `StartupFailure` en lugar de mostrar una ventana de error que el residente no podía distinguir.
+- El residente engancha la salida del proceso en ambas superficies. `OnSettingsProcessExited` abre `SettingsDialog` y `CompleteWinUiSelection` abre `LayoutSelectionDialog` para el mismo dispositivo cuando `ShouldFallBack` es cierto. Los caminos WinForms se extrajeron a `RunWinFormsSettings` y `RunWinFormsSelector` para compartirse entre el arranque inicial y la recuperación por caída.
+- Se recupera **solo** ante un fallo antes de que la ventana sea usable. Un cierre normal, un fallo posterior a la interacción o una terminación externa del proceso no reabren el fallback; la documentación se ajustó para no prometer más de eso.
+- Ambos proyectos avanzaron conjuntamente a `1.5.7` y `CHANGELOG.md` describe el impacto para el usuario. Se alinearon `docs/arquitectura-winui-1.5.md`, `.agent-context/02-arquitectura-y-decisiones.md` y `.agent-context/03-problemas-conocidos.md` con el comportamiento real.
+
+Evidencia:
+
+- Cambios de código: `RightKeyboard/FrontendExitCodes.cs` (contrato nuevo), `RightKeyboard.WinUI/App.xaml.cs` (señal de fallo de arranque), `RightKeyboard/TrayApplicationContext.cs` (enganche de salida y fallback en las dos superficies) y `RightKeyboard.NUnit/FrontendExitCodesTests.cs` (8 casos nuevos para el contrato de códigos y la decisión de fallback: `Success`, distinción respecto a `Success`, `ShouldFallBack` para el fallo de arranque, para el éxito y para cuatro códigos ajenos —incluida la salida abrupta administrada `0xE0434352`).
+- Verificación en CI de Windows (esta VM es Linux y sin SDK .NET, no compila ni ejecuta la suite `net10.0-windows`): `dotnet build RightKeyboard.sln -c Release` con advertencias como errores y `dotnet test` deben quedar en verde en el runner Windows antes de fusionar. El total de pruebas lo confirma el CI sobre el conteo previo de 1.5.6 más los 8 casos nuevos.
+- La validación visual del respaldo tras un fallo real de arranque queda en el carril C: esta VM no puede forzar la caída del frontend WinUI ni ejecutarlo.
+- `git diff --check`: sin errores.
 
 ### Etapa 17 — Instrumentar el foco del selector (1.5.8)
 
