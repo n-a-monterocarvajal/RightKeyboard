@@ -29,8 +29,8 @@ Secuenciales. Cada una es una sesión, una rama, un PR y un bump de versión.
 | 11 | 1.5.2 | Guardia de cambios sin guardar | Completada |
 | 12 | 1.5.3 | Coherencia de Ignorar y Agrupar | Completada |
 | 13 | 1.5.4 | Nomenclatura y estado de fila | Completada |
-| 14 | 1.5.5 / 1.5.5.1 | Pulido visual del panel | Completada con corrección |
-| 15 | 1.5.6 | Exploración de pulsaciones sintéticas | Pendiente |
+| 14 | 1.5.5 / 1.5.5.1 / 1.5.5.2 | Pulido visual del panel | Completada con dos correcciones |
+| 15 | 1.5.6 | Exploración de pulsaciones sintéticas | Completada |
 | 16 | 1.5.7 | Fallback verificable ante caída del frontend | Pendiente |
 | 17 | 1.5.8 | Instrumentar el foco del selector | Pendiente |
 | 18 | 1.6.0 | Extraer contratos compartidos y cerrar versión | Pendiente |
@@ -166,13 +166,31 @@ Evidencia local:
 - Cierre publicado: el PR #26 superó «Build y pruebas (Windows)» y se fusionó mediante squash como `604aeb6dd4e7706f8e79d244db819451e07f79c6`. Desde ese commit se reconstruyeron 590 archivos (271.324.391 bytes), con ambos ejecutables en versión de archivo 1.5.5.1. La etiqueta anotada `v1.5.5.1` resuelve exactamente al squash y la Release estable contiene `RightKeyboard-1.5.5.1-Setup.exe` (65.797.849 bytes) y `RightKeyboard-1.5.5.1-SHA256.txt` (98 bytes). Una descarga posterior independiente confirmó el SHA-256 `26a9a091bf30d97e73ad3cd5b9268c80369a1cb634b086b9c36476b1dad91557` y la coincidencia del archivo de suma.
 - `git diff --check`: sin errores.
 
-### Etapa 15 — Exploración de pulsaciones sintéticas (1.5.6)
+#### Corrección 1.5.5.2 · 22 de julio de 2026
 
-Puede cerrarse sin cambios de código; el entregable mínimo es la conclusión documentada.
+Una revisión de la agrupación manual detectó que el desplegable «Agrupar con otra identidad» quedaba vacío al seleccionar un dispositivo suelto: dos identidades sin grupo se evaluaban como si compartieran grupo lógico, de modo que ninguna se ofrecía como destino de la otra. `v1.5.5.1` permanece inmutable; la corrección se entrega como `v1.5.5.2`.
 
-- `API.TryReadKeyboardEvent` ya descarta `Header.Device == 0`, el caso habitual de `SendInput`, de modo que el portapapeles de Windows no debería generar dispositivos fantasma.
-- `RawKeyboardEvent.HasExtraInformation` se captura y solo se registra en diagnóstico; no filtra nada. Decidir si debe filtrar.
-- Verificar teclados virtuales que sí se enumeran como HID real: escritorio remoto, automatización y teclado en pantalla.
+Resultado:
+
+- `SettingsEditorAvailability.IsGroupTargetCandidate` distingue ahora dos dispositivos sueltos de dos miembros del mismo grupo, de forma que cada dispositivo agrupable vuelve a ofrecerse como destino de los demás sin tocar la persistencia ni la semántica de agrupación.
+- El corte añadió además un ZIP portable junto al instalador. Ambos proyectos avanzaron juntos a `1.5.5.2`; la etapa 15 conserva `1.5.6`.
+
+El desplegable vacío queda **corregido en 1.5.5.2**, pendiente solo de validación física con dos teclados reales.
+
+### Etapa 15 — Exploración de pulsaciones sintéticas (1.5.6) · completada el 23 de julio de 2026
+
+Se cierra sin cambios de código: el entregable es la conclusión documentada. La revisión confirma que la defensa actual es de dos capas y conservadora, y que no procede añadir un filtro nuevo.
+
+Conclusión:
+
+- **Entrada inyectada sin dispositivo.** `API.TryReadKeyboardEvent` descarta los eventos con `Header.Device == 0` antes de que lleguen a `OnKeyboardInput`. Es el caso habitual de `SendInput` —pegado del portapapeles, `Windows + V`—, por lo que esas pulsaciones no crean dispositivos fantasma ni abren el selector.
+- **`HasExtraInformation` no debe filtrar.** El campo `ExtraInformation` de Raw Input es un valor definido por la aplicación que inyecta: una inyección con `dwExtraInfo == 0` no se distingue de la entrada física, y no hay garantía de que ningún controlador real deje ese campo a cero. Filtrar por él sería poco fiable en ambos sentidos —dejaría pasar inyecciones y podría excluir teclados legítimos—, contra el criterio de que un teclado real nunca se excluya por una coincidencia débil. Se conserva, por tanto, únicamente como señal de diagnóstico (`entrada_recibida`, `entrada_sintetica_excluida`), sin cambiar el código.
+- **HID virtual con capacidades vacías.** El segundo filtro, `DeviceClassifier.IsLikelySyntheticInputSource`, ya excluye del selector los orígenes sin huella cuya identidad HID está vacía y cuyo enumerador no es `HID#`, `ACPI#` ni `ROOT#`, combinado con una pulsación sin código de escaneo. Cubre los dispositivos virtuales que se enumeran pero no publican capacidades reales.
+- **Riesgo residual, a validación física.** Un teclado virtual que se enumere como HID real, con ruta de dispositivo reconocida y capacidades pobladas —escritorio remoto, marcos de automatización, teclado en pantalla que enumere un HID genuino—, pasaría los dos filtros y podría abrir el selector. No se añade filtrado especulativo: este caso se traslada al carril C (validación física y sesiones reales), porque esta VM no puede producir la evidencia.
+
+Dependencias del corte: la etapa recoge además el salto de Windows App SDK de 2.2.0 a 2.3.1 y de `Microsoft.NET.Test.Sdk` de 18.7.0 a 18.8.1 (PR #32 de Dependabot, ya fusionado en `master` tras 1.5.5.2). El salto de Windows App SDK afecta a la Configuración y al selector WinUI; su compilación se verifica en CI y el pulido visual corregido en 1.5.5.1 queda pendiente de revalidación en una estación física.
+
+Verificación: sin cambios de código, la suite se mantiene en el conteo de 1.5.5.2 y la compilación Release con Windows App SDK 2.3.1 se confirma en CI. La VM de desarrollo (Linux, sin SDK .NET ni destino Windows) no ejecuta la suite ni el frontend WinUI; esa evidencia la aporta el runner Windows del carril A.
 
 ### Etapa 16 — Fallback verificable ante caída del frontend (1.5.7)
 
