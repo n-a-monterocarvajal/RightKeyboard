@@ -38,7 +38,7 @@ Revisión del ejecutable de `1.5.0` del 19 de julio de 2026. Cada punto indica q
 ### Pulido visual
 
 - **Botón Recargar sin icono.** Es un `Button` con texto (`SettingsWindow.xaml.cs`). Debería usar un icono del sistema, conservando nombre accesible y descripción emergente.
-- **Casillas de verificación con ángulos rectos.** Los `CheckBox` son los únicos controles que no fijan `CornerRadius`; el resto usa `CornerRadius(8)`. El radio del glifo no proviene de la propiedad del control sino del recurso de tema `CheckBoxCornerRadius`, así que hay que sobrescribir el recurso y no la propiedad.
+- **Casillas de verificación con ángulos rectos — persiste tras tres abordajes.** Los `CheckBox` son los únicos controles que no fijan `CornerRadius`; el resto usa `CornerRadius(8)`. La hipótesis original de este documento (sobrescribir el recurso de tema `CheckBoxCornerRadius`) se implementó en 1.5.5 y se descartó en 1.5.5.1 por otra hipótesis (`ControlCornerRadius`, ver `SettingsWindow.ApplyRoundedCheckBoxResources`). La nota de campo de 1.5.7 confirma que el glifo sigue en ángulo recto en VM y en físico pese a ese segundo intento; detalle del historial y de por qué la suite no lo detecta en [notas de uso 1.5.7](docs/notas-de-uso-1.5.7.md#2-casillas-de-verificación-siguen-con-ángulos-rectos-después-de-un-tercer-abordaje).
 
 ### Abandono de edición sin guardar
 
@@ -72,7 +72,7 @@ El orden en que se abordan estos pendientes, junto con la validación física, l
 - Revisar microtextos de la UI que aún suenan excesivamente técnicos.
 - Decidir cómo se atiende CPOL 3(c): notas de modificación por archivo, o el historial de Git documentado como equivalente. El resto de la licencia quedó resuelto el 19 de julio de 2026 en [LICENSE](LICENSE).
 
-Las observaciones de uso todavía sin triar de cada versión se recogen aparte, en `docs/notas-de-uso-<versión>.md` (por ejemplo [notas de uso 1.5.4](docs/notas-de-uso-1.5.4.md)), y se articulan en este backlog o en [Plan camino a 1.6.0](docs/plan-1.6.0.md) al convertirse en trabajo.
+Las observaciones de uso todavía sin triar de cada versión se recogen aparte, en `docs/notas-de-uso-<versión>.md` (por ejemplo [notas de uso 1.5.4](docs/notas-de-uso-1.5.4.md) y [notas de uso 1.5.7](docs/notas-de-uso-1.5.7.md)), y se articulan en este backlog o en [Plan camino a 1.6.0](docs/plan-1.6.0.md) al convertirse en trabajo.
 
 ## Referencias históricas
 

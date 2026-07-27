@@ -111,6 +111,8 @@ Las notas recogidas al usar cada versión viven en `docs/notas-de-uso-<versión>
 
 Pendientes abiertos en `docs/notas-de-uso-1.5.4.md`: indicador gráfico de conexión, evaluación de agrupar identidades ignoradas, actualizador en la app y regla de orden «Conectados arriba». El desplegable de agrupación vacío quedó **corregido en 1.5.5.2** (`SettingsEditorAvailability.IsGroupTargetCandidate`), pendiente solo de validación física.
 
+Pendientes abiertos en `docs/notas-de-uso-1.5.7.md`: confirmar si la falta de cambio de distribución con el Escritorio de Windows en foco es una limitación de Explorer/Shell o un defecto propio (no hay exclusión deliberada en el código, pero falta evidencia física con diagnóstico activo); y las casillas de verificación con ángulos rectos, que siguen sin resolverse pese a dos intentos de código distintos (1.5.5 y 1.5.5.1) — la suite actual no ejerce el árbol visual real, así que no puede detectar la regresión.
+
 ## Puerta propuesta
 
 Para `1.5.1`, priorizar diagnóstico de desarrollo/detección preventiva antes que nuevas superficies UI grandes. Para `1.6`, considerar exportación/importación completa y refactor de contratos compartidos si no se resolvió en 1.5.x.
