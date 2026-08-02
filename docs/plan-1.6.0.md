@@ -32,8 +32,9 @@ Secuenciales. Cada una es una sesión, una rama, un PR y un bump de versión.
 | 14 | 1.5.5 / 1.5.5.1 / 1.5.5.2 | Pulido visual del panel | Completada con dos correcciones |
 | 15 | 1.5.6 | Exploración de pulsaciones sintéticas | Completada |
 | 16 | 1.5.7 | Fallback verificable ante caída del frontend | Completada |
-| 17 | 1.5.8 | Instrumentar el foco del selector | Pendiente |
-| 18 | 1.6.0 | Extraer contratos compartidos y cerrar versión | Pendiente |
+| 17 | 1.5.8 | Instrumentar el foco del selector y el Escritorio | Pendiente |
+| 18 | 1.5.9 | Casillas de verificación: prueba de árbol visual y cuarto intento | Pendiente |
+| 19 | 1.6.0 | Extraer contratos compartidos y cerrar versión | Pendiente |
 
 ### Etapa 9 — Sincronizar documentación con el código · completada el 19 de julio de 2026
 
@@ -211,11 +212,24 @@ Evidencia:
 - La validación visual del respaldo tras un fallo real de arranque queda en el carril C: esta VM no puede forzar la caída del frontend WinUI ni ejecutarlo.
 - `git diff --check`: sin errores.
 
-### Etapa 17 — Instrumentar el foco del selector (1.5.8)
+### Etapa 17 — Instrumentar el foco del selector y el Escritorio (1.5.8)
 
 P1 registrado en `.agent-context/03-problemas-conocidos.md`: el foco depende de heurísticas Win32 y la ventana puede quedar delante sin que el cuadro de texto tenga foco. Instrumentar tiempos y resultado de la secuencia foreground y probar con varias aplicaciones antes de tocar el orden. No convertir la ventana en topmost permanente.
 
-### Etapa 18 — Contratos compartidos y cierre de 1.6.0
+Se incorpora una segunda pregunta de la misma familia, registrada en [notas de uso 1.5.7](notas-de-uso-1.5.7.md#1-el-escritorio-de-windows-no-parece-disparar-el-cambio-de-distribución): con el Escritorio de Windows en foco, `ApplyLayout` → `RequestForegroundLayout` envía `WM_INPUTLANGCHANGEREQUEST` a lo que devuelva `GetForegroundWindow()`, pero el usuario no observa el cambio de distribución. El código no excluye deliberadamente al Escritorio; falta evidencia física con `RIGHTKEYBOARD_DIAGNOSTICS` activo (`entrada_recibida`, `distribucion_aplicada`) para saber si el evento llega y si la petición se envía, y así distinguir un límite de Explorer/Shell de un defecto propio. Se instrumenta junto al resto de escenarios de foreground de la etapa, sin ampliar su mecanismo de código (es una ruta distinta a la del selector), y su resultado decide si el punto 1 de las notas de 1.5.7 se cierra como límite documentado o pasa a `docs/limitaciones-conocidas-1.5.md`.
+
+### Etapa 18 — Casillas de verificación: prueba de árbol visual y cuarto intento (1.5.9)
+
+Defecto visual persistente registrado en [notas de uso 1.5.7](notas-de-uso-1.5.7.md#2-casillas-de-verificación-siguen-con-ángulos-rectos-después-de-un-tercer-abordaje) y en `ROADMAP.md`: los `CheckBox` de la Configuración WinUI siguen con el glifo en ángulo recto pese a dos intentos de código distintos (1.5.5 con `CheckBoxCornerRadius`, 1.5.5.1 con `ControlCornerRadius` en `SettingsWindow.ApplyRoundedCheckBoxResources`). Ninguno de los dos se sostuvo fuera del momento en que se dio por corregido.
+
+**Orden de trabajo, en dos partes:**
+
+1. Antes de tocar código de producción, añadir una prueba que ejerza el árbol visual real del `CheckBox` (resolver su `ControlTemplate` e inspeccionar el `Rectangle` del glifo), no solo comparar constantes como hace hoy `SettingsPanelVisualContractTests.CheckBox_UsaUnRadioProporcionadoAlRestoDeControles`. Sin esa prueba, un cuarto intento corre el mismo riesgo que los dos anteriores: pasar CI sin cambiar nada visible.
+2. Con la prueba en rojo confirmando el defecto, investigar si el `Rectangle` del glifo tiene `RadiusX`/`RadiusY` fijos en el XAML de tema de `Microsoft.WindowsAppSDK` 2.3.1 sin enlazar a ningún `ThemeResource` —hipótesis abierta en las notas de 1.5.7— y, si es así, sobrescribir el `ControlTemplate` completo del control en vez de una clave de `Resources`.
+
+**Criterio de cierre:** la prueba nueva pasa porque el glifo redondeado se verifica en el árbol visual, no porque una constante coincida con otra; y la validación visual en VM y en la estación física (carril C) coincide con lo que reporta la prueba, para no repetir la discrepancia que motivó esta etapa.
+
+### Etapa 19 — Contratos compartidos y cierre de 1.6.0
 
 Refactor diferido a 1.6: mover los DTO de IPC, `VersionPresentation` y modelos compartidos a una biblioteca para que el frontend WinUI no referencie el ejecutable WinForms. Cierra la versión.
 

@@ -21,6 +21,8 @@ Cada punto describe lo observado, lo que se sabe del código y lo que quedaría 
 
 **Pendiente:** confirmarlo con evidencia real, no solo lectura de código. En la estación física, con el diagnóstico activado (`RIGHTKEYBOARD_DIAGNOSTICS`), verificar si `entrada_recibida` y `distribucion_aplicada` se registran al presionar una letra con el Escritorio en foco; si se registran pero el idioma visible no cambia, el límite está del lado de Explorer/Shell y conviene documentarlo en `docs/limitaciones-conocidas-1.5.md`. Si no se registra nada, revisar si algo distinto a lo leído aquí está filtrando el evento.
 
+**Promovido:** incorporado a la etapa 17 (1.5.8) de [`docs/plan-1.6.0.md`](plan-1.6.0.md#etapa-17--instrumentar-el-foco-del-selector-y-el-escritorio-158), junto a la instrumentación de foco del selector ya planeada ahí.
+
 ## 2. Casillas de verificación siguen con ángulos rectos después de un tercer abordaje
 
 **Tipo:** defecto visual persistente, no resuelto pese a varios intentos.
@@ -40,3 +42,5 @@ Esta nota de campo de 1.5.7 es la evidencia de que el segundo intento tampoco se
 **Hipótesis sin confirmar para un cuarto intento:** en la versión de Windows App SDK usada por el proyecto (`Microsoft.WindowsAppSDK` 2.3.1, `RightKeyboard.WinUI/RightKeyboard.WinUI.csproj`), el `Rectangle` del glifo dentro del `ControlTemplate` por defecto de `CheckBox` podría tener `RadiusX`/`RadiusY` fijos en el propio XAML del tema, sin enlazarlos a ningún `ThemeResource`; en ese caso ninguna clave puesta en `Resources` a nivel de instancia cambiaría el resultado, y la única vía sería copiar y sobrescribir el `ControlTemplate` completo del control. Tampoco se ha descartado que el efecto observado una vez en un build de prueba y ausente después se deba a una diferencia entre esa compilación y la publicada (Debug/Release, resources.pri regenerado, o caché de composición de la sesión) más que a un cambio de código.
 
 **Pendiente:** decidir si se justifica una cuarta iteración inspeccionando el `ControlTemplate` resuelto en tiempo de ejecución (o el XAML de referencia de esa versión de Windows App SDK), añadir antes una prueba que sí ejerza el árbol visual para no repetir un «arreglo» que solo cambia constantes, o aceptar el ángulo recto como límite conocido de esta versión de WinUI y ajustar `ROADMAP.md` en consecuencia.
+
+**Promovido:** incorporado como etapa 18 (1.5.9) de [`docs/plan-1.6.0.md`](plan-1.6.0.md#etapa-18--casillas-de-verificación-prueba-de-árbol-visual-y-cuarto-intento-159), con la prueba de árbol visual como paso previo obligatorio al cuarto intento.
