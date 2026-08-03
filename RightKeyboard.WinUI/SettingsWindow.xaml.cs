@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
+using Microsoft.UI.Xaml.Shapes;
 using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Composition;
@@ -845,7 +846,10 @@ public sealed class SettingsWindow : Window
         try
         {
             SetBusy(true);
-            ApplySnapshot(await client.GetSnapshotAsync(), identityToSelect);
+            ApplySnapshot(
+                await client.GetSnapshotAsync(),
+                identityToSelect,
+                preserveEditorContext: true);
         }
         catch (Exception error)
         {
@@ -857,8 +861,20 @@ public sealed class SettingsWindow : Window
         }
     }
 
-    private void ApplySnapshot(SettingsSnapshot value, string? identityToSelect = null)
+    private void ApplySnapshot(
+        SettingsSnapshot value,
+        string? identityToSelect = null,
+        bool preserveEditorContext = false)
     {
+        string? previousIdentity = SelectedRow?.Identity;
+        string? requestedIdentity = identityToSelect ?? previousIdentity;
+        SettingsEditorState? pendingEditorState = preserveEditorContext && editorStateTracker.IsDirty &&
+            string.Equals(previousIdentity, requestedIdentity, StringComparison.OrdinalIgnoreCase)
+                ? CreateEditorState()
+                : null;
+        double? verticalOffset = preserveEditorContext
+            ? FindDescendant<ScrollViewer>(DeviceList)?.VerticalOffset
+            : null;
         snapshot = value;
         suppressSelectionGuard = true;
         try
@@ -869,36 +885,44 @@ public sealed class SettingsWindow : Window
             DeviceList.Items.Clear();
             Dictionary<string, SettingsDevice> devicesByIdentity = value.Devices
                 .ToDictionary(device => device.Identity, StringComparer.OrdinalIgnoreCase);
-            foreach (SettingsDeviceGroup group in value.Groups.OrderBy(
-                         group => group.DisplayName, StringComparer.CurrentCultureIgnoreCase))
+            List<(DeviceRow Parent, IReadOnlyList<DeviceRow> Members)> topLevelRows = [];
+            foreach (SettingsDeviceGroup group in value.Groups)
             {
                 SettingsLayout? groupLayout = value.Layouts.FirstOrDefault(candidate =>
                     candidate.Identifier == group.LayoutIdentifier);
                 DeviceRow groupRow = new(group, groupLayout, devicesByIdentity);
-                AddRow(groupRow);
-                foreach (string memberIdentity in group.MemberIdentities)
-                {
-                    if (devicesByIdentity.TryGetValue(memberIdentity, out SettingsDevice? member))
-                    {
-                        AddRow(new DeviceRow(member, group.Id));
-                    }
-                }
+                DeviceRow[] members = group.MemberIdentities
+                    .Where(devicesByIdentity.ContainsKey)
+                    .Select(identity => new DeviceRow(devicesByIdentity[identity], group.Id, groupLayout))
+                    .OrderBy(row => row.SortRank)
+                    .ThenBy(row => row.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+                    .ToArray();
+                topLevelRows.Add((groupRow, members));
             }
 
-            IEnumerable<(SettingsDevice Device, SettingsLayout? Layout)> orderedDevices = value.Devices
+            IEnumerable<(SettingsDevice Device, SettingsLayout? Layout)> ungroupedDevices = value.Devices
                 .Where(device => device.GroupId is null)
                 .Select(device =>
                 {
                     SettingsLayout? layout = value.Layouts.FirstOrDefault(candidate =>
                         candidate.Identifier == device.LayoutIdentifier);
                     return (Device: device, Layout: layout);
-                })
-                .OrderBy(item => DeviceSortRank(item.Device, item.Layout))
-                .ThenBy(item => item.Device.DisplayName, StringComparer.CurrentCultureIgnoreCase);
+                });
 
-            foreach ((SettingsDevice device, SettingsLayout? layout) in orderedDevices)
+            foreach ((SettingsDevice device, SettingsLayout? layout) in ungroupedDevices)
             {
-                AddRow(new DeviceRow(device, layout));
+                topLevelRows.Add((new DeviceRow(device, layout), []));
+            }
+
+            foreach ((DeviceRow parent, IReadOnlyList<DeviceRow> members) in topLevelRows
+                         .OrderBy(entry => entry.Parent.SortRank)
+                         .ThenBy(entry => entry.Parent.DisplayName, StringComparer.CurrentCultureIgnoreCase))
+            {
+                AddRow(parent);
+                foreach (DeviceRow member in members)
+                {
+                    AddRow(member);
+                }
             }
 
             LayoutComboBox.Items.Clear();
@@ -909,7 +933,7 @@ public sealed class SettingsWindow : Window
             }
 
             DeviceRow? selected = rows.FirstOrDefault(row =>
-                string.Equals(row.Identity, identityToSelect, StringComparison.OrdinalIgnoreCase)) ?? rows.FirstOrDefault();
+                string.Equals(row.Identity, requestedIdentity, StringComparison.OrdinalIgnoreCase)) ?? rows.FirstOrDefault();
             DeviceList.SelectedItem = DeviceList.Items.OfType<ListViewItem>()
                 .FirstOrDefault(item => ReferenceEquals(item.Tag, selected));
         }
@@ -919,7 +943,74 @@ public sealed class SettingsWindow : Window
         }
 
         ApplySelectedDevice(DeviceList.SelectedItem as ListViewItem);
+        if (pendingEditorState is SettingsEditorState pending &&
+            string.Equals(SelectedRow?.Identity, requestedIdentity, StringComparison.OrdinalIgnoreCase))
+        {
+            RestorePendingEditorState(pending);
+        }
         SetEditorEnabled(DeviceList.SelectedItem is not null);
+        RestoreScrollOffset(verticalOffset);
+    }
+
+    private void RestorePendingEditorState(SettingsEditorState state)
+    {
+        applyingEditorState = true;
+        try
+        {
+            AliasTextBox.Text = state.Alias;
+            IgnoredCheckBox.IsChecked = state.Ignored;
+            LayoutComboBox.SelectedItem = state.LayoutIdentifier is long identifier
+                ? LayoutComboBox.Items.OfType<SettingsLayout>()
+                    .FirstOrDefault(layout => layout.Identifier == identifier)
+                : LayoutComboBox.Items[0];
+        }
+        finally
+        {
+            applyingEditorState = false;
+        }
+
+        editorStateTracker.Update(CreateEditorState(), applyingEditorState: false);
+        SetEditorEnabled(true);
+    }
+
+    private void RestoreScrollOffset(double? verticalOffset)
+    {
+        if (verticalOffset is not double offset)
+        {
+            return;
+        }
+
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            DeviceList.UpdateLayout();
+            FindDescendant<ScrollViewer>(DeviceList)?.ChangeView(
+                horizontalOffset: null,
+                verticalOffset: offset,
+                zoomFactor: null,
+                disableAnimation: true);
+        });
+    }
+
+    private static T? FindDescendant<T>(DependencyObject parent)
+        where T : DependencyObject
+    {
+        int count = VisualTreeHelper.GetChildrenCount(parent);
+        for (int index = 0; index < count; index++)
+        {
+            DependencyObject child = VisualTreeHelper.GetChild(parent, index);
+            if (child is T match)
+            {
+                return match;
+            }
+
+            T? nested = FindDescendant<T>(child);
+            if (nested is not null)
+            {
+                return nested;
+            }
+        }
+
+        return null;
     }
 
     private void AddRow(DeviceRow row)
@@ -928,23 +1019,20 @@ public sealed class SettingsWindow : Window
         DeviceList.Items.Add(CreateDeviceItem(row));
     }
 
-    private static int DeviceSortRank(SettingsDevice device, SettingsLayout? layout)
-    {
-        if (device.Ignored)
-        {
-            return 4;
-        }
-
-        if (device.Connected)
-        {
-            return layout is null ? 1 : 0;
-        }
-
-        return layout is null ? 3 : 2;
-    }
-
     private static ListViewItem CreateDeviceItem(DeviceRow row)
     {
+        Ellipse connectionIndicator = new()
+        {
+            Name = "ConnectionIndicator",
+            Width = 6,
+            Height = 6,
+            Fill = new SolidColorBrush(row.Connected
+                ? Color.FromArgb(255, 16, 124, 65)
+                : Color.FromArgb(255, 117, 117, 117)),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        ToolTipService.SetToolTip(connectionIndicator, row.Connected ? "Conectado" : "Desconectado");
+
         StackPanel content = new() { Spacing = 2 };
         content.Children.Add(new TextBlock
         {
@@ -952,12 +1040,19 @@ public sealed class SettingsWindow : Window
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             TextTrimming = TextTrimming.CharacterEllipsis
         });
-        content.Children.Add(new TextBlock
+        Grid stateLine = new() { ColumnSpacing = 6 };
+        stateLine.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        stateLine.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        stateLine.Children.Add(connectionIndicator);
+        TextBlock summary = new()
         {
             Text = row.Summary,
             Opacity = 0.72,
             TextTrimming = TextTrimming.CharacterEllipsis
-        });
+        };
+        Grid.SetColumn(summary, 1);
+        stateLine.Children.Add(summary);
+        content.Children.Add(stateLine);
         ListViewItem item = new()
         {
             Tag = row,
@@ -1878,9 +1973,10 @@ public sealed class DeviceRow
         DevicePresentation presentation = DevicePresentation.Create(device.Connected, device.Ignored, layout?.Name);
         Summary = presentation.SecondaryText;
         AccessibleName = presentation.GetAccessibleName(DisplayName);
+        SortRank = presentation.SortRank;
     }
 
-    internal DeviceRow(SettingsDevice device, string groupId)
+    internal DeviceRow(SettingsDevice device, string groupId, SettingsLayout? effectiveLayout)
     {
         Identity = device.Identity;
         TargetIdentity = device.Identity;
@@ -1890,10 +1986,15 @@ public sealed class DeviceRow
         TechnicalId = device.TechnicalId;
         LastSeenUtc = device.LastSeenUtc;
         Connected = device.Connected;
+        Ignored = device.Ignored;
         IsGroupMember = true;
-        string state = device.Connected ? "Conectado" : "Desconectado";
-        Summary = $"Identidad técnica · {state}";
-        AccessibleName = $"{DisplayName}. {Summary}";
+        DevicePresentation presentation = DevicePresentation.Create(
+            device.Connected,
+            device.Ignored,
+            effectiveLayout?.Name);
+        Summary = $"Identidad técnica · {presentation.SecondaryText}";
+        AccessibleName = $"{DisplayName}. Identidad técnica. {presentation.SecondaryText.Replace(" · ", ". ")}.";
+        SortRank = presentation.SortRank;
     }
 
     internal DeviceRow(
@@ -1912,15 +2013,16 @@ public sealed class DeviceRow
             .Select(identity => devices[identity])
             .ToArray();
         LastSeenUtc = members.Select(member => member.LastSeenUtc).DefaultIfEmpty().Max();
-        Connected = members.Any(member => member.Connected);
+        DevicePresentation presentation = DevicePresentation.CreateGroup(
+            members.Select(member => member.Connected),
+            layout?.Name);
+        Connected = presentation.Connected;
         Layout = layout;
         IsGroup = true;
         MemberCount = members.Length;
-        string state = Connected ? "Conectado" : "Desconectado";
-        Summary = layout is null
-            ? $"{MemberCount} identidades · {state}"
-            : $"{MemberCount} identidades · {state} · {layout.Name}";
-        AccessibleName = $"Grupo {DisplayName}. {Summary}";
+        Summary = $"{MemberCount} identidades · {presentation.SecondaryText}";
+        AccessibleName = presentation.GetAccessibleName($"Grupo {DisplayName}, {MemberCount} identidades");
+        SortRank = presentation.SortRank;
     }
 
     public string Identity { get; }
@@ -1934,6 +2036,7 @@ public sealed class DeviceRow
     public string AccessibleName { get; }
     public bool Connected { get; }
     public bool Ignored { get; }
+    public int SortRank { get; }
     public bool IsGroup { get; }
     public bool IsGroupMember { get; }
     public bool CanBeGroupTarget => SettingsEditorAvailability.CanBeGroupTarget(

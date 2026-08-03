@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.VisualStudio.TestTools.UnitTesting.AppContainer;
+using RightKeyboard;
 
 namespace RightKeyboard.WinUI.Tests;
 
@@ -41,6 +42,72 @@ public sealed class CheckBoxVisualTreeTests
         }
     }
 
+    [UITestMethod]
+    public void Filas_MuestranIndicadorDeConexionSinPerderElNombreAccesible()
+    {
+        SettingsDevice connectedDevice = new(
+            "device:connected",
+            "Teclado conectado",
+            "HID Keyboard",
+            "HID\\CONNECTED",
+            DateTimeOffset.UnixEpoch,
+            Connected: true,
+            Ignored: false,
+            LayoutIdentifier: null,
+            GroupId: null);
+        SettingsDevice disconnectedDevice = connectedDevice with
+        {
+            Identity = "device:disconnected",
+            DisplayName = "Teclado desconectado",
+            Connected = false
+        };
+
+        ListViewItem connectedItem = CreateDeviceItem(connectedDevice);
+        ListViewItem disconnectedItem = CreateDeviceItem(disconnectedDevice);
+        Grid themeHost = new() { RequestedTheme = ElementTheme.Light };
+        themeHost.Children.Add(connectedItem);
+        themeHost.Children.Add(disconnectedItem);
+        Grid host = UnitTestAppWindow.ActiveTestWindow.Host;
+
+        try
+        {
+            host.Children.Add(themeHost);
+            host.UpdateLayout();
+            Ellipse? connectedIndicator = FindDescendant<Ellipse>(connectedItem, "ConnectionIndicator");
+            Ellipse? disconnectedIndicator = FindDescendant<Ellipse>(disconnectedItem, "ConnectionIndicator");
+
+            Assert.IsNotNull(connectedIndicator);
+            Assert.IsNotNull(disconnectedIndicator);
+            Assert.IsTrue(connectedIndicator.Width <= 6d, "El punto no debe competir con el nombre.");
+            Assert.AreNotEqual(
+                ((SolidColorBrush)connectedIndicator.Fill).Color,
+                ((SolidColorBrush)disconnectedIndicator.Fill).Color);
+            Assert.IsTrue(
+                Microsoft.UI.Xaml.Automation.AutomationProperties.GetName(connectedItem)
+                    .Contains("Conectado", StringComparison.Ordinal));
+            Assert.IsTrue(
+                Microsoft.UI.Xaml.Automation.AutomationProperties.GetName(disconnectedItem)
+                    .Contains("Desconectado", StringComparison.Ordinal));
+
+            Grid stateLine = (Grid)VisualTreeHelper.GetParent(connectedIndicator);
+            TextBlock stateText = stateLine.Children.OfType<TextBlock>().Single();
+            Assert.AreEqual(0, Grid.GetColumn(connectedIndicator));
+            Assert.AreEqual(1, Grid.GetColumn(stateText));
+            Assert.IsTrue(stateText.Text.StartsWith("Conectado", StringComparison.Ordinal));
+
+            themeHost.RequestedTheme = ElementTheme.Dark;
+            host.UpdateLayout();
+            Assert.AreNotEqual(
+                ((SolidColorBrush)connectedIndicator.Fill).Color,
+                ((SolidColorBrush)disconnectedIndicator.Fill).Color,
+                "Los indicadores deben seguir distinguiéndose en tema oscuro.");
+        }
+        finally
+        {
+            host.Children.Clear();
+        }
+    }
+
     private static void ApplyProductionResources(CheckBox checkBox)
     {
         MethodInfo? method = typeof(SettingsWindow).GetMethod(
@@ -48,6 +115,24 @@ public sealed class CheckBoxVisualTreeTests
             BindingFlags.NonPublic | BindingFlags.Static);
         Assert.IsNotNull(method, "No se encontró el helper de producción de CheckBox.");
         method.Invoke(null, [checkBox]);
+    }
+
+    private static ListViewItem CreateDeviceItem(SettingsDevice device)
+    {
+        Type? rowType = typeof(SettingsWindow).Assembly.GetType("RightKeyboard.WinUI.DeviceRow");
+        Assert.IsNotNull(rowType);
+        object? row = Activator.CreateInstance(
+            rowType,
+            BindingFlags.Instance | BindingFlags.NonPublic,
+            binder: null,
+            args: [device, null],
+            culture: null);
+        Assert.IsNotNull(row);
+        MethodInfo? method = typeof(SettingsWindow).GetMethod(
+            "CreateDeviceItem",
+            BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.IsNotNull(method);
+        return (ListViewItem)method.Invoke(null, [row])!;
     }
 
     private static T? FindDescendant<T>(DependencyObject parent, string name)

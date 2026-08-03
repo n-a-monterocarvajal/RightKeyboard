@@ -16,7 +16,7 @@ Snapshot actualizado el **2026-08-02** durante la Etapa 17. Contrastar siempre c
 - Recuperación de asociación/ignorado por huella solo cuando hay una coincidencia inequívoca (`Configuration.TryGetLayout` e `IsIgnored`).
 - Persistencia esquema 5, migraciones de esquemas 2-4 y de `config.txt`, validación estricta y escritura temporal (`Configuration`).
 - Selector WinUI con alias, agrupación visual por idioma, distribución, ignorado y fallback WinForms.
-- Configuración WinUI para listar, ordenar, renombrar, cambiar distribución, ignorar, olvidar y limpiar.
+- Configuración WinUI para listar, ordenar, renombrar, cambiar distribución, ignorar, olvidar y limpiar. Desde 1.5.10, conexión es la clave primaria del orden y cada fila muestra un indicador verde/gris junto al texto accesible de estado; el respaldo WinForms usa la misma semántica.
 - Seguimiento del teclado pulsado con Configuración abierta; mientras el alias tiene foco no cambia la selección.
 - Menú nativo de bandeja limitado a **Configuración**, separador y **Salir** (`NativeTrayMenu`).
 - Detección conservadora de no-teclados por nombre y de la firma sintética observada al usar el historial del portapapeles.
@@ -55,4 +55,4 @@ No hay servicios falsos en producción. `RightKeyboard.WinUI` usa IPC real, `Con
 
 ## Evidencia automatizada
 
-En el snapshot inicial había **98 pruebas NUnit**; tras la Etapa 18 hay **207 NUnit y 1 prueba WinUI de árbol visual real**. Esta última levanta una aplicación XAML, resuelve el template de `CheckBox` y mide el rectángulo del glifo. Es una cobertura UI deliberadamente estrecha: la suite aún no cubre extremo a extremo el pipe, ventanas completas, foco/foreground, SetupAPI real, instalador ni hardware.
+En el snapshot inicial había **98 pruebas NUnit**; tras la Etapa 19 hay **218 NUnit y 2 pruebas WinUI de árbol visual real**. Estas últimas levantan una aplicación XAML, resuelven el template de `CheckBox` y verifican los indicadores de conexión y sus nombres accesibles. Es una cobertura UI deliberadamente estrecha: la suite aún no cubre extremo a extremo el pipe, ventanas completas, foco/foreground, SetupAPI real, instalador ni hardware.

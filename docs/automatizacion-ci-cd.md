@@ -27,8 +27,8 @@ compilaciones programadas, artefactos permanentes y jobs redundantes.
    modo que una sola compilación cubre el núcleo WinForms, el frontend WinUI y
    ambos proyectos de pruebas. `Directory.Build.props` activa `TreatWarningsAsErrors`, por lo
    que cualquier advertencia detiene el build (política AUT-15).
-3. Ejecuta `scripts/run-tests.ps1`: 207 pruebas NUnit mediante `dotnet test` y
-   una prueba dentro de una aplicación WinUI real que resuelve el árbol XAML.
+3. Ejecuta `scripts/run-tests.ps1`: 218 pruebas NUnit mediante `dotnet test` y
+   dos pruebas dentro de una aplicación WinUI real que resuelve el árbol XAML.
 
 Un fallo de restauración, compilación o pruebas hace fallar el workflow de forma
 visible.
@@ -188,8 +188,8 @@ CI antes de integrarse.
 
 ## 5. Limitaciones actuales y tareas futuras
 
-- **Pruebas físicas:** la prueba WinUI de la Etapa 18 cubre solo el árbol visual
-  real de un `CheckBox`. Las suites no cubren extremo a extremo el pipe IPC,
+- **Pruebas físicas:** las pruebas WinUI cubren el árbol visual real de un
+  `CheckBox` y los indicadores de conexión. Las suites no cubren extremo a extremo el pipe IPC,
   ventanas completas, foco/foreground, SetupAPI real, el registro de inicio, el
   instalador ni el hardware. Esa validación sigue siendo manual (ver
   `docs/calidad-1.5.md`).

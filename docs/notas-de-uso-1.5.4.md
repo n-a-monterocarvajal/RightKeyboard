@@ -26,6 +26,8 @@ Cada punto describe lo observado, lo que se sabe del código y lo que quedaría 
 
 **Promovido:** incorporado junto con la regla «Conectados arriba» a la Etapa 19 (1.5.10) de [`docs/plan-1.6.0.md`](plan-1.6.0.md#etapa-19--estado-visual-y-orden-lógico-de-dispositivos-1510).
 
+**Resuelto en 1.5.10:** punto verde o gris pequeño en la línea de estado de WinUI y WinForms, con «Conectado/Desconectado» conservado como texto y en el nombre accesible.
+
 ## 3. Evaluar la agrupación de identidades ignoradas
 
 **Tipo:** decisión de diseño a evaluar.
@@ -64,3 +66,5 @@ Así, por ejemplo, un ignorado conectado aparece por encima de un conocido y con
 **Pendiente:** ajustar `DeviceSortRank` (los grupos lógicos conservan su ordenación por nombre; revisar cómo hereda el rango un grupo con miembros en estados distintos) y validar visualmente con dispositivos conectados y desconectados en cada categoría.
 
 **Promovido:** incorporado junto con el indicador gráfico de conexión a la Etapa 19 (1.5.10) de [`docs/plan-1.6.0.md`](plan-1.6.0.md#etapa-19--estado-visual-y-orden-lógico-de-dispositivos-1510).
+
+**Resuelto en 1.5.10:** conexión como clave primaria, estado lógico como secundaria y nombre como desempate; los grupos heredan conexión si cualquiera de sus miembros está conectado.

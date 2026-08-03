@@ -28,7 +28,7 @@ if (-not (Test-Path -LiteralPath $winUiTests -PathType Leaf)) {
 }
 
 $env:TESTINGPLATFORM_TELEMETRY_OPTOUT = '1'
-& $winUiTests --minimum-expected-tests 1
+& $winUiTests --minimum-expected-tests 2
 if ($LASTEXITCODE -ne 0) {
     throw "La suite WinUI falló con código $LASTEXITCODE."
 }

@@ -241,6 +241,9 @@ internal sealed class SettingsDialog : FluentForm
         Button clearButton = ActionButton("&Limpiar preferencias");
         clearButton.AccessibleDescription = "Elimina todos los alias, distribuciones y dispositivos ignorados después de pedir confirmación.";
         clearButton.Click += (_, _) => ClearPreferences();
+        Button reloadButton = ActionButton("&Recargar");
+        reloadButton.AccessibleDescription = "Actualiza conexión y orden sin descartar la edición pendiente.";
+        reloadButton.Click += (_, _) => RefreshDeviceList(selectedIdentity, preserveEditorContext: true);
         startupCheckBox = new CheckBox
         {
             AutoSize = true,
@@ -253,6 +256,7 @@ internal sealed class SettingsDialog : FluentForm
         closeButton.Margin = new Padding(16, 0, 0, 0);
         secondaryActions.Controls.Add(exportButton);
         secondaryActions.Controls.Add(importButton);
+        secondaryActions.Controls.Add(reloadButton);
         secondaryActions.Controls.Add(clearButton);
         secondaryActions.Controls.Add(startupCheckBox);
         footer.Controls.Add(secondaryActions, 0, 0);
@@ -278,8 +282,19 @@ internal sealed class SettingsDialog : FluentForm
         RefreshDeviceList();
     }
 
-    private void RefreshDeviceList(string? identityToSelect = null)
+    private void RefreshDeviceList(
+        string? identityToSelect = null,
+        bool preserveEditorContext = false)
     {
+        string? previousIdentity = selectedIdentity;
+        string? requestedIdentity = identityToSelect ?? previousIdentity;
+        SettingsEditorState? pendingEditorState = preserveEditorContext && editorStateTracker.IsDirty &&
+            string.Equals(previousIdentity, requestedIdentity, StringComparison.OrdinalIgnoreCase)
+                ? CreateEditorState()
+                : null;
+        Point scrollPosition = new(
+            -deviceList.AutoScrollPosition.X,
+            -deviceList.AutoScrollPosition.Y);
         devices.Refresh();
         HashSet<string> connected = devices.Select(device => device.Identity).ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (KeyboardDevice device in devices)
@@ -294,28 +309,26 @@ internal sealed class SettingsDialog : FluentForm
         editorStateTracker.Clear();
         deviceList.Controls.Clear();
 
-        foreach (DevicePreference preference in configuration.Devices.Values
-                     .OrderBy(preference => preference.DisplayName, StringComparer.CurrentCultureIgnoreCase))
+        foreach (SettingsDeviceListRow row in BuildDeviceRows(connected))
         {
-            bool isConnected = connected.Contains(preference.Identity);
-            bool isIgnored = configuration.IgnoredDevices.Contains(preference.Identity);
-            configuration.TryGetEffectiveLayout(preference.Identity, out Layout? layout);
-            string displayName = configuration.GetGroup(preference.Identity)?.DisplayName ?? preference.DisplayName;
-            DevicePresentation presentation = DevicePresentation.Create(isConnected, isIgnored, layout);
-            RadioButton button = new()
+            DeviceRadioButton button = new(row.Presentation.Connected, row.IsGroupMember)
             {
                 Appearance = Appearance.Button,
                 AutoSize = false,
                 Height = 64,
                 FlatStyle = FlatStyle.Flat,
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(12, 6, 12, 6),
-                Text = presentation.GetListText(displayName),
-                Tag = preference.Identity,
-                Margin = new Padding(0, 0, 0, 8),
+                Padding = new Padding(row.IsGroupMember ? 48 : 32, 6, 12, 6),
+                Text = row.ListText,
+                Tag = row.TargetIdentity,
+                Margin = row.IsGroupMember
+                    ? new Padding(20, 0, 0, 8)
+                    : new Padding(0, 0, 0, 8),
                 AutoEllipsis = true,
-                AccessibleName = presentation.GetAccessibleName(displayName),
-                AccessibleDescription = "Selecciona el dispositivo para editar sus preferencias."
+                AccessibleName = row.AccessibleName,
+                AccessibleDescription = row.IsGroupMember
+                    ? "Identidad técnica del grupo. Conserva su estado de conexión real."
+                    : "Selecciona el dispositivo para editar sus preferencias."
             };
             button.FlatAppearance.BorderColor = SystemColors.ControlLight;
             button.FlatAppearance.CheckedBackColor = SystemColors.GradientActiveCaption;
@@ -338,11 +351,101 @@ internal sealed class SettingsDialog : FluentForm
         {
             ResizeDeviceButtons();
             RadioButton? selected = deviceList.Controls.OfType<RadioButton>()
-                .FirstOrDefault(button => string.Equals(button.Tag as string, identityToSelect, StringComparison.OrdinalIgnoreCase))
+                .FirstOrDefault(button => string.Equals(button.Tag as string, requestedIdentity, StringComparison.OrdinalIgnoreCase))
                 ?? deviceList.Controls.OfType<RadioButton>().First();
             selected.Checked = true;
         }
+
+        if (pendingEditorState is SettingsEditorState pending &&
+            string.Equals(selectedIdentity, requestedIdentity, StringComparison.OrdinalIgnoreCase))
+        {
+            RestorePendingEditorState(pending);
+        }
+
+        deviceList.AutoScrollPosition = scrollPosition;
         applyingEditorState = false;
+    }
+
+    private IEnumerable<SettingsDeviceListRow> BuildDeviceRows(IReadOnlySet<string> connected)
+    {
+        List<(SettingsDeviceListRow Parent, IReadOnlyList<SettingsDeviceListRow> Members)> topLevel = [];
+        foreach (LogicalDeviceGroup group in configuration.DeviceGroups.Values)
+        {
+            DevicePreference[] members = group.MemberIdentities
+                .Where(configuration.Devices.ContainsKey)
+                .Select(identity => configuration.Devices[identity])
+                .ToArray();
+            DevicePresentation groupPresentation = DevicePresentation.CreateGroup(
+                members.Select(member => connected.Contains(member.Identity)),
+                group.Layout);
+            SettingsDeviceListRow parent = new(
+                members[0].Identity,
+                $"{group.DisplayName}\r\n{members.Length} identidades · {groupPresentation.SecondaryText}",
+                groupPresentation.GetAccessibleName($"Grupo {group.DisplayName}, {members.Length} identidades"),
+                groupPresentation,
+                IsGroupMember: false);
+            SettingsDeviceListRow[] memberRows = members
+                .Select(member =>
+                {
+                    DevicePresentation presentation = DevicePresentation.Create(
+                        connected.Contains(member.Identity),
+                        configuration.IgnoredDevices.Contains(member.Identity),
+                        group.Layout);
+                    return new SettingsDeviceListRow(
+                        member.Identity,
+                        $"{member.DetectedName}\r\nIdentidad técnica · {presentation.SecondaryText}",
+                        $"{member.DetectedName}. Identidad técnica. {presentation.SecondaryText.Replace(" · ", ". ")}.",
+                        presentation,
+                        IsGroupMember: true);
+                })
+                .OrderBy(row => row.Presentation.SortRank)
+                .ThenBy(row => row.ListText, StringComparer.CurrentCultureIgnoreCase)
+                .ToArray();
+            topLevel.Add((parent, memberRows));
+        }
+
+        foreach (DevicePreference preference in configuration.Devices.Values
+                     .Where(preference => configuration.GetGroup(preference.Identity) is null))
+        {
+            bool isIgnored = configuration.IgnoredDevices.Contains(preference.Identity);
+            configuration.TryGetEffectiveLayout(preference.Identity, out Layout? layout);
+            DevicePresentation presentation = DevicePresentation.Create(
+                connected.Contains(preference.Identity),
+                isIgnored,
+                layout);
+            topLevel.Add((new SettingsDeviceListRow(
+                preference.Identity,
+                presentation.GetListText(preference.DisplayName),
+                presentation.GetAccessibleName(preference.DisplayName),
+                presentation,
+                IsGroupMember: false), []));
+        }
+
+        return topLevel
+            .OrderBy(entry => entry.Parent.Presentation.SortRank)
+            .ThenBy(entry => entry.Parent.ListText, StringComparer.CurrentCultureIgnoreCase)
+            .SelectMany(entry => new[] { entry.Parent }.Concat(entry.Members));
+    }
+
+    private void RestorePendingEditorState(SettingsEditorState state)
+    {
+        applyingEditorState = true;
+        try
+        {
+            customNameTextBox.Text = state.Alias;
+            ignoredCheckBox.Checked = state.Ignored;
+            layoutComboBox.SelectedItem = state.LayoutIdentifier is long identifier
+                ? layoutComboBox.Items.OfType<Layout>()
+                    .FirstOrDefault(layout => layout.Identifier.ToInt64() == identifier)
+                : layoutComboBox.Items[0];
+        }
+        finally
+        {
+            applyingEditorState = false;
+        }
+
+        editorStateTracker.Update(CreateEditorState(), applyingEditorState: false);
+        SetEditorEnabled(true);
     }
 
     internal void HighlightDevice(string identity)
@@ -378,7 +481,7 @@ internal sealed class SettingsDialog : FluentForm
         int width = Math.Max(180, deviceList.ClientSize.Width - deviceList.Padding.Horizontal - 12);
         foreach (RadioButton button in deviceList.Controls.OfType<RadioButton>())
         {
-            button.Width = width;
+            button.Width = width - button.Margin.Horizontal;
             button.Height = Math.Max(76, (Font.Height * 3) + 16);
         }
     }
@@ -691,5 +794,28 @@ internal sealed class SettingsDialog : FluentForm
         }
 
         return button;
+    }
+
+    private sealed record SettingsDeviceListRow(
+        string TargetIdentity,
+        string ListText,
+        string AccessibleName,
+        DevicePresentation Presentation,
+        bool IsGroupMember);
+
+    private sealed class DeviceRadioButton(bool connected, bool isGroupMember) : RadioButton
+    {
+        protected override void OnPaint(PaintEventArgs eventArgs)
+        {
+            base.OnPaint(eventArgs);
+            eventArgs.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            int diameter = Math.Max(5, DeviceDpi / 20);
+            int x = (isGroupMember ? 28 : 12) * DeviceDpi / 96;
+            int y = (ClientSize.Height / 2) + (Font.Height / 2) - (diameter / 2);
+            using SolidBrush brush = new(connected
+                ? Color.FromArgb(16, 124, 65)
+                : SystemColors.GrayText);
+            eventArgs.Graphics.FillEllipse(brush, x, y, diameter, diameter);
+        }
     }
 }

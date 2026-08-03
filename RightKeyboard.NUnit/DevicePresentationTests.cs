@@ -57,4 +57,55 @@ public sealed class DevicePresentationTests
 
         Assert.That(text, Is.EqualTo($"Teclado oficina con…\r\nDesconectado · Ignorado · {spanish.Name}"));
     }
+
+    [TestCase(true, false, true, 0)]
+    [TestCase(true, false, false, 1)]
+    [TestCase(true, true, true, 2)]
+    [TestCase(false, false, true, 3)]
+    [TestCase(false, false, false, 4)]
+    [TestCase(false, true, true, 5)]
+    public void GetSortRank_OrdenaLasSeisCombinacionesLogicas(
+        bool connected,
+        bool ignored,
+        bool configured,
+        int expectedRank)
+    {
+        Assert.That(DevicePresentation.GetSortRank(connected, ignored, configured), Is.EqualTo(expectedRank));
+    }
+
+    [TestCase(false, false, false)]
+    [TestCase(true, false, true)]
+    [TestCase(true, true, true)]
+    public void CreateGroup_ConsideraConectadoAlGrupoSiAlgunMiembroLoEsta(
+        bool first,
+        bool second,
+        bool expectedConnected)
+    {
+        DevicePresentation presentation = DevicePresentation.CreateGroup([first, second], spanish);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(presentation.Connected, Is.EqualTo(expectedConnected));
+            Assert.That(presentation.LayoutName, Is.EqualTo(spanish.Name));
+        });
+    }
+
+    [Test]
+    public void OrdenPorRangoYNombre_ResuelveEmpatesPorNombre()
+    {
+        (string Name, DevicePresentation Presentation)[] rows =
+        [
+            ("Zulu", DevicePresentation.Create(true, ignored: false, spanish)),
+            ("Alfa", DevicePresentation.Create(true, ignored: false, spanish)),
+            ("Beta", DevicePresentation.Create(false, ignored: false, layoutName: null))
+        ];
+
+        string[] ordered = rows
+            .OrderBy(row => row.Presentation.SortRank)
+            .ThenBy(row => row.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(row => row.Name)
+            .ToArray();
+
+        Assert.That(ordered, Is.EqualTo(new[] { "Alfa", "Zulu", "Beta" }));
+    }
 }

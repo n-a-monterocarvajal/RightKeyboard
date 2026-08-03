@@ -1,8 +1,14 @@
 namespace RightKeyboard;
 
-internal readonly record struct DevicePresentation(string State, bool Ignored, string? LayoutName)
+internal readonly record struct DevicePresentation(
+    bool Connected,
+    string State,
+    bool Ignored,
+    string? LayoutName)
 {
     public string SecondaryText => string.Join(" · ", GetSummaryParts());
+
+    public int SortRank => GetSortRank(Connected, Ignored, LayoutName is not null);
 
     public string GetListText(string displayName, int maximumNameLength = 30)
     {
@@ -20,9 +26,26 @@ internal readonly record struct DevicePresentation(string State, bool Ignored, s
         Create(connected, ignored, layout?.Name);
 
     public static DevicePresentation Create(bool connected, bool ignored, string? layoutName) => new(
+        connected,
         connected ? "Conectado" : "Desconectado",
         ignored,
         layoutName);
+
+    public static DevicePresentation CreateGroup(IEnumerable<bool> connectedMembers, Layout? layout) =>
+        CreateGroup(connectedMembers, layout?.Name);
+
+    public static DevicePresentation CreateGroup(IEnumerable<bool> connectedMembers, string? layoutName)
+    {
+        ArgumentNullException.ThrowIfNull(connectedMembers);
+        return Create(connectedMembers.Any(connected => connected), ignored: false, layoutName);
+    }
+
+    public static int GetSortRank(bool connected, bool ignored, bool configured)
+    {
+        int connectionRank = connected ? 0 : 3;
+        int logicalRank = ignored ? 2 : configured ? 0 : 1;
+        return connectionRank + logicalRank;
+    }
 
     private IEnumerable<string> GetSummaryParts()
     {

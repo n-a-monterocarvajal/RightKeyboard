@@ -4,6 +4,18 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [Sin publicar]
 
+## [1.5.10] - 2026-08-02
+
+### Configuración
+
+- Las filas WinUI y el respaldo WinForms muestran un punto verde pequeño inmediatamente antes de «Conectado» y un punto gris neutro antes de «Desconectado». El texto y el nombre accesible conservan conexión, estado ignorado y distribución, de modo que la información no depende del color.
+- La conexión pasa a ser la clave primaria del orden: configurado, sin configurar e ignorado se aplican dentro de los bloques conectado y desconectado. Los empates se resuelven por nombre y los grupos se consideran conectados cuando lo está al menos una de sus identidades técnicas.
+- Recargar el inventario conserva la selección, los cambios pendientes del editor y la posición de desplazamiento aunque una fila cambie de bloque; el respaldo WinForms incorpora la misma acción «Recargar».
+
+### Pruebas
+
+- La suite crece a 218 pruebas NUnit y 2 pruebas WinUI. Cubre las seis combinaciones de orden, empates por nombre, conexión agregada de grupos, el indicador real en temas claro/oscuro y su dibujo separado en WinForms.
+
 ## [1.5.9] - 2026-08-02
 
 ### Pruebas
