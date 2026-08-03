@@ -65,6 +65,8 @@ dotnet publish $winUiProjectPath `
     -p:DebugType=None
 if ($LASTEXITCODE -ne 0) { throw 'Falló dotnet publish para WinUI.' }
 
+& (Join-Path $PSScriptRoot 'verify-winui-publish.ps1') -PublishDirectory $publishDirectory
+
 # El despliegue autocontenido del Windows App SDK copia el runtime de Windows ML aunque el
 # proyecto no lo use. `WindowsAppSDKMLPassthroughOnnxRuntime` no lo evita (WindowsAppSDK 5969),
 # así que se eliminan tras publicar. RightKeyboard no referencia ninguna API de Windows.AI:

@@ -281,6 +281,8 @@ Refactor diferido a 1.6: mover los DTO de IPC, `VersionPresentation` y modelos c
 
 **Evidencia:** la biblioteca, el residente y el frontend WinUI compilan por separado en Release con 0 advertencias. 220/220 pruebas NUnit incluyen dos invariantes nuevas que fijan el ensamblado compartido y la versión 1.6.0; las 2 pruebas WinUI se mantienen como puerta de regresión visual. El CI limpio de GitHub Actions es el criterio definitivo de cierre.
 
+**Corrección de empaquetado posterior al cierre · 3 de agosto de 2026:** la primera publicación de prueba de 1.6.0 omitía `App.xbf` y `RightKeyboard.WinUI.pri`, aunque ambos existían en la salida de compilación usada por la prueba WinUI. El mismo ZIP afectado mostró las casillas rectas en la VM y en la estación física; al agregar únicamente esos dos recursos recuperó las esquinas redondeadas en la VM. El proyecto copia ahora los recursos generados a `PublishDir` y los scripts de instalador y portable detienen el empaquetado si faltan o están vacíos. Se conserva la versión 1.6.0 porque todavía no se había creado su etiqueta ni su Release.
+
 ## Carril B — Licencia · resuelto el 19 de julio de 2026
 
 Existe `LICENSE` en la raíz, con tres capas declaradas por separado: la obra original de 2007 de Antoine Aubry bajo CPOL 1.02, los forks intermedios sin licencia declarada, y los cambios de este fork bajo MIT. La procedencia está trazada en `docs/procedencia-y-licencia.md` y la atribución restaurada en el README.

@@ -40,8 +40,17 @@ El repositorio deberá incluir:
 
 - el script fuente del instalador;
 - un script reproducible que publique la aplicación y compile el instalador;
+- una puerta que compruebe `App.xbf` y `RightKeyboard.WinUI.pri` en la salida WinUI antes de empaquetar;
 - verificación SHA-256;
 - pruebas de instalación nueva, actualización, reparación y desinstalación.
+
+Los dos recursos WinUI son obligatorios para la aplicación no empaquetada. En una
+publicación 1.6.0 de prueba, `dotnet publish` los omitió silenciosamente mientras la
+compilación Release sí los conservaba. El ejecutable seguía abriendo, pero cargaba el
+tema XAML de forma incompleta: el mismo ZIP mostró casillas rectas tanto en la VM como
+en la estación física. Reincorporar solamente `App.xbf` y
+`RightKeyboard.WinUI.pri` al paquete reprodujo las esquinas redondeadas en la VM y
+confirmó que no era una diferencia de hardware, DPI ni versión de Windows.
 
 ## Raíz única por usuario
 
@@ -139,6 +148,7 @@ Los ZIP autocontenido y dependiente del framework dejarán de ser descargas púb
 
 - Instalar, actualizar y desinstalar desde una cuenta estándar sin UAC.
 - Ejecutar en un equipo limpio sin .NET Desktop Runtime preinstalado.
+- Verificar que la salida instalada contiene `App.xbf` y `RightKeyboard.WinUI.pri` junto al frontend WinUI.
 - Conservar preferencias durante una actualización.
 - Mostrar RightKeyboard como aplicación instalada.
 - Iniciar con Windows por defecto y permitir desactivarlo desde ambos lugares.

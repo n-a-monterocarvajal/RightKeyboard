@@ -95,7 +95,11 @@ No se ejecuta en cada commit ni en cada pull request.
 
 Realiza una compilación limpia en `Release`. En ambas modalidades publica núcleo y
 WinUI autocontenidos para `win-x64` (ReadyToRun) en una sola carpeta compartida y
-calcula el SHA-256; la diferencia es el empaquetado final.
+calcula el SHA-256; la diferencia es el empaquetado final. Antes de empaquetar, ambos
+scripts exigen `App.xbf` y `RightKeyboard.WinUI.pri`: son recursos generados por WinUI
+que `dotnet publish` puede omitir aunque estén presentes en la carpeta de compilación.
+Si falta alguno o está vacío, la ejecución falla en vez de producir un artefacto que
+abra con el tema XAML incompleto.
 
 Salida publicada como artefacto de la ejecución de Actions, descargable desde la
 página de la ejecución (sección *Artifacts*):
