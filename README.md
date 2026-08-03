@@ -45,7 +45,7 @@ El contrato del esquema, las validaciones, las rutas y el alcance exacto de **Li
 ```powershell
 dotnet restore RightKeyboard.sln
 dotnet build RightKeyboard.sln --configuration Release
-dotnet test RightKeyboard.sln --configuration Release
+powershell -ExecutionPolicy Bypass -File scripts\run-tests.ps1 -Configuration Release -NoBuild
 scripts\build-installer.ps1
 ```
 

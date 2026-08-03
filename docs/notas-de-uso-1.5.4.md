@@ -24,6 +24,8 @@ Cada punto describe lo observado, lo que se sabe del código y lo que quedaría 
 
 **Accesibilidad:** el indicador no debe depender solo del color. Conservar el texto de estado y su anuncio para el lector de pantalla, de forma coherente con la separación introducida en 1.5.4.
 
+**Promovido:** incorporado junto con la regla «Conectados arriba» a la Etapa 19 (1.5.10) de [`docs/plan-1.6.0.md`](plan-1.6.0.md#etapa-19--estado-visual-y-orden-lógico-de-dispositivos-1510).
+
 ## 3. Evaluar la agrupación de identidades ignoradas
 
 **Tipo:** decisión de diseño a evaluar.
@@ -60,3 +62,5 @@ La lista tiene una jerarquía lógica implementada en `DeviceSortRank` (`RightKe
 Así, por ejemplo, un ignorado conectado aparece por encima de un conocido y configurado desconectado. El cambio respecto al comportamiento actual es que «ignorado» deja de ir siempre al fondo: pasa a ordenarse primero por conexión y solo después por su rango lógico.
 
 **Pendiente:** ajustar `DeviceSortRank` (los grupos lógicos conservan su ordenación por nombre; revisar cómo hereda el rango un grupo con miembros en estados distintos) y validar visualmente con dispositivos conectados y desconectados en cada categoría.
+
+**Promovido:** incorporado junto con el indicador gráfico de conexión a la Etapa 19 (1.5.10) de [`docs/plan-1.6.0.md`](plan-1.6.0.md#etapa-19--estado-visual-y-orden-lógico-de-dispositivos-1510).

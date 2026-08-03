@@ -24,16 +24,16 @@ Get-Command ISCC.exe -ErrorAction SilentlyContinue
 ```powershell
 dotnet restore .\RightKeyboard.sln
 dotnet build .\RightKeyboard.sln --configuration Release
-dotnet test .\RightKeyboard.sln --configuration Release --no-build
+powershell -ExecutionPolicy Bypass -File .\scripts\run-tests.ps1 -Configuration Release -NoBuild
 ```
 
-Tras la Etapa 17: 207/207 pruebas. Si se omite `--no-build`, `dotnet test` recompila.
+Tras la Etapa 18: 207/207 pruebas NUnit y 1/1 prueba WinUI de árbol visual. El script ejecuta NUnit con `dotnet test` y la aplicación de prueba WinUI directamente, porque el repositorio mantiene VSTest para NUnit y Microsoft Testing Platform para el proceso XAML.
 
 La puerta de las etapas 6-7 exige además la variante diagnóstica:
 
 ```powershell
 dotnet build .\RightKeyboard.sln --configuration Release -p:DefineConstants=RIGHTKEYBOARD_DIAGNOSTICS
-dotnet test .\RightKeyboard.sln --configuration Release --no-build -p:DefineConstants=RIGHTKEYBOARD_DIAGNOSTICS
+powershell -ExecutionPolicy Bypass -File .\scripts\run-tests.ps1 -Configuration Release -NoBuild
 ```
 
 Para la Etapa 7, comprobar por separado la Configuración normal y la diagnóstica a tamaño inicial y al mínimo de 900 × 640 píxeles lógicos. Registrar la escala efectiva y marcar como **Bloqueada por entorno** —no aprobada por inferencia— cualquier validación de 125 %, DPI mixto o monitor que la VM no permita evidenciar.
@@ -101,7 +101,7 @@ Workflows vigentes:
 
 | Workflow | Archivo | Se ejecuta | Qué hace |
 |---|---|---|---|
-| CI | `.github/workflows/ci.yml` | push a `master`, cada pull request, manual (`workflow_dispatch`) | `dotnet restore` + `dotnet build -c Release` (solución completa; WinUI mapea a x64) + `dotnet test`. Advertencias como errores. Sin artefactos. |
+| CI | `.github/workflows/ci.yml` | push a `master`, cada pull request, manual (`workflow_dispatch`) | `dotnet restore` + `dotnet build -c Release` (solución completa; WinUI mapea a x64) + `scripts/run-tests.ps1`: 207 NUnit y 1 prueba WinUI. Advertencias como errores. Sin artefactos. |
 | Compilación distribuible | `.github/workflows/build-package.yml` | manual (`workflow_dispatch`) o etiqueta `v*` | Entrada `artifact`: `installer` (por defecto, `scripts/build-installer.ps1` → instalador Inno Setup) o `zip` (`scripts/build-portable-zip.ps1` → ZIP portable autocontenido para pruebas). Ambas suben binario + `-SHA256.txt` (retención 7 días). Entrada `publish=yes` (solo con `installer`): un job aparte con `contents: write` crea la GitHub Release `vX.Y.Z` con los dos assets. |
 | Dependabot | `.github/dependabot.yml` | semanal (lunes) | PRs agrupados de NuGet y GitHub Actions. |
 
@@ -161,6 +161,7 @@ desde 1.5.5.2 el workflow puede crearla con `publish=yes`.
 | `RightKeyboard.WinUI/LayoutSelectionWindow.cs` | Selector WinUI normal y foco |
 | `RightKeyboard.WinUI/SettingsIpcClient.cs` | Cliente named pipe |
 | `RightKeyboard.NUnit/` | 207 pruebas unitarias/interop/DTO tras la Etapa 17 |
+| `RightKeyboard.WinUI.Tests/` | Aplicación de prueba WinUI y comprobación del árbol visual real |
 | `installer/RightKeyboard.iss` | Instalación/actualización/desinstalación por usuario |
 | `scripts/` | Publicación, instalador, SHA-256, prototipo histórico |
 | `.github/workflows/` | CI (`ci.yml`) y compilación distribuible (`build-package.yml`) |
@@ -180,7 +181,7 @@ Después de editar código:
 
 ```powershell
 dotnet build .\RightKeyboard.sln --configuration Release
-dotnet test .\RightKeyboard.sln --configuration Release --no-build
+powershell -ExecutionPolicy Bypass -File .\scripts\run-tests.ps1 -Configuration Release -NoBuild
 git diff --check
 ```
 

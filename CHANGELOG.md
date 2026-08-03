@@ -4,6 +4,13 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [Sin publicar]
 
+## [1.5.9] - 2026-08-02
+
+### Pruebas
+
+- Una nueva prueba WinUI levanta una aplicación XAML real, resuelve el `ControlTemplate` de `CheckBox` e inspecciona el `Rectangle` del glifo. Confirma que el radio efectivo es 4 y que sigue enlazado a la propiedad `CornerRadius` del control; la hipótesis de radios fijos en el XAML de tema de Windows App SDK 2.3.1 queda descartada.
+- El CI ejecuta ahora las 207 pruebas NUnit y la nueva prueba de árbol visual mediante `scripts/run-tests.ps1`. No se añade un cuarto parche de producción porque el defecto no se reproduce en el árbol real ni en la revisión visual de esta estación; permanece pendiente repetir la comprobación en la estación física que reportó el ángulo recto en 1.5.7.
+
 ## [1.5.8] - 2026-08-02
 
 ### Diagnóstico

@@ -25,9 +25,10 @@ compilaciones programadas, artefactos permanentes y jobs redundantes.
 2. Compila **la solución completa en `Release`** (`dotnet build -c Release`). La
    solución mapea `Release|Any CPU` → `Release|x64` para el proyecto WinUI, de
    modo que una sola compilación cubre el núcleo WinForms, el frontend WinUI y
-   las pruebas. `Directory.Build.props` activa `TreatWarningsAsErrors`, por lo
+   ambos proyectos de pruebas. `Directory.Build.props` activa `TreatWarningsAsErrors`, por lo
    que cualquier advertencia detiene el build (política AUT-15).
-3. Ejecuta la suite NUnit (`dotnet test RightKeyboard.NUnit`).
+3. Ejecuta `scripts/run-tests.ps1`: 207 pruebas NUnit mediante `dotnet test` y
+   una prueba dentro de una aplicación WinUI real que resuelve el árbol XAML.
 
 Un fallo de restauración, compilación o pruebas hace fallar el workflow de forma
 visible.
@@ -160,7 +161,7 @@ La firma Authenticode/MSIX del instalador publicado sigue pendiente (ver arriba)
 
 Revisiones **semanales** (lunes) para dos ecosistemas:
 
-- **NuGet** (`nuget`): los `PackageReference` de los tres proyectos. No hay
+- **NuGet** (`nuget`): los `PackageReference` de los cuatro proyectos. No hay
   `Directory.Packages.props`, así que resuelve por proyecto.
 - **GitHub Actions** (`github-actions`): las acciones usadas por los workflows.
 
@@ -187,10 +188,11 @@ CI antes de integrarse.
 
 ## 5. Limitaciones actuales y tareas futuras
 
-- **Pruebas físicas:** la suite NUnit no cubre extremo a extremo el pipe IPC, la
-  UI WinUI, foco/foreground, SetupAPI real, el registro de inicio, el instalador
-  ni el hardware. Esa validación sigue siendo manual (ver `docs/calidad-1.5.md`).
-  No se añadieron pruebas artificiales para llenar ese hueco.
+- **Pruebas físicas:** la prueba WinUI de la Etapa 18 cubre solo el árbol visual
+  real de un `CheckBox`. Las suites no cubren extremo a extremo el pipe IPC,
+  ventanas completas, foco/foreground, SetupAPI real, el registro de inicio, el
+  instalador ni el hardware. Esa validación sigue siendo manual (ver
+  `docs/calidad-1.5.md`).
 - **Sin firma:** ver la sección de firma; queda pendiente decidir e integrar
   Authenticode y/o MSIX con sus secretos.
 - **GitHub Release:** se crea desde Actions bajo demanda (`publish=yes`), con el
