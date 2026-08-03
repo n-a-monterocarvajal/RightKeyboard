@@ -36,7 +36,7 @@ Cerrar el selector sin aceptar no crea una asociación. Las pulsaciones de modif
 
 Desde **Configuración** se pueden editar preferencias sin repetir el flujo de detección: renombrar dispositivos, cambiar distribución, ignorar periféricos ambiguos, agrupar identidades del mismo teclado, olvidar dispositivos y limpiar preferencias. También se pueden exportar e importar las preferencias —la importación muestra una vista previa y permite combinar o reemplazar, dejando siempre un respaldo— y activar o desactivar **Iniciar con Windows**. La portabilidad entre dos equipos distintos aún no está certificada con pruebas reales.
 
-> **Estado de la versión 1.5:** `1.5.0` es la versión estable inicial de la línea 1.5, y es la última publicada. El trabajo posterior está acumulado sin publicar. La matriz de validación y los pendientes de mantenimiento siguen en [docs/calidad-1.5.md](docs/calidad-1.5.md) y [ROADMAP.md](ROADMAP.md); el orden y el estado de cada etapa, en [docs/plan-1.6.0.md](docs/plan-1.6.0.md).
+> **Estado de versión:** el código fuente cierra en `1.6.0`; `1.5.0` sigue siendo la última versión publicada. No se crea etiqueta ni Release hasta ejecutar expresamente el flujo de publicación. La matriz de validación y los pendientes siguen en [docs/calidad-1.5.md](docs/calidad-1.5.md) y [ROADMAP.md](ROADMAP.md); el cierre de etapas está en [docs/plan-1.6.0.md](docs/plan-1.6.0.md).
 
 El contrato del esquema, las validaciones, las rutas y el alcance exacto de **Limpiar preferencias** se documentan en [Preferencias y portabilidad de RightKeyboard 1.5](docs/preferencias-1.5.md).
 

@@ -12,7 +12,7 @@ La revisión del ejecutable del 19 de julio de 2026 dejó observaciones de inter
 
 ## Mecánica de versión
 
-La versión se declara en dos sitios que deben moverse juntos: `RightKeyboard/RightKeyboard.csproj` y `RightKeyboard.WinUI/RightKeyboard.WinUI.csproj`. `scripts/build-installer.ps1` la lee del primero cuando no se pasa `-Version`. Cada etapa de mantenimiento cierra con su bump, su entrada en `CHANGELOG.md`, una etiqueta `vX.Y.Z` —o `vX.Y.Z.W` para una corrección puntual— y una Release de GitHub con instalador y SHA-256 después del squash y del CI en verde.
+La versión se declara en tres sitios que deben moverse juntos: `RightKeyboard/RightKeyboard.csproj`, `RightKeyboard.WinUI/RightKeyboard.WinUI.csproj` y `RightKeyboard.Shared/RightKeyboard.Shared.csproj`. `scripts/build-installer.ps1` la lee del primero cuando no se pasa `-Version`. Cada etapa de mantenimiento cierra con su bump y su entrada en `CHANGELOG.md`; una etiqueta y una Release de GitHub con instalador y SHA-256 requieren una publicación explícita posterior al squash y al CI en verde.
 
 ## Advertencia sobre la publicación
 
@@ -35,7 +35,7 @@ Secuenciales. Cada una es una sesión, una rama, un PR y un bump de versión.
 | 17 | 1.5.8 | Instrumentar el foco del selector y el Escritorio | Completada; validación física pendiente |
 | 18 | 1.5.9 | Casillas de verificación: prueba de árbol visual y cuarto intento | Completada; revalidación física pendiente |
 | 19 | 1.5.10 | Estado visual y orden lógico de dispositivos | Completada |
-| 20 | 1.6.0 | Extraer contratos compartidos y cerrar versión | Pendiente |
+| 20 | 1.6.0 | Extraer contratos compartidos y cerrar versión | Completada |
 
 ### Etapa 9 — Sincronizar documentación con el código · completada el 19 de julio de 2026
 
@@ -271,9 +271,15 @@ Criterios de cierre:
 
 **Evidencia:** 218/218 pruebas NUnit cubren las seis combinaciones, el desempate por nombre, grupos sin/uno/varios miembros conectados y el dibujo WinForms; 2/2 pruebas WinUI inspeccionan el árbol real, los colores distintos en temas claro y oscuro y el nombre accesible. La revisión visual en esta estación confirmó el punto verde pequeño alineado inmediatamente antes de «Conectado». El inventario disponible solo aportó una fila conectada y sin grupo; las combinaciones restantes quedan cubiertas de forma determinista por las pruebas y siguen siendo candidatas a repetición física con más hardware.
 
-### Etapa 20 — Contratos compartidos y cierre de 1.6.0
+### Etapa 20 — Contratos compartidos y cierre de 1.6.0 · completada el 2 de agosto de 2026
 
 Refactor diferido a 1.6: mover los DTO de IPC, `VersionPresentation` y modelos compartidos a una biblioteca para que el frontend WinUI no referencie el ejecutable WinForms. Cierra la versión.
+
+**Resultado:** `RightKeyboard.Shared` concentra el protocolo IPC v2, `VersionPresentation`, `FrontendExitCodes`, la disponibilidad de diagnóstico y los modelos de presentación/edición consumidos por ambos procesos. La biblioteca apunta a `net10.0` y no depende de ninguna tecnología de interfaz. El logger, los modelos HID y el resto del núcleo permanecen en el residente.
+
+**Desacoplamiento:** `RightKeyboard.WinUI.csproj` referencia exclusivamente `RightKeyboard.Shared.csproj`; ya no referencia `RightKeyboard.csproj` ni necesita acceso amigo al ejecutable WinForms. El residente y las pruebas declaran su referencia a la biblioteca de forma explícita.
+
+**Evidencia:** la biblioteca, el residente y el frontend WinUI compilan por separado en Release con 0 advertencias. 220/220 pruebas NUnit incluyen dos invariantes nuevas que fijan el ensamblado compartido y la versión 1.6.0; las 2 pruebas WinUI se mantienen como puerta de regresión visual. El CI limpio de GitHub Actions es el criterio definitivo de cierre.
 
 ## Carril B — Licencia · resuelto el 19 de julio de 2026
 

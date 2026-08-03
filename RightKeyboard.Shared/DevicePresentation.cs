@@ -22,17 +22,11 @@ internal readonly record struct DevicePresentation(
     public string GetAccessibleName(string displayName) =>
         $"{displayName}. {string.Join(". ", GetSummaryParts())}.";
 
-    public static DevicePresentation Create(bool connected, bool ignored, Layout? layout) =>
-        Create(connected, ignored, layout?.Name);
-
     public static DevicePresentation Create(bool connected, bool ignored, string? layoutName) => new(
         connected,
         connected ? "Conectado" : "Desconectado",
         ignored,
         layoutName);
-
-    public static DevicePresentation CreateGroup(IEnumerable<bool> connectedMembers, Layout? layout) =>
-        CreateGroup(connectedMembers, layout?.Name);
 
     public static DevicePresentation CreateGroup(IEnumerable<bool> connectedMembers, string? layoutName)
     {

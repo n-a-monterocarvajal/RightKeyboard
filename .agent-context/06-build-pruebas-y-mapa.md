@@ -27,7 +27,7 @@ dotnet build .\RightKeyboard.sln --configuration Release
 powershell -ExecutionPolicy Bypass -File .\scripts\run-tests.ps1 -Configuration Release -NoBuild
 ```
 
-Tras la Etapa 19: 218/218 pruebas NUnit y 2/2 pruebas WinUI de árbol visual. El script ejecuta NUnit con `dotnet test` y la aplicación de prueba WinUI directamente, porque el repositorio mantiene VSTest para NUnit y Microsoft Testing Platform para el proceso XAML.
+Tras la Etapa 20: 220/220 pruebas NUnit y 2/2 pruebas WinUI de árbol visual. El script ejecuta NUnit con `dotnet test` y la aplicación de prueba WinUI directamente, porque el repositorio mantiene VSTest para NUnit y Microsoft Testing Platform para el proceso XAML.
 
 La puerta de las etapas 6-7 exige además la variante diagnóstica:
 
@@ -101,7 +101,7 @@ Workflows vigentes:
 
 | Workflow | Archivo | Se ejecuta | Qué hace |
 |---|---|---|---|
-| CI | `.github/workflows/ci.yml` | push a `master`, cada pull request, manual (`workflow_dispatch`) | `dotnet restore` + `dotnet build -c Release` (solución completa; WinUI mapea a x64) + `scripts/run-tests.ps1`: 218 NUnit y 2 pruebas WinUI. Advertencias como errores. Sin artefactos. |
+| CI | `.github/workflows/ci.yml` | push a `master`, cada pull request, manual (`workflow_dispatch`) | `dotnet restore` + `dotnet build -c Release` (solución completa; WinUI mapea a x64) + `scripts/run-tests.ps1`: 220 NUnit y 2 pruebas WinUI. Advertencias como errores. Sin artefactos. |
 | Compilación distribuible | `.github/workflows/build-package.yml` | manual (`workflow_dispatch`) o etiqueta `v*` | Entrada `artifact`: `installer` (por defecto, `scripts/build-installer.ps1` → instalador Inno Setup) o `zip` (`scripts/build-portable-zip.ps1` → ZIP portable autocontenido para pruebas). Ambas suben binario + `-SHA256.txt` (retención 7 días). Entrada `publish=yes` (solo con `installer`): un job aparte con `contents: write` crea la GitHub Release `vX.Y.Z` con los dos assets. |
 | Dependabot | `.github/dependabot.yml` | semanal (lunes) | PRs agrupados de NuGet y GitHub Actions. |
 
@@ -150,17 +150,16 @@ desde 1.5.5.2 el workflow puede crearla con `publish=yes`.
 | `RightKeyboard/KeyboardDevicesCollection.cs` | Inventario handle/path/identidad |
 | `RightKeyboard/Configuration.cs` | Esquema 5, grupos lógicos, migración, validación y persistencia |
 | `RightKeyboard/HidSignature.cs` | Firma HID parcial: tokens públicos del path y forma canónica |
-| `RightKeyboard/SettingsIpcProtocol.cs` | DTO/acciones de pipe v2, incluidas agrupación reversible e instrumentación de foco |
+| `RightKeyboard.Shared/` | DTO/acciones IPC v2, versión, códigos de salida y modelos compartidos de Configuración |
 | `RightKeyboard/SettingsIpcServer.cs` | Autoridad IPC en núcleo |
 | `RightKeyboard/DiagnosticLogger.cs` | Diagnóstico de desarrollo tras `RIGHTKEYBOARD_DIAGNOSTICS` |
-| `RightKeyboard/FrontendExitCodes.cs` | Contrato de código de salida del frontend y decisión de fallback |
 | `RightKeyboard/SettingsDialog.cs` | Configuración WinForms fallback |
 | `RightKeyboard/LayoutSelectionDialog.cs` | Selector WinForms fallback |
 | `RightKeyboard.WinUI/App.xaml.cs` | Arranque del frontend y señal de fallo por código de salida |
 | `RightKeyboard.WinUI/SettingsWindow.xaml.cs` | Configuración WinUI normal |
 | `RightKeyboard.WinUI/LayoutSelectionWindow.cs` | Selector WinUI normal y foco |
 | `RightKeyboard.WinUI/SettingsIpcClient.cs` | Cliente named pipe |
-| `RightKeyboard.NUnit/` | 218 pruebas unitarias/interop/DTO y dibujo WinForms tras la Etapa 19 |
+| `RightKeyboard.NUnit/` | 220 pruebas unitarias/interop/DTO, arquitectura compartida y dibujo WinForms tras la Etapa 20 |
 | `RightKeyboard.WinUI.Tests/` | 2 pruebas en una aplicación WinUI y comprobación del árbol visual real |
 | `installer/RightKeyboard.iss` | Instalación/actualización/desinstalación por usuario |
 | `scripts/` | Publicación, instalador, SHA-256, prototipo histórico |

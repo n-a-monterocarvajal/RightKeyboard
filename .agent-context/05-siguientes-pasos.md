@@ -84,9 +84,9 @@ Reducir textos «tipo máquina» en Configuración, selector, errores e instalad
 
 Workflow Windows para restore/build/test, SDK fijado por `global.json`; `TreatWarningsAsErrors` activo en `Directory.Build.props`. Hecho: `.github/workflows/ci.yml` (push a `master`, PR y manual) con caché NuGet, cancelación de ejecuciones obsoletas, timeout y permisos mínimos. El instalador quedó como job manual (`.github/workflows/build-package.yml`, disparo manual o etiqueta `v*`) que ejecuta `scripts/build-installer.ps1` y publica el instalador + SHA-256 como artefacto de 7 días; Inno Setup se instala en el runner. Dependabot semanal agrupado (`.github/dependabot.yml`) para NuGet y GitHub Actions. Documentación: `docs/automatizacion-ci-cd.md`. La publicación de la GitHub Release quedó automatizada (entrada `publish=yes` de `build-package.yml`, job aparte con `contents: write`). Pendiente: firma Authenticode/MSIX del instalador publicado (requiere certificado y secretos).
 
-### 11. Extraer contratos compartidos
+### 11. Extraer contratos compartidos — **implementado (Etapa 20, 1.6.0)**
 
-Mover DTO de IPC, `VersionPresentation` y modelos compartidos a una biblioteca para que WinUI no referencie el ejecutable WinForms. Mantener compatibilidad del protocolo o incrementar versión.
+Los DTO de IPC v2, `VersionPresentation`, códigos de salida y modelos compartidos viven en `RightKeyboard.Shared`. WinUI referencia esa biblioteca neutral y deja de referenciar el ejecutable WinForms; el protocolo conserva compatibilidad.
 
 ### 12. Reordenar la disposición de la Configuración WinUI y definir tamaño mínimo — **implementado (Etapa 7), pendiente de validación DPI ampliada**
 
@@ -115,4 +115,4 @@ Pendientes abiertos en `docs/notas-de-uso-1.5.7.md`, ya incorporados a `docs/pla
 
 ## Puerta propuesta
 
-Para `1.5.1`, priorizar diagnóstico de desarrollo/detección preventiva antes que nuevas superficies UI grandes. Para `1.6`, considerar exportación/importación completa y refactor de contratos compartidos si no se resolvió en 1.5.x.
+El código fuente ya cierra en 1.6.0. La siguiente planificación debe partir de los pendientes físicos y de mantenimiento que siguen abiertos, sin reintroducir el acoplamiento entre WinUI y el ejecutable WinForms.

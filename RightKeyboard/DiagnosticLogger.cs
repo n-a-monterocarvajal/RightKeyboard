@@ -18,17 +18,7 @@ internal sealed class DiagnosticLogger : IDisposable
     private volatile bool detailedEnabled;
     private bool disposed;
 
-    internal static bool IsAvailable
-    {
-        get
-        {
-#if RIGHTKEYBOARD_DIAGNOSTICS
-            return true;
-#else
-            return false;
-#endif
-        }
-    }
+    internal static bool IsAvailable => DiagnosticsAvailability.IsAvailable;
 
     internal DiagnosticLogger(string? directory = null, bool forceEnableForTests = false)
     {

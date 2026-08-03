@@ -24,10 +24,10 @@ compilaciones programadas, artefactos permanentes y jobs redundantes.
 1. Restaura la solución (`dotnet restore RightKeyboard.sln`).
 2. Compila **la solución completa en `Release`** (`dotnet build -c Release`). La
    solución mapea `Release|Any CPU` → `Release|x64` para el proyecto WinUI, de
-   modo que una sola compilación cubre el núcleo WinForms, el frontend WinUI y
-   ambos proyectos de pruebas. `Directory.Build.props` activa `TreatWarningsAsErrors`, por lo
+   modo que una sola compilación cubre la biblioteca compartida, el núcleo WinForms,
+   el frontend WinUI y ambos proyectos de pruebas. `Directory.Build.props` activa `TreatWarningsAsErrors`, por lo
    que cualquier advertencia detiene el build (política AUT-15).
-3. Ejecuta `scripts/run-tests.ps1`: 218 pruebas NUnit mediante `dotnet test` y
+3. Ejecuta `scripts/run-tests.ps1`: 220 pruebas NUnit mediante `dotnet test` y
    dos pruebas dentro de una aplicación WinUI real que resuelve el árbol XAML.
 
 Un fallo de restauración, compilación o pruebas hace fallar el workflow de forma
@@ -161,7 +161,7 @@ La firma Authenticode/MSIX del instalador publicado sigue pendiente (ver arriba)
 
 Revisiones **semanales** (lunes) para dos ecosistemas:
 
-- **NuGet** (`nuget`): los `PackageReference` de los cuatro proyectos. No hay
+- **NuGet** (`nuget`): los `PackageReference` de los cinco proyectos. No hay
   `Directory.Packages.props`, así que resuelve por proyecto.
 - **GitHub Actions** (`github-actions`): las acciones usadas por los workflows.
 
