@@ -84,6 +84,12 @@ public sealed class SettingsIpcClient
             SettingsIpcProtocol.Version, SettingsIpcProtocol.SetStartupAction, StartupEnabled: enabled))).Startup
         ?? throw new InvalidOperationException("El núcleo no devolvió el estado de inicio con Windows.");
 
+    internal async Task ReportFocusDiagnosticsAsync(SettingsFrontendFocus focus) =>
+        _ = await SendResponseAsync(new SettingsRequest(
+            SettingsIpcProtocol.Version,
+            SettingsIpcProtocol.FocusDiagnosticsAction,
+            FrontendFocus: focus));
+
     private static async Task<SettingsSnapshot> SendAsync(SettingsRequest request)
     {
         SettingsResponse response = await SendResponseAsync(request);

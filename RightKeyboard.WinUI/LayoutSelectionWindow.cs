@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Windows.UI;
 
@@ -16,6 +17,7 @@ public sealed class LayoutSelectionWindow : Window
     private readonly ListView layouts = new();
     private readonly Button accept = new();
     private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer activationRetryTimer;
+    private readonly Stopwatch activationStopwatch = new();
     private SettingsDevice? device;
 
     public LayoutSelectionWindow(SettingsIpcClient client, string identity)
@@ -150,7 +152,8 @@ public sealed class LayoutSelectionWindow : Window
         Activated -= OnActivated;
         // Mostrar y activar primero la superficie vacía evita que la consulta IPC
         // forme parte de la demora percibida al abrir el selector en frío.
-        ActivateSelectorWindow();
+        activationStopwatch.Restart();
+        NativeActivationResult activation = ActivateSelectorWindow();
         double scale = (Content as FrameworkElement)?.XamlRoot?.RasterizationScale ?? 1;
         AppWindow.Resize(new Windows.Graphics.SizeInt32(
             (int)Math.Ceiling(720 * scale),
@@ -199,8 +202,9 @@ public sealed class LayoutSelectionWindow : Window
             }
         }
 
-        await FocusManager.TryFocusAsync(alias, FocusState.Programmatic);
+        FocusMovementResult xamlFocus = await FocusManager.TryFocusAsync(alias, FocusState.Programmatic);
         activationRetryTimer.Start();
+        await ReportFocusDiagnosticsAsync("initial", activation, xamlFocus.Succeeded);
     }
 
     private async void RetryActivation(
@@ -211,16 +215,22 @@ public sealed class LayoutSelectionWindow : Window
         nint handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
         if (GetForegroundWindow() == handle)
         {
-            await FocusManager.TryFocusAsync(alias, FocusState.Programmatic);
+            FocusMovementResult xamlFocus = await FocusManager.TryFocusAsync(alias, FocusState.Programmatic);
+            await ReportFocusDiagnosticsAsync(
+                "retry",
+                NativeActivationResult.NotNeeded(foregroundAcquired: true),
+                xamlFocus.Succeeded);
             return;
         }
 
-        ActivateSelectorWindow();
-        await FocusManager.TryFocusAsync(alias, FocusState.Programmatic);
+        NativeActivationResult activation = ActivateSelectorWindow();
+        FocusMovementResult retryFocus = await FocusManager.TryFocusAsync(alias, FocusState.Programmatic);
+        await ReportFocusDiagnosticsAsync("retry", activation, retryFocus.Succeeded);
     }
 
-    private void ActivateSelectorWindow()
+    private NativeActivationResult ActivateSelectorWindow()
     {
+        Stopwatch duration = Stopwatch.StartNew();
         nint handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
         AppWindow.Show(true);
         ShowWindow(handle, SwRestore);
@@ -228,12 +238,14 @@ public sealed class LayoutSelectionWindow : Window
         nint foreground = GetForegroundWindow();
         uint foregroundThread = foreground == 0 ? 0 : GetWindowThreadProcessId(foreground, out _);
         uint currentThread = GetCurrentThreadId();
-        bool attached = foregroundThread != 0 && foregroundThread != currentThread &&
-                        AttachThreadInput(currentThread, foregroundThread, true);
+        bool attachAttempted = foregroundThread != 0 && foregroundThread != currentThread;
+        bool attached = attachAttempted && AttachThreadInput(currentThread, foregroundThread, true);
+        bool bringToTopSucceeded;
+        bool foregroundRequestSucceeded;
         try
         {
-            BringWindowToTop(handle);
-            SetForegroundWindow(handle);
+            bringToTopSucceeded = BringWindowToTop(handle);
+            foregroundRequestSucceeded = SetForegroundWindow(handle);
             SetFocus(handle);
         }
         finally
@@ -243,11 +255,51 @@ public sealed class LayoutSelectionWindow : Window
 
         // Windows puede conservar el foco de la aplicación anterior. Este pulso
         // garantiza que el selector quede visible sin mantenerlo "siempre arriba".
-        if (GetForegroundWindow() != handle)
+        bool topmostPulseApplied = GetForegroundWindow() != handle;
+        if (topmostPulseApplied)
         {
             SetWindowPos(handle, HwndTopmost, 0, 0, 0, 0, SwpNoMove | SwpNoSize | SwpShowWindow);
             SetWindowPos(handle, HwndNotTopmost, 0, 0, 0, 0, SwpNoMove | SwpNoSize | SwpShowWindow);
-            SetForegroundWindow(handle);
+            foregroundRequestSucceeded |= SetForegroundWindow(handle);
+        }
+
+        duration.Stop();
+        return new NativeActivationResult(
+            duration.ElapsedMilliseconds,
+            true,
+            attachAttempted,
+            attached,
+            bringToTopSucceeded,
+            foregroundRequestSucceeded,
+            GetFocus() == handle,
+            topmostPulseApplied,
+            GetForegroundWindow() == handle);
+    }
+
+    private async Task ReportFocusDiagnosticsAsync(
+        string phase,
+        NativeActivationResult activation,
+        bool xamlFocusAcquired)
+    {
+        try
+        {
+            await client.ReportFocusDiagnosticsAsync(new SettingsFrontendFocus(
+                phase,
+                activationStopwatch.ElapsedMilliseconds,
+                activation.DurationMilliseconds,
+                activation.ActivationAttempted,
+                activation.AttachAttempted,
+                activation.AttachSucceeded,
+                activation.BringToTopSucceeded,
+                activation.ForegroundRequestSucceeded,
+                activation.NativeFocusAcquired,
+                activation.TopmostPulseApplied,
+                activation.ForegroundAcquired,
+                xamlFocusAcquired));
+        }
+        catch
+        {
+            // El diagnóstico no debe impedir que el selector siga siendo usable.
         }
     }
 
@@ -305,6 +357,9 @@ public sealed class LayoutSelectionWindow : Window
     private static extern nint SetFocus(nint window);
 
     [DllImport("user32.dll")]
+    private static extern nint GetFocus();
+
+    [DllImport("user32.dll")]
     private static extern bool SetWindowPos(
         nint window, nint insertAfter, int x, int y, int width, int height, uint flags);
 
@@ -314,4 +369,27 @@ public sealed class LayoutSelectionWindow : Window
     private const uint SwpNoSize = 0x0001;
     private const uint SwpNoMove = 0x0002;
     private const uint SwpShowWindow = 0x0040;
+
+    private sealed record NativeActivationResult(
+        long DurationMilliseconds,
+        bool ActivationAttempted,
+        bool AttachAttempted,
+        bool AttachSucceeded,
+        bool BringToTopSucceeded,
+        bool ForegroundRequestSucceeded,
+        bool NativeFocusAcquired,
+        bool TopmostPulseApplied,
+        bool ForegroundAcquired)
+    {
+        internal static NativeActivationResult NotNeeded(bool foregroundAcquired) => new(
+            0,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            foregroundAcquired);
+    }
 }

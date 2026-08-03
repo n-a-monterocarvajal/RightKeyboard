@@ -27,7 +27,7 @@ dotnet build .\RightKeyboard.sln --configuration Release
 dotnet test .\RightKeyboard.sln --configuration Release --no-build
 ```
 
-Tras la Etapa 7: 161/161 pruebas. Si se omite `--no-build`, `dotnet test` recompila.
+Tras la Etapa 17: 207/207 pruebas. Si se omite `--no-build`, `dotnet test` recompila.
 
 La puerta de las etapas 6-7 exige además la variante diagnóstica:
 
@@ -150,7 +150,7 @@ desde 1.5.5.2 el workflow puede crearla con `publish=yes`.
 | `RightKeyboard/KeyboardDevicesCollection.cs` | Inventario handle/path/identidad |
 | `RightKeyboard/Configuration.cs` | Esquema 5, grupos lógicos, migración, validación y persistencia |
 | `RightKeyboard/HidSignature.cs` | Firma HID parcial: tokens públicos del path y forma canónica |
-| `RightKeyboard/SettingsIpcProtocol.cs` | DTO/acciones de pipe v2, incluida agrupación reversible |
+| `RightKeyboard/SettingsIpcProtocol.cs` | DTO/acciones de pipe v2, incluidas agrupación reversible e instrumentación de foco |
 | `RightKeyboard/SettingsIpcServer.cs` | Autoridad IPC en núcleo |
 | `RightKeyboard/DiagnosticLogger.cs` | Diagnóstico de desarrollo tras `RIGHTKEYBOARD_DIAGNOSTICS` |
 | `RightKeyboard/FrontendExitCodes.cs` | Contrato de código de salida del frontend y decisión de fallback |
@@ -160,7 +160,7 @@ desde 1.5.5.2 el workflow puede crearla con `publish=yes`.
 | `RightKeyboard.WinUI/SettingsWindow.xaml.cs` | Configuración WinUI normal |
 | `RightKeyboard.WinUI/LayoutSelectionWindow.cs` | Selector WinUI normal y foco |
 | `RightKeyboard.WinUI/SettingsIpcClient.cs` | Cliente named pipe |
-| `RightKeyboard.NUnit/` | 161 pruebas unitarias/interop/DTO |
+| `RightKeyboard.NUnit/` | 207 pruebas unitarias/interop/DTO tras la Etapa 17 |
 | `installer/RightKeyboard.iss` | Instalación/actualización/desinstalación por usuario |
 | `scripts/` | Publicación, instalador, SHA-256, prototipo histórico |
 | `.github/workflows/` | CI (`ci.yml`) y compilación distribuible (`build-package.yml`) |

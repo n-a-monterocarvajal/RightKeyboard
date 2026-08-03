@@ -4,6 +4,13 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [Sin publicar]
 
+## [1.5.8] - 2026-08-02
+
+### Diagnóstico
+
+- La variante diagnóstica registra por separado el resultado y la duración de la activación nativa del selector, el pulso temporal al frente y el foco final del campo de alias, tanto en el intento inicial como en el retry de 180 ms. La secuencia de activación no cambia y la ventana no queda topmost permanente.
+- Cada solicitud de distribución registra si la ventana foreground era el Escritorio de Windows, otra ventana o no existía; también distingue una distribución ya activa, una petición `WM_INPUTLANGCHANGEREQUEST` aceptada por la cola y una petición rechazada. Esto permite separar un límite de Explorer/Shell de un defecto de RightKeyboard sin registrar títulos, nombres de procesos ni clases de ventanas arbitrarias.
+
 ## [1.5.7] - 2026-07-23
 
 ### Estabilidad

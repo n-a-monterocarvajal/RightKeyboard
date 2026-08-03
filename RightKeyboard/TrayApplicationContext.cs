@@ -178,16 +178,16 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
         if (configuration.TryGetLayout(device, matchingDevices, out Layout? layout, out bool learnedLayoutIdentity))
         {
-            diagnostics?.Write(learnedLayoutIdentity ? "distribucion_recuperada_por_huella" : "distribucion_aplicada", device, new
-            {
-                layout = layout!.Identifier.ToInt64().ToString("X")
-            });
             if (learnedLayoutIdentity)
             {
+                diagnostics?.Write("distribucion_recuperada_por_huella", device, new
+                {
+                    layout = layout!.Identifier.ToInt64().ToString("X")
+                });
                 SaveConfiguration();
             }
 
-            ApplyLayout(layout!);
+            ApplyLayout(layout!, device, learnedLayoutIdentity ? "huella" : "preferencia");
             return;
         }
 
@@ -279,7 +279,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
             }
 
             SaveConfiguration();
-            ApplyLayout(dialog.SelectedLayout);
+            ApplyLayout(dialog.SelectedLayout, device, "selector_winforms");
         }
         finally
         {
@@ -362,7 +362,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 int matchingDevices = devices.CountConnectedWithFingerprint(selectedDevice.Fingerprint);
                 if (configuration.TryGetLayout(selectedDevice, matchingDevices, out Layout? layout, out _))
                 {
-                    ApplyLayout(layout!);
+                    ApplyLayout(layout!, selectedDevice, "selector_winui");
                 }
             }
         }
@@ -489,12 +489,28 @@ internal sealed class TrayApplicationContext : ApplicationContext
         return null;
     }
 
-    private static void ApplyLayout(Layout layout)
+    private void ApplyLayout(Layout layout, KeyboardDevice device, string origin)
     {
-        if (!API.IsForegroundLayout(layout.Identifier))
+        ForegroundLayoutRequestResult result = API.RequestForegroundLayout(layout.Identifier);
+        diagnostics?.Write("distribucion_aplicada", device, new
         {
-            API.RequestForegroundLayout(layout.Identifier);
-        }
+            layout = layout.Identifier.ToInt64().ToString("X"),
+            origin,
+            foregroundTarget = result.TargetKind switch
+            {
+                ForegroundTargetKind.DesktopShell => "escritorio_shell",
+                ForegroundTargetKind.Other => "otra_ventana",
+                _ => "sin_ventana"
+            },
+            outcome = result.AlreadyApplied
+                ? "ya_activa"
+                : result.RequestPosted
+                    ? "solicitud_enviada"
+                    : result.ForegroundAvailable ? "solicitud_rechazada" : "sin_ventana",
+            result.ForegroundAvailable,
+            result.AlreadyApplied,
+            result.RequestPosted
+        });
     }
 
     private void SaveConfiguration()
