@@ -73,7 +73,7 @@ artifacts\installer\RightKeyboard-<versión>-Setup.exe
 artifacts\installer\RightKeyboard-<versión>-SHA256.txt
 ```
 
-El script publica núcleo y WinUI autocontenidos; WinUI se restaura/publica con ReadyToRun. No editar la salida manualmente.
+El script publica núcleo y WinUI autocontenidos; WinUI se restaura/publica con ReadyToRun. El proyecto conserva `App.xbf` y `RightKeyboard.WinUI.pri` en `PublishDir`, y `scripts/verify-winui-publish.ps1` detiene tanto el instalador como el ZIP portable si falta alguno o está vacío. No editar la salida manualmente.
 
 ## Instalar/probar
 
@@ -112,7 +112,7 @@ Reglas obligatorias para agentes:
 3. Todo cambio en código, proyectos, dependencias, recursos, manifiestos o configuración de compilación exige verificar la ejecución de CI correspondiente.
 4. Una validación local satisfactoria **no** sustituye la comprobación en un runner limpio de GitHub Actions.
 5. Los fallos de CI no se ignoran ni se ocultan: se corrigen, o se documentan con precisión si dependen de una restricción externa (permisos, facturación, dependencia externa). No modificar el código de la aplicación para enmascarar un fallo de CI.
-6. Para obtener una salida limpia y descargable desde GitHub, usar el workflow «Compilación distribuible» (manual o etiqueta `v*`), no el CI.
+6. Para obtener una salida limpia y descargable desde GitHub, usar el workflow «Compilación distribuible» (manual o etiqueta `v*`), no el CI. Confirmar en el log que se verificaron `App.xbf` y `RightKeyboard.WinUI.pri` antes de empaquetar.
 7. Los artefactos de Actions son temporales (7 días) y no sustituyen una versión formal ni una GitHub Release.
 8. Dependabot es parte del mantenimiento ordinario de dependencias.
 9. Las actualizaciones de Dependabot se revisan y se validan por CI antes de integrarse.

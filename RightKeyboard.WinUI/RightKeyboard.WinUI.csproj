@@ -32,4 +32,24 @@
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
   </ItemGroup>
+
+  <!--
+    `dotnet publish` no conserva estos recursos generados para la aplicación WinUI
+    no empaquetada. Sin ellos XamlControlsResources no puede resolver el tema completo
+    en la salida distribuida, aunque la carpeta de compilación sí se vea correctamente.
+  -->
+  <Target Name="CopyWinUiGeneratedResourcesToPublish" AfterTargets="Publish">
+    <PropertyGroup>
+      <WinUiAppXbf>$(TargetDir)App.xbf</WinUiAppXbf>
+      <WinUiAppPri>$(TargetDir)$(AssemblyName).pri</WinUiAppPri>
+    </PropertyGroup>
+
+    <Error Condition="!Exists('$(WinUiAppXbf)')"
+           Text="No se encontró el recurso WinUI generado: $(WinUiAppXbf)" />
+    <Error Condition="!Exists('$(WinUiAppPri)')"
+           Text="No se encontró el índice de recursos WinUI generado: $(WinUiAppPri)" />
+    <Copy SourceFiles="$(WinUiAppXbf);$(WinUiAppPri)"
+          DestinationFolder="$(PublishDir)"
+          SkipUnchangedFiles="true" />
+  </Target>
 </Project>

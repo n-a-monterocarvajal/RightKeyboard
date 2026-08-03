@@ -1,6 +1,6 @@
 # Estado actual real
 
-Snapshot actualizado el **2026-08-02** al cerrar la Etapa 20. Contrastar siempre con `git status`, `git log -1 --oneline` y los metadatos de versión del checkout actual.
+Snapshot actualizado el **2026-08-03** tras corregir el empaquetado de 1.6.0. Contrastar siempre con `git status`, `git log -1 --oneline` y los metadatos de versión del checkout actual.
 
 ## Resumen ejecutivo
 
@@ -27,6 +27,7 @@ Snapshot actualizado el **2026-08-02** al cerrar la Etapa 20. Contrastar siempre
 - Diagnóstico detallado fuera del build normal; el código del logger queda disponible para compilaciones de desarrollo con `RIGHTKEYBOARD_DIAGNOSTICS`.
 - Instrumentación de foreground de la Etapa 17: el selector informa tiempos y resultados de activación nativa/foco XAML por IPC, y cada solicitud de distribución clasifica de forma segura el Escritorio frente a otras ventanas sin registrar títulos ni clases arbitrarias.
 - Instalador Inno Setup por usuario, autocontenido, sin UAC, acceso en Inicio, inicio automático en instalación nueva y conservación de datos al actualizar.
+- La publicación autocontenida copia y comprueba `App.xbf` y `RightKeyboard.WinUI.pri`; los scripts de instalador y portable fallan si el tema WinUI quedaría incompleto.
 - Frontend publicado ReadyToRun; el snapshot IPC ya no repite SetupAPI en cada apertura.
 
 ## Parcial, no verificado o pendiente

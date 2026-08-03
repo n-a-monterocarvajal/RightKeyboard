@@ -69,6 +69,8 @@ dotnet publish $winUiProjectPath `
     -p:DebugType=None
 if ($LASTEXITCODE -ne 0) { throw 'Falló dotnet publish para WinUI.' }
 
+& (Join-Path $PSScriptRoot 'verify-winui-publish.ps1') -PublishDirectory $publishDirectory
+
 # El despliegue autocontenido del Windows App SDK copia el runtime de Windows ML aunque el
 # proyecto no lo use (ver la nota en scripts/build-installer.ps1). Se elimina tras publicar.
 $machineLearningBinaries = @(

@@ -4,7 +4,11 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [Sin publicar]
 
-## [1.6.0] - 2026-08-02
+## [1.6.0] - 2026-08-03
+
+### Distribución
+
+- La publicación autocontenida conserva y verifica `App.xbf` y `RightKeyboard.WinUI.pri`. Su ausencia permitía abrir la aplicación, pero dejaba incompleto el tema de WinUI en el instalador y el ZIP portable —entre otros síntomas, las casillas volvían a verse con ángulos rectos— aunque la compilación local y las pruebas del árbol visual fueran correctas.
 
 ### Arquitectura
 
