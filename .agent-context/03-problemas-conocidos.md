@@ -32,9 +32,11 @@ Agregar una prueba directa sobre el evento JSON sería buena mejora, pero ya no 
 
 **Pendiente:** validar en la estación física con el Baseus real (confirmar si su huella es vacía; si no lo es, la recuperación por huella ya cubría su reconexión y la firma cubre el resto de HID débiles) y ejecutar el cambio de puerto de la matriz.
 
-## P1 — foco del selector depende de heurísticas Win32
+## Instrumentado en 1.5.8, pendiente de validación física — foco del selector y Escritorio
 
-`AllowSetForegroundWindow`, `AttachThreadInput`, `SetForegroundWindow`, `SetFocus`, un pulso topmost temporal y un retry a 180 ms intentan cooperar con las reglas de foco de Windows. La ventana puede estar delante sin que el `TextBox` tenga foco. No convertirla en topmost permanente. Instrumentar tiempos/resultado de foreground y probar varias aplicaciones antes de cambiar la secuencia.
+`AllowSetForegroundWindow`, `AttachThreadInput`, `SetForegroundWindow`, `SetFocus`, un pulso topmost temporal y un retry a 180 ms intentan cooperar con las reglas de foco de Windows. La ventana puede estar delante sin que el `TextBox` tenga foco. Desde 1.5.8, `selector_foco` registra tiempos y resultados nativos/XAML de ambos intentos sin cambiar la secuencia ni mantener la ventana topmost.
+
+`distribucion_aplicada` registra además si el destino foreground fue `escritorio_shell`, otra ventana o ninguno, y si la distribución ya estaba activa o `PostMessageW` aceptó la solicitud. Falta probar varias aplicaciones y el Escritorio en estación física antes de cambiar heurísticas o declarar una limitación de Explorer/Shell.
 
 ## Resuelto en 1.5.7 — el fallback cubre un frontend que arranca y luego cae
 

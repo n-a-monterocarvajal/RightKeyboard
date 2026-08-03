@@ -19,6 +19,7 @@ internal static class SettingsIpcProtocol
     internal const string SetStartupAction = "set-startup";
     internal const string GroupAction = "group";
     internal const string UngroupAction = "ungroup";
+    internal const string FocusDiagnosticsAction = "focus-diagnostics";
 }
 
 internal sealed record SettingsRequest(
@@ -32,7 +33,8 @@ internal sealed record SettingsRequest(
     string? FilePath = null,
     bool? Replace = null,
     bool? StartupEnabled = null,
-    string? TargetIdentity = null);
+    string? TargetIdentity = null,
+    SettingsFrontendFocus? FrontendFocus = null);
 
 internal sealed record SettingsResponse(
     bool Success,
@@ -50,6 +52,20 @@ internal sealed record SettingsStartup(bool Enabled);
 internal sealed record SettingsActivity(long Sequence, string? Identity);
 
 internal sealed record SettingsDiagnostics(bool Enabled, string DirectoryPath);
+
+internal sealed record SettingsFrontendFocus(
+    string Phase,
+    long ElapsedSinceActivationMilliseconds,
+    long NativeActivationDurationMilliseconds,
+    bool ActivationAttempted,
+    bool AttachAttempted,
+    bool AttachSucceeded,
+    bool BringToTopSucceeded,
+    bool ForegroundRequestSucceeded,
+    bool NativeFocusAcquired,
+    bool TopmostPulseApplied,
+    bool ForegroundAcquired,
+    bool XamlFocusAcquired);
 
 internal sealed record SettingsSnapshot(
     int Version,

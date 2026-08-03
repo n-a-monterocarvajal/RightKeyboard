@@ -111,7 +111,7 @@ Las notas recogidas al usar cada versión viven en `docs/notas-de-uso-<versión>
 
 Pendientes abiertos en `docs/notas-de-uso-1.5.4.md`: indicador gráfico de conexión, evaluación de agrupar identidades ignoradas, actualizador en la app y regla de orden «Conectados arriba». El desplegable de agrupación vacío quedó **corregido en 1.5.5.2** (`SettingsEditorAvailability.IsGroupTargetCandidate`), pendiente solo de validación física.
 
-Pendientes abiertos en `docs/notas-de-uso-1.5.7.md`, ya incorporados a `docs/plan-1.6.0.md`: confirmar si la falta de cambio de distribución con el Escritorio de Windows en foco es una limitación de Explorer/Shell o un defecto propio (etapa 17, 1.5.8, junto a la instrumentación de foco del selector); y las casillas de verificación con ángulos rectos, que siguen sin resolverse pese a dos intentos de código distintos (1.5.5 y 1.5.5.1) — la suite actual no ejerce el árbol visual real, así que no puede detectar la regresión (etapa 18, 1.5.9, que exige esa prueba antes de un cuarto intento).
+Pendientes abiertos en `docs/notas-de-uso-1.5.7.md`, ya incorporados a `docs/plan-1.6.0.md`: la Etapa 17 (1.5.8) añadió instrumentación para decidir con evidencia física si la falta de cambio de distribución con el Escritorio en foco es una limitación de Explorer/Shell o un defecto propio; y las casillas de verificación con ángulos rectos siguen sin resolverse pese a dos intentos de código distintos (1.5.5 y 1.5.5.1). La suite actual aún no ejerce el árbol visual real, así que la Etapa 18 (1.5.9) exige esa prueba antes de un cuarto intento.
 
 ## Puerta propuesta
 

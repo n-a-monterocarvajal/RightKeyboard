@@ -129,4 +129,38 @@ public sealed class SettingsIpcProtocolTests
             Assert.That(restoredResponse?.Startup?.Enabled, Is.True);
         });
     }
+
+    [Test]
+    public void Request_RoundTrip_PreservesSelectorFocusDiagnostics()
+    {
+        SettingsFrontendFocus focus = new(
+            "retry",
+            412,
+            7,
+            true,
+            true,
+            false,
+            true,
+            false,
+            false,
+            true,
+            false,
+            true);
+        SettingsRequest request = new(
+            SettingsIpcProtocol.Version,
+            SettingsIpcProtocol.FocusDiagnosticsAction,
+            FrontendFocus: focus);
+        JsonSerializerOptions options = new(JsonSerializerDefaults.Web);
+
+        SettingsRequest? restored = JsonSerializer.Deserialize<SettingsRequest>(
+            JsonSerializer.Serialize(request, options), options);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(restored?.Action, Is.EqualTo(SettingsIpcProtocol.FocusDiagnosticsAction));
+            Assert.That(restored?.FrontendFocus, Is.EqualTo(focus));
+            Assert.That(restored?.FrontendFocus?.TopmostPulseApplied, Is.True);
+            Assert.That(restored?.FrontendFocus?.XamlFocusAcquired, Is.True);
+        });
+    }
 }

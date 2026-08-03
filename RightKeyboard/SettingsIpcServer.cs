@@ -126,6 +126,21 @@ internal sealed class SettingsIpcServer : IDisposable
                     UseShellExecute = true
                 });
                 return DiagnosticsResponse();
+            case SettingsIpcProtocol.FocusDiagnosticsAction:
+                if (request.FrontendFocus is not SettingsFrontendFocus focus)
+                {
+                    return new SettingsResponse(false, "No se indicó el resultado de foco.", null);
+                }
+
+                if (focus.Phase is not ("initial" or "retry") ||
+                    focus.ElapsedSinceActivationMilliseconds < 0 ||
+                    focus.NativeActivationDurationMilliseconds < 0)
+                {
+                    return new SettingsResponse(false, "El resultado de foco no es válido.", null);
+                }
+
+                diagnostics?.Write("selector_foco", details: focus);
+                return new SettingsResponse(true, null, null);
             case SettingsIpcProtocol.SnapshotAction:
                 break;
             case SettingsIpcProtocol.SaveAction:

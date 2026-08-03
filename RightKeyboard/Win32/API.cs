@@ -254,23 +254,62 @@ internal static class API
         }
     }
 
-    internal static bool IsForegroundLayout(nint desiredLayout)
+    internal static ForegroundLayoutRequestResult RequestForegroundLayout(nint desiredLayout)
+    {
+        ForegroundLayoutRequestResult inspection = InspectForegroundLayout(desiredLayout);
+        if (!inspection.ForegroundAvailable || inspection.AlreadyApplied)
+        {
+            return inspection;
+        }
+
+        bool requestPosted = PostMessageW(
+            inspection.ForegroundWindow,
+            WmInputLanguageChangeRequest,
+            0,
+            desiredLayout);
+        return inspection with { RequestPosted = requestPosted };
+    }
+
+    internal static ForegroundTargetKind ClassifyForegroundWindowClass(string? className) => className switch
+    {
+        "Progman" or "WorkerW" => ForegroundTargetKind.DesktopShell,
+        null or "" => ForegroundTargetKind.Unknown,
+        _ => ForegroundTargetKind.Other
+    };
+
+    private static ForegroundLayoutRequestResult InspectForegroundLayout(nint desiredLayout)
     {
         nint foreground = GetForegroundWindow();
         if (foreground == 0)
         {
-            return false;
+            return new ForegroundLayoutRequestResult(
+                0,
+                ForegroundTargetKind.Unknown,
+                false,
+                false,
+                false);
         }
 
         uint threadId = GetWindowThreadProcessId(foreground, 0);
-        return GetKeyboardLayout(threadId) == desiredLayout;
+        nint currentLayout = GetKeyboardLayout(threadId);
+        return new ForegroundLayoutRequestResult(
+            foreground,
+            ClassifyForegroundWindowClass(ReadWindowClass(foreground)),
+            true,
+            currentLayout == desiredLayout,
+            false);
     }
 
-    internal static bool RequestForegroundLayout(nint desiredLayout)
+    private static string? ReadWindowClass(nint window)
     {
-        nint foreground = GetForegroundWindow();
-        return foreground != 0 && PostMessageW(foreground, WmInputLanguageChangeRequest, 0, desiredLayout);
+        StringBuilder className = new(128);
+        return GetClassNameW(window, className, className.Capacity) > 0
+            ? className.ToString()
+            : null;
     }
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern int GetClassNameW(nint window, StringBuilder className, int maximumCount);
 
     private static string ReadLayoutDisplayName(string identifier)
     {
@@ -280,3 +319,17 @@ internal static class API
         return key?.GetValue("Layout Text") as string ?? $"Distribución {identifier}";
     }
 }
+
+internal enum ForegroundTargetKind
+{
+    Unknown,
+    DesktopShell,
+    Other
+}
+
+internal sealed record ForegroundLayoutRequestResult(
+    nint ForegroundWindow,
+    ForegroundTargetKind TargetKind,
+    bool ForegroundAvailable,
+    bool AlreadyApplied,
+    bool RequestPosted);

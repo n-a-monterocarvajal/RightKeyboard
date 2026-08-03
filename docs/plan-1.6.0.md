@@ -32,7 +32,7 @@ Secuenciales. Cada una es una sesión, una rama, un PR y un bump de versión.
 | 14 | 1.5.5 / 1.5.5.1 / 1.5.5.2 | Pulido visual del panel | Completada con dos correcciones |
 | 15 | 1.5.6 | Exploración de pulsaciones sintéticas | Completada |
 | 16 | 1.5.7 | Fallback verificable ante caída del frontend | Completada |
-| 17 | 1.5.8 | Instrumentar el foco del selector y el Escritorio | Pendiente |
+| 17 | 1.5.8 | Instrumentar el foco del selector y el Escritorio | Completada; validación física pendiente |
 | 18 | 1.5.9 | Casillas de verificación: prueba de árbol visual y cuarto intento | Pendiente |
 | 19 | 1.6.0 | Extraer contratos compartidos y cerrar versión | Pendiente |
 
@@ -212,11 +212,24 @@ Evidencia:
 - La validación visual del respaldo tras un fallo real de arranque queda en el carril C: esta VM no puede forzar la caída del frontend WinUI ni ejecutarlo.
 - `git diff --check`: sin errores.
 
-### Etapa 17 — Instrumentar el foco del selector y el Escritorio (1.5.8)
+### Etapa 17 — Instrumentar el foco del selector y el Escritorio (1.5.8) · completada el 2 de agosto de 2026
 
 P1 registrado en `.agent-context/03-problemas-conocidos.md`: el foco depende de heurísticas Win32 y la ventana puede quedar delante sin que el cuadro de texto tenga foco. Instrumentar tiempos y resultado de la secuencia foreground y probar con varias aplicaciones antes de tocar el orden. No convertir la ventana en topmost permanente.
 
 Se incorpora una segunda pregunta de la misma familia, registrada en [notas de uso 1.5.7](notas-de-uso-1.5.7.md#1-el-escritorio-de-windows-no-parece-disparar-el-cambio-de-distribución): con el Escritorio de Windows en foco, `ApplyLayout` → `RequestForegroundLayout` envía `WM_INPUTLANGCHANGEREQUEST` a lo que devuelva `GetForegroundWindow()`, pero el usuario no observa el cambio de distribución. El código no excluye deliberadamente al Escritorio; falta evidencia física con `RIGHTKEYBOARD_DIAGNOSTICS` activo (`entrada_recibida`, `distribucion_aplicada`) para saber si el evento llega y si la petición se envía, y así distinguir un límite de Explorer/Shell de un defecto propio. Se instrumenta junto al resto de escenarios de foreground de la etapa, sin ampliar su mecanismo de código (es una ruta distinta a la del selector), y su resultado decide si el punto 1 de las notas de 1.5.7 se cierra como límite documentado o pasa a `docs/limitaciones-conocidas-1.5.md`.
+
+Resultado:
+
+- El selector envía al núcleo, mediante la acción IPC `focus-diagnostics`, un evento `selector_foco` para el intento inicial y otro para el retry. Cada evento conserva el tiempo desde la activación, la duración de la secuencia nativa y resultados separados para `AttachThreadInput`, `BringWindowToTop`, `SetForegroundWindow`, foco nativo, pulso topmost temporal, foreground final y foco XAML del alias.
+- La acción es un no-op satisfactorio en el build normal y solo escribe cuando existe `DiagnosticLogger`; un fallo del diagnóstico se absorbe en el frontend para no impedir el uso del selector. El retry sigue iniciándose inmediatamente después del primer foco XAML y conserva sus 180 ms.
+- `RequestForegroundLayout` captura una sola ventana foreground, clasifica únicamente `Progman` y `WorkerW` como `escritorio_shell` y agrupa cualquier otra clase como `otra_ventana`, sin registrar títulos, procesos ni nombres de clase arbitrarios. `distribucion_aplicada` indica ahora si la distribución ya estaba activa, si la petición se encoló, si fue rechazada o si no había ventana foreground.
+- No se cambió el orden de las heurísticas, no se añadió espera a la ruta Raw Input y el selector conserva exclusivamente el pulso topmost temporal existente.
+
+Evidencia:
+
+- `dotnet test RightKeyboard.sln -c Release`: 207/207 pruebas superadas; siete casos nuevos cubren el round-trip del diagnóstico de foco y la clasificación segura de las clases del Escritorio, ausentes y ajenas.
+- `dotnet build RightKeyboard.sln -c Release --no-restore` y la variante Debug con `RIGHTKEYBOARD_DIAGNOSTICS`: compilación correcta, 0 advertencias y 0 errores.
+- Queda pendiente en el carril C abrir el selector desde varias aplicaciones y desde el Escritorio con teclados físicos, correlacionar `entrada_recibida`, `selector_foco` y `distribucion_aplicada`, y decidir con esa evidencia si se modifica la secuencia o se documenta un límite de Explorer/Shell.
 
 ### Etapa 18 — Casillas de verificación: prueba de árbol visual y cuarto intento (1.5.9)
 
