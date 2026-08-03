@@ -34,7 +34,7 @@ Secuenciales. Cada una es una sesión, una rama, un PR y un bump de versión.
 | 16 | 1.5.7 | Fallback verificable ante caída del frontend | Completada |
 | 17 | 1.5.8 | Instrumentar el foco del selector y el Escritorio | Completada; validación física pendiente |
 | 18 | 1.5.9 | Casillas de verificación: prueba de árbol visual y cuarto intento | Completada; revalidación física pendiente |
-| 19 | 1.5.10 | Estado visual y orden lógico de dispositivos | Pendiente |
+| 19 | 1.5.10 | Estado visual y orden lógico de dispositivos | Completada |
 | 20 | 1.6.0 | Extraer contratos compartidos y cerrar versión | Pendiente |
 
 ### Etapa 9 — Sincronizar documentación con el código · completada el 19 de julio de 2026
@@ -247,7 +247,7 @@ Defecto visual persistente registrado en [notas de uso 1.5.7](notas-de-uso-1.5.7
 
 **Evidencia:** `RightKeyboard.WinUI.Tests` contiene la prueba de árbol visual y `scripts/run-tests.ps1` ejecuta conjuntamente 207/207 pruebas NUnit y 1/1 prueba WinUI; el CI usa la misma puerta. La solución Release compila con 0 advertencias. Sigue pendiente repetir la inspección en la estación física que reportó el ángulo recto con 1.5.7; hasta entonces la discrepancia queda documentada, no inferida como resuelta en todos los equipos.
 
-### Etapa 19 — Estado visual y orden lógico de dispositivos (1.5.10)
+### Etapa 19 — Estado visual y orden lógico de dispositivos (1.5.10) · completada el 2 de agosto de 2026
 
 Reúne dos mejoras contiguas registradas en [notas de uso 1.5.4](notas-de-uso-1.5.4.md): el indicador gráfico de conexión y la regla «Conectados arriba». Ambas dependen del mismo estado de presentación y deben avanzar juntas para que la señal visual, el texto accesible y la posición de cada fila nunca se contradigan.
 
@@ -264,6 +264,12 @@ Criterios de cierre:
 - Los nombres accesibles conservan conexión, estado ignorado y distribución además del indicador decorativo.
 - Validación visual en temas claro y oscuro con filas conectadas, desconectadas e ignoradas, incluida la jerarquía de grupos; el respaldo WinForms se comprueba por separado.
 - El cambio de conexión al actualizar el inventario recoloca la fila sin perder selección, edición pendiente ni contexto de desplazamiento.
+
+**Resultado:** `DevicePresentation` es la fuente única del rango de seis posiciones y de la conexión agregada de grupos. WinUI ordena juntos grupos y dispositivos sueltos, mantiene sus identidades técnicas anidadas y muestra un punto de 6 px en la propia línea de «Conectado/Desconectado»; WinForms consume la misma semántica y dibuja el indicador equivalente en su control nativo. Conectado usa verde y desconectado gris neutro, siempre acompañado por texto y nombre accesible completo.
+
+**Continuidad de edición:** ambas superficies capturan identidad seleccionada, estado pendiente y desplazamiento antes de reconstruir la lista. Después de reordenarla restauran esos tres elementos si la identidad sigue existiendo, por lo que Recargar no descarta ni desplaza silenciosamente el trabajo en curso; el respaldo WinForms incorpora ahora esa acción explícita.
+
+**Evidencia:** 218/218 pruebas NUnit cubren las seis combinaciones, el desempate por nombre, grupos sin/uno/varios miembros conectados y el dibujo WinForms; 2/2 pruebas WinUI inspeccionan el árbol real, los colores distintos en temas claro y oscuro y el nombre accesible. La revisión visual en esta estación confirmó el punto verde pequeño alineado inmediatamente antes de «Conectado». El inventario disponible solo aportó una fila conectada y sin grupo; las combinaciones restantes quedan cubiertas de forma determinista por las pruebas y siguen siendo candidatas a repetición física con más hardware.
 
 ### Etapa 20 — Contratos compartidos y cierre de 1.6.0
 
