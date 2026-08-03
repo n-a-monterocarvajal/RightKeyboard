@@ -336,7 +336,7 @@ public sealed class SettingsWindow : Window
         Grid.SetColumn(StartupCheckBox, 1);
         systemRow.Children.Add(StartupCheckBox);
         systemPreferences.Children.Add(systemRow);
-        if (DiagnosticLogger.IsAvailable)
+        if (DiagnosticsAvailability.IsAvailable)
         {
             systemPreferences.Children.Add(CreateSeparator());
             systemPreferences.Children.Add(new TextBlock
@@ -670,7 +670,7 @@ public sealed class SettingsWindow : Window
         ResizeForCurrentDpi(InitialWidth, InitialHeight);
         await ReloadAsync();
         await ReloadStartupAsync();
-        if (DiagnosticLogger.IsAvailable)
+        if (DiagnosticsAvailability.IsAvailable)
         {
             await ReloadDiagnosticsAsync();
         }

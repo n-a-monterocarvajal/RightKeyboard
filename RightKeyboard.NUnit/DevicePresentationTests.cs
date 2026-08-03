@@ -5,18 +5,18 @@ namespace RightKeyboard.Tests;
 [TestFixture]
 public sealed class DevicePresentationTests
 {
-    private readonly Layout spanish = new(new nint(0x0000040A), "español (Chile)", "Latinoamericano");
+    private const string SpanishName = "español (Chile) / Latinoamericano";
 
     [TestCase(true, "Conectado")]
     [TestCase(false, "Desconectado")]
     public void Create_DescribeElEstadoDeConexion(bool connected, string expectedState)
     {
-        DevicePresentation presentation = DevicePresentation.Create(connected, ignored: false, spanish);
+        DevicePresentation presentation = DevicePresentation.Create(connected, ignored: false, SpanishName);
 
         Assert.Multiple(() =>
         {
             Assert.That(presentation.State, Is.EqualTo(expectedState));
-            Assert.That(presentation.LayoutName, Is.EqualTo(spanish.Name));
+            Assert.That(presentation.LayoutName, Is.EqualTo(SpanishName));
             Assert.That(presentation.GetAccessibleName("Teclado oficina"), Does.Contain(expectedState));
         });
     }
@@ -41,21 +41,21 @@ public sealed class DevicePresentationTests
     [Test]
     public void GetAccessibleName_AnunciaConexionIgnoradoYDistribucion()
     {
-        DevicePresentation presentation = DevicePresentation.Create(connected: true, ignored: true, spanish);
+        DevicePresentation presentation = DevicePresentation.Create(connected: true, ignored: true, SpanishName);
 
         Assert.That(
             presentation.GetAccessibleName("Teclado oficina"),
-            Is.EqualTo($"Teclado oficina. Conectado. Ignorado. {spanish.Name}."));
+            Is.EqualTo($"Teclado oficina. Conectado. Ignorado. {SpanishName}."));
     }
 
     [Test]
     public void GetListText_RecortaSoloElAliasYConservaElEstado()
     {
-        DevicePresentation presentation = DevicePresentation.Create(connected: false, ignored: true, spanish);
+        DevicePresentation presentation = DevicePresentation.Create(connected: false, ignored: true, SpanishName);
 
         string text = presentation.GetListText("Teclado oficina con un alias demasiado largo", maximumNameLength: 20);
 
-        Assert.That(text, Is.EqualTo($"Teclado oficina con…\r\nDesconectado · Ignorado · {spanish.Name}"));
+        Assert.That(text, Is.EqualTo($"Teclado oficina con…\r\nDesconectado · Ignorado · {SpanishName}"));
     }
 
     [TestCase(true, false, true, 0)]
@@ -81,12 +81,12 @@ public sealed class DevicePresentationTests
         bool second,
         bool expectedConnected)
     {
-        DevicePresentation presentation = DevicePresentation.CreateGroup([first, second], spanish);
+        DevicePresentation presentation = DevicePresentation.CreateGroup([first, second], SpanishName);
 
         Assert.Multiple(() =>
         {
             Assert.That(presentation.Connected, Is.EqualTo(expectedConnected));
-            Assert.That(presentation.LayoutName, Is.EqualTo(spanish.Name));
+            Assert.That(presentation.LayoutName, Is.EqualTo(SpanishName));
         });
     }
 
@@ -95,8 +95,8 @@ public sealed class DevicePresentationTests
     {
         (string Name, DevicePresentation Presentation)[] rows =
         [
-            ("Zulu", DevicePresentation.Create(true, ignored: false, spanish)),
-            ("Alfa", DevicePresentation.Create(true, ignored: false, spanish)),
+            ("Zulu", DevicePresentation.Create(true, ignored: false, SpanishName)),
+            ("Alfa", DevicePresentation.Create(true, ignored: false, SpanishName)),
             ("Beta", DevicePresentation.Create(false, ignored: false, layoutName: null))
         ];
 

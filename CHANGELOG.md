@@ -4,6 +4,17 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [Sin publicar]
 
+## [1.6.0] - 2026-08-02
+
+### Arquitectura
+
+- Los DTO del protocolo IPC, la presentación de versión, los códigos de salida y los modelos compartidos de Configuración viven ahora en `RightKeyboard.Shared`, una biblioteca neutral sin dependencias de WinForms ni WinUI.
+- El frontend WinUI deja de referenciar el proyecto ejecutable `RightKeyboard`; ambos procesos consumen la biblioteca compartida y el logger permanece encapsulado en el residente.
+
+### Pruebas
+
+- Dos pruebas nuevas fijan que los contratos residen en `RightKeyboard.Shared`, separados del ejecutable, y que la versión compartida cierra en 1.6.0. La suite alcanza 220 pruebas NUnit y 2 pruebas WinUI.
+
 ## [1.5.10] - 2026-08-02
 
 ### Configuración

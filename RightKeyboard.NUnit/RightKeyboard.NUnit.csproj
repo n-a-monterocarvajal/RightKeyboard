@@ -17,5 +17,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RightKeyboard\RightKeyboard.csproj" />
+    <ProjectReference Include="..\RightKeyboard.Shared\RightKeyboard.Shared.csproj" />
   </ItemGroup>
 </Project>

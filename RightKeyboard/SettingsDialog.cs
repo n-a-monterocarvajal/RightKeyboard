@@ -377,7 +377,7 @@ internal sealed class SettingsDialog : FluentForm
                 .ToArray();
             DevicePresentation groupPresentation = DevicePresentation.CreateGroup(
                 members.Select(member => connected.Contains(member.Identity)),
-                group.Layout);
+                group.Layout?.Name);
             SettingsDeviceListRow parent = new(
                 members[0].Identity,
                 $"{group.DisplayName}\r\n{members.Length} identidades · {groupPresentation.SecondaryText}",
@@ -390,7 +390,7 @@ internal sealed class SettingsDialog : FluentForm
                     DevicePresentation presentation = DevicePresentation.Create(
                         connected.Contains(member.Identity),
                         configuration.IgnoredDevices.Contains(member.Identity),
-                        group.Layout);
+                        group.Layout?.Name);
                     return new SettingsDeviceListRow(
                         member.Identity,
                         $"{member.DetectedName}\r\nIdentidad técnica · {presentation.SecondaryText}",
@@ -412,7 +412,7 @@ internal sealed class SettingsDialog : FluentForm
             DevicePresentation presentation = DevicePresentation.Create(
                 connected.Contains(preference.Identity),
                 isIgnored,
-                layout);
+                layout?.Name);
             topLevel.Add((new SettingsDeviceListRow(
                 preference.Identity,
                 presentation.GetListText(preference.DisplayName),

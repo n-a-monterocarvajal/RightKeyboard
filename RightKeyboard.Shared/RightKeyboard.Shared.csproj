@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>RightKeyboard.Shared</AssemblyName>
+    <RootNamespace>RightKeyboard</RootNamespace>
+    <Version>1.6.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="RightKeyboard" />
+    <InternalsVisibleTo Include="RightKeyboard.NUnit" />
+    <InternalsVisibleTo Include="RightKeyboard.WinUI" />
+    <InternalsVisibleTo Include="RightKeyboard.WinUI.Tests" />
+  </ItemGroup>
+</Project>

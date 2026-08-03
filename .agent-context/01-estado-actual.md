@@ -1,10 +1,10 @@
 # Estado actual real
 
-Snapshot actualizado el **2026-08-02** durante la Etapa 17. Contrastar siempre con `git status`, `git log -1 --oneline` y los metadatos de versión del checkout actual.
+Snapshot actualizado el **2026-08-02** al cerrar la Etapa 20. Contrastar siempre con `git status`, `git log -1 --oneline` y los metadatos de versión del checkout actual.
 
 ## Resumen ejecutivo
 
-`1.5.0` es la versión estable inicial de la línea 1.5. Las etapas 1-7 posteriores añadieron CI estricto, paridad de exportación/importación/inicio en WinUI, diagnóstico explicable, exclusión conservadora por firma HID, agrupación manual de identidades y una jerarquía deliberada para la Configuración WinUI. El camino instalado normal usa un residente WinForms/Win32 (`RightKeyboard.exe`) y un frontend WinUI bajo demanda (`ui/RightKeyboard.WinUI.exe`).
+`1.5.0` es la última versión publicada; el código fuente cierra en `1.6.0`. El camino instalado normal usa un residente WinForms/Win32 (`RightKeyboard.exe`) y un frontend WinUI bajo demanda (`ui/RightKeyboard.WinUI.exe`), ambos apoyados en la biblioteca neutral `RightKeyboard.Shared.dll`.
 
 ## Funciona en el código actual
 
@@ -17,6 +17,7 @@ Snapshot actualizado el **2026-08-02** durante la Etapa 17. Contrastar siempre c
 - Persistencia esquema 5, migraciones de esquemas 2-4 y de `config.txt`, validación estricta y escritura temporal (`Configuration`).
 - Selector WinUI con alias, agrupación visual por idioma, distribución, ignorado y fallback WinForms.
 - Configuración WinUI para listar, ordenar, renombrar, cambiar distribución, ignorar, olvidar y limpiar. Desde 1.5.10, conexión es la clave primaria del orden y cada fila muestra un indicador verde/gris junto al texto accesible de estado; el respaldo WinForms usa la misma semántica.
+- Contratos compartidos de ambos procesos extraídos a `RightKeyboard.Shared`: IPC v2, versión, códigos de salida y modelos de Configuración. WinUI ya no referencia el ejecutable WinForms.
 - Seguimiento del teclado pulsado con Configuración abierta; mientras el alias tiene foco no cambia la selección.
 - Menú nativo de bandeja limitado a **Configuración**, separador y **Salir** (`NativeTrayMenu`).
 - Detección conservadora de no-teclados por nombre y de la firma sintética observada al usar el historial del portapapeles.
@@ -55,4 +56,4 @@ No hay servicios falsos en producción. `RightKeyboard.WinUI` usa IPC real, `Con
 
 ## Evidencia automatizada
 
-En el snapshot inicial había **98 pruebas NUnit**; tras la Etapa 19 hay **218 NUnit y 2 pruebas WinUI de árbol visual real**. Estas últimas levantan una aplicación XAML, resuelven el template de `CheckBox` y verifican los indicadores de conexión y sus nombres accesibles. Es una cobertura UI deliberadamente estrecha: la suite aún no cubre extremo a extremo el pipe, ventanas completas, foco/foreground, SetupAPI real, instalador ni hardware.
+En el snapshot inicial había **98 pruebas NUnit**; tras la Etapa 20 hay **220 NUnit y 2 pruebas WinUI de árbol visual real**. Las nuevas pruebas fijan el límite del ensamblado compartido y la versión 1.6.0; las pruebas WinUI levantan una aplicación XAML, resuelven el template de `CheckBox` y verifican los indicadores de conexión y sus nombres accesibles. Es una cobertura UI deliberadamente estrecha: la suite aún no cubre extremo a extremo el pipe, ventanas completas, foco/foreground, SetupAPI real, instalador ni hardware.

@@ -3,9 +3,9 @@
   <!--
     Política de calidad de compilación (AUT-15).
 
-    La solución debe compilar sin advertencias. Se aplica a los cuatro proyectos
-    (núcleo WinForms, frontend WinUI, pruebas NUnit y pruebas WinUI) desde una
-    única raíz.
+    La solución debe compilar sin advertencias. Se aplica a los cinco proyectos
+    (contratos compartidos, núcleo WinForms, frontend WinUI, pruebas NUnit y
+    pruebas WinUI) desde una única raíz.
 
     Si algún generador externo (p. ej. Windows App SDK) emitiera una advertencia
     genuinamente inevitable, documentarla y añadir su código a

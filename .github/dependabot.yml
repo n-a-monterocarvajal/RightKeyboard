@@ -5,7 +5,7 @@
 version: 2
 
 updates:
-  # Paquetes NuGet de los tres proyectos (núcleo, WinUI y pruebas).
+  # Paquetes NuGet de los cinco proyectos (compartido, núcleo, WinUI y pruebas).
   - package-ecosystem: "nuget"
     directory: "/"
     schedule:

@@ -117,6 +117,6 @@ Se implementó una cola acotada y un escritor JSONL propio para no bloquear Raw 
 
 ## Dependencias frágiles entre componentes
 
-- `RightKeyboard.WinUI` referencia el proyecto ejecutable `RightKeyboard` para reutilizar DTO, `VersionPresentation` y tipos internos mediante `InternalsVisibleTo`. Es deuda conocida; extraer contratos/modelo compartidos evitaría ese acoplamiento.
+- Desde 1.6.0, `RightKeyboard.WinUI` y el residente referencian `RightKeyboard.Shared`, biblioteca neutral que contiene IPC, versión, códigos de salida y modelos de Configuración. WinUI no referencia el proyecto ejecutable WinForms; el logger y los modelos HID permanecen encapsulados en el residente.
 - El servidor de pipe acepta una conexión por vez y cada polling de actividad crea una conexión nueva cada 500 ms. Es suficiente hoy, no es un bus general.
 - El inventario se refresca al iniciar y tras `WM_INPUT_DEVICE_CHANGE` con debounce de 200 ms. Beta 7 dejó de refrescar SetupAPI al abrir UI para reducir latencia; no deshacerlo sin evidencia de inventario obsoleto.
