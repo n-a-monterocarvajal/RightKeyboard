@@ -1,7 +1,7 @@
 name: CI
 
 # Integración continua: restaura, compila en Release (advertencias como errores
-# vía Directory.Build.props) y ejecuta la suite NUnit en un runner Windows.
+# vía Directory.Build.props) y ejecuta las suites NUnit y WinUI en un runner Windows.
 # No genera ni conserva artefactos: para una salida descargable se usa el
 # workflow "Compilación distribuible" (.github/workflows/build-package.yml).
 
@@ -73,5 +73,6 @@ jobs:
       - name: Compilar (Release, advertencias como errores)
         run: dotnet build RightKeyboard.sln -c Release --no-restore
 
-      - name: Ejecutar pruebas
-        run: dotnet test RightKeyboard.NUnit/RightKeyboard.NUnit.csproj -c Release --no-restore
+      - name: Ejecutar pruebas NUnit y WinUI
+        shell: powershell
+        run: powershell -ExecutionPolicy Bypass -File .\scripts\run-tests.ps1 -Configuration Release -NoBuild

@@ -33,8 +33,9 @@ Secuenciales. Cada una es una sesión, una rama, un PR y un bump de versión.
 | 15 | 1.5.6 | Exploración de pulsaciones sintéticas | Completada |
 | 16 | 1.5.7 | Fallback verificable ante caída del frontend | Completada |
 | 17 | 1.5.8 | Instrumentar el foco del selector y el Escritorio | Completada; validación física pendiente |
-| 18 | 1.5.9 | Casillas de verificación: prueba de árbol visual y cuarto intento | Pendiente |
-| 19 | 1.6.0 | Extraer contratos compartidos y cerrar versión | Pendiente |
+| 18 | 1.5.9 | Casillas de verificación: prueba de árbol visual y cuarto intento | Completada; revalidación física pendiente |
+| 19 | 1.5.10 | Estado visual y orden lógico de dispositivos | Pendiente |
+| 20 | 1.6.0 | Extraer contratos compartidos y cerrar versión | Pendiente |
 
 ### Etapa 9 — Sincronizar documentación con el código · completada el 19 de julio de 2026
 
@@ -231,7 +232,7 @@ Evidencia:
 - `dotnet build RightKeyboard.sln -c Release --no-restore` y la variante Debug con `RIGHTKEYBOARD_DIAGNOSTICS`: compilación correcta, 0 advertencias y 0 errores.
 - Queda pendiente en el carril C abrir el selector desde varias aplicaciones y desde el Escritorio con teclados físicos, correlacionar `entrada_recibida`, `selector_foco` y `distribucion_aplicada`, y decidir con esa evidencia si se modifica la secuencia o se documenta un límite de Explorer/Shell.
 
-### Etapa 18 — Casillas de verificación: prueba de árbol visual y cuarto intento (1.5.9)
+### Etapa 18 — Casillas de verificación: prueba de árbol visual y cuarto intento (1.5.9) · completada el 2 de agosto de 2026
 
 Defecto visual persistente registrado en [notas de uso 1.5.7](notas-de-uso-1.5.7.md#2-casillas-de-verificación-siguen-con-ángulos-rectos-después-de-un-tercer-abordaje) y en `ROADMAP.md`: los `CheckBox` de la Configuración WinUI siguen con el glifo en ángulo recto pese a dos intentos de código distintos (1.5.5 con `CheckBoxCornerRadius`, 1.5.5.1 con `ControlCornerRadius` en `SettingsWindow.ApplyRoundedCheckBoxResources`). Ninguno de los dos se sostuvo fuera del momento en que se dio por corregido.
 
@@ -242,7 +243,29 @@ Defecto visual persistente registrado en [notas de uso 1.5.7](notas-de-uso-1.5.7
 
 **Criterio de cierre:** la prueba nueva pasa porque el glifo redondeado se verifica en el árbol visual, no porque una constante coincida con otra; y la validación visual en VM y en la estación física (carril C) coincide con lo que reporta la prueba, para no repetir la discrepancia que motivó esta etapa.
 
-### Etapa 19 — Contratos compartidos y cierre de 1.6.0
+**Resultado:** la primera parte encontró que el defecto no se reproduce. Una aplicación de prueba WinUI no empaquetada levanta un hilo XAML real, carga el `ControlTemplate` predeterminado y localiza `NormalRectangle`; el radio efectivo es 4 en ambos ejes y coincide con `CheckBox.CornerRadius`. El XAML de tema de Windows App SDK 2.3.1 enlaza esos radios a la propiedad del control, por lo que la hipótesis de valores fijos era falsa. La revisión visual en esta estación, en estados marcado y desmarcado, también mostró el glifo redondeado. No se hizo un cuarto cambio de producción: alterar el template sin reproducir el defecto habría añadido complejidad y riesgo sin una corrección demostrable.
+
+**Evidencia:** `RightKeyboard.WinUI.Tests` contiene la prueba de árbol visual y `scripts/run-tests.ps1` ejecuta conjuntamente 207/207 pruebas NUnit y 1/1 prueba WinUI; el CI usa la misma puerta. La solución Release compila con 0 advertencias. Sigue pendiente repetir la inspección en la estación física que reportó el ángulo recto con 1.5.7; hasta entonces la discrepancia queda documentada, no inferida como resuelta en todos los equipos.
+
+### Etapa 19 — Estado visual y orden lógico de dispositivos (1.5.10)
+
+Reúne dos mejoras contiguas registradas en [notas de uso 1.5.4](notas-de-uso-1.5.4.md): el indicador gráfico de conexión y la regla «Conectados arriba». Ambas dependen del mismo estado de presentación y deben avanzar juntas para que la señal visual, el texto accesible y la posición de cada fila nunca se contradigan.
+
+Resultado esperado:
+
+- Cada fila que informa conexión conserva las palabras «Conectado» o «Desconectado» y añade un indicador visual: verde para conectado y neutro/gris para desconectado. No usar rojo como estado ordinario, porque comunica error. El lector de pantalla sigue anunciando el texto completo y ninguna decisión depende solo del color.
+- La misma semántica se aplica en la Configuración WinUI y en el respaldo WinForms, respetando los controles nativos de cada tecnología.
+- La conexión pasa a ser la clave primaria del orden. Dentro de cada bloque se ordena por estado lógico: conectado y configurado, conectado y sin configurar, conectado e ignorado, desconectado y configurado, desconectado y sin configurar, desconectado e ignorado; los empates conservan el orden por nombre.
+- Un grupo lógico se considera conectado si al menos uno de sus miembros técnicos está conectado. Su rango configurado procede de la distribución efectiva del grupo; las identidades técnicas conservan su estado real al mostrarse anidadas.
+
+Criterios de cierre:
+
+- Pruebas unitarias cubren las seis combinaciones de conexión/configuración/ignorado, los empates por nombre y grupos con ningún, uno o varios miembros conectados.
+- Los nombres accesibles conservan conexión, estado ignorado y distribución además del indicador decorativo.
+- Validación visual en temas claro y oscuro con filas conectadas, desconectadas e ignoradas, incluida la jerarquía de grupos; el respaldo WinForms se comprueba por separado.
+- El cambio de conexión al actualizar el inventario recoloca la fila sin perder selección, edición pendiente ni contexto de desplazamiento.
+
+### Etapa 20 — Contratos compartidos y cierre de 1.6.0
 
 Refactor diferido a 1.6: mover los DTO de IPC, `VersionPresentation` y modelos compartidos a una biblioteca para que el frontend WinUI no referencie el ejecutable WinForms. Cierra la versión.
 

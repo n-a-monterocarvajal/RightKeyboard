@@ -55,4 +55,4 @@ No hay servicios falsos en producción. `RightKeyboard.WinUI` usa IPC real, `Con
 
 ## Evidencia automatizada
 
-En el snapshot inicial había **98 pruebas NUnit**; tras la Etapa 17 hay **207**. Los casos más recientes cubren el round-trip del diagnóstico de foco y la clasificación segura de las clases foreground, pero no sustituyen una prueba de foco real: la suite aún no cubre extremo a extremo el pipe, UI WinUI, foco/foreground, SetupAPI real, instalador ni hardware.
+En el snapshot inicial había **98 pruebas NUnit**; tras la Etapa 18 hay **207 NUnit y 1 prueba WinUI de árbol visual real**. Esta última levanta una aplicación XAML, resuelve el template de `CheckBox` y mide el rectángulo del glifo. Es una cobertura UI deliberadamente estrecha: la suite aún no cubre extremo a extremo el pipe, ventanas completas, foco/foreground, SetupAPI real, instalador ni hardware.

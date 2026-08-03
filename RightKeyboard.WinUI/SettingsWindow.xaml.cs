@@ -525,7 +525,7 @@ public sealed class SettingsWindow : Window
     private static void ApplyRoundedCheckBoxResources(CheckBox checkBox)
     {
         CornerRadius radius = new(SettingsPanelVisualContract.CheckBoxGlyphCornerRadius);
-        // WinUI 2.2 inicializa la propiedad desde ControlCornerRadius y su template
+        // WinUI inicializa la propiedad desde ControlCornerRadius y su template
         // enlaza esa propiedad con el rectángulo del glifo. La clave usada en 1.5.5
         // (CheckBoxCornerRadius) no forma parte de ese template y no tenía efecto.
         checkBox.Resources["ControlCornerRadius"] = radius;
