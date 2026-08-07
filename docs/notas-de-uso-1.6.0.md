@@ -24,15 +24,17 @@ Cada punto describe lo observado, lo que se sabe del código y lo que quedaría 
 
 **Pendiente:** decidir el mecanismo de detección en vivo (por ejemplo `WM_DEVICECHANGE` o el mismo camino de Raw Input que ya usa el núcleo) y cómo conservarlo coherente con la continuidad de edición ya existente (selección, cambios pendientes y desplazamiento se preservan al recargar, etapa 19/1.5.10) para que un refresco automático no descarte trabajo en curso a mitad de edición.
 
-## 3. Cambiar el material de fondo a Acrylic nativo y radios de botones a Fluent nativo
+## 3. Mica como material principal (no Acrylic) y radios de botones a Fluent nativo
 
-**Tipo:** mejora visual, con una discrepancia a confirmar antes de tocar código.
+**Tipo:** mejora visual; el pedido original de esta nota se corrigió tras revisar la guía oficial.
 
-**Síntoma reportado:** se pide reemplazar el fondo Mica actual por Acrylic nativo, y que los radios de todos los botones usen el valor Fluent nativo en vez de uno fijo.
+**Conclusión sobre el material de fondo:** según la [guía de materiales de Windows Apps](https://learn.microsoft.com/en-us/windows/apps/develop/ui/materials), Mica es el material recomendado para el fondo de la ventana principal de una app (título y panel de navegación), mientras que Desktop Acrylic está pensado sobre todo para superficies transitorias (flyouts, popups, menús contextuales) o para un efecto de vidrio esmerilado deliberado. El pedido inicial de reemplazar Mica por Acrylic partía de un malentendido; **Mica debe ser el material principal**, no Acrylic.
 
-**Qué dice el código:** `TryEnableBackdrop` (`RightKeyboard.WinUI/SettingsWindow.xaml.cs:646-663`) ya intenta `DesktopAcrylicBackdrop` primero y solo cae a `MicaBackdrop` si el Acrylic falla, y a `null` si ambos fallan. Es decir, el código actual **ya prioriza Acrylic**; si en la práctica se ve un material tipo Mica, la causa probable es que `DesktopAcrylicBackdrop` está lanzando una excepción en este entorno (¿VM sin composición de escritorio completa, política de energía, modo de ahorro?) y cae al `catch`, no que el código pida Mica a propósito. Sobre los botones, `ApplyFluentResources` fija `button.CornerRadius = new CornerRadius(8)` explícitamente (línea 634) en vez de heredar `ControlCornerRadius`/el recurso de tema del sistema.
+**Qué dice el código:** `TryEnableBackdrop` (`RightKeyboard.WinUI/SettingsWindow.xaml.cs:646-663`) hoy intenta `DesktopAcrylicBackdrop` primero y solo cae a `MicaBackdrop` si el Acrylic lanza una excepción, y a `null` si ambos fallan. El orden es el inverso al recomendado por la guía para una ventana de configuración tipo panel principal.
 
-**Pendiente:** antes de cambiar código, confirmar con diagnóstico si `DesktopAcrylicBackdrop` está fallando en la estación de prueba (y por qué) o si el fondo visto es Acrylic y simplemente se percibe como Mica. Para los botones, evaluar quitar el `CornerRadius` fijo y dejar que hereden el recurso de tema (`ControlCornerRadius`) como ya hacen las casillas desde 1.5.9, salvo que exista una razón deliberada para el valor fijo de 8.
+**Sobre el fallback:** la guía documenta que WinUI 3 ya resuelve el fallback de forma nativa sin que la app tenga que detectarlo: si Mica no puede renderizarse (Escritorio Remoto o VM, hardware gráfico insuficiente, "Efectos de transparencia" desactivado en Configuración, o alto contraste), `MicaBackdrop` cae automáticamente a un color sólido del tema activo — no hace falta envolverlo en un segundo `try/catch` manual con otro material como red de seguridad. Ahorro de batería no afecta a Mica (solo desactiva Acrylic). Esto también explica por qué, si la prueba se hizo en una VM o sesión remota, es probable que no se viera ni Mica ni Acrylic sino directamente el color sólido de respaldo.
+
+**Pendiente:** invertir `TryEnableBackdrop` para que `MicaBackdrop` sea el intento principal, y apoyarse en el fallback nativo a color sólido en vez de encadenar `DesktopAcrylicBackdrop` como alternativa manual; conservar un `FallbackColor`/color de tema que se vea bien como plano. Sobre los botones, `ApplyFluentResources` fija `button.CornerRadius = new CornerRadius(8)` explícitamente (línea 634) en vez de heredar `ControlCornerRadius`/el recurso de tema del sistema; evaluar quitar el valor fijo y dejar que hereden el recurso de tema, como ya hacen las casillas desde 1.5.9, salvo que exista una razón deliberada para el 8.
 
 ## 4. Ancho mínimo al abrir la ventana
 
