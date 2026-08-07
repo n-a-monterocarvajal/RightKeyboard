@@ -64,3 +64,15 @@ Cada punto describe lo observado, lo que se sabe del código y lo que quedaría 
 **Síntoma:** el texto de ayuda «Edita el grupo lógico o el teclado seleccionado. …» (línea 383) queda pegado al campo «Nombre para este teclado» (línea 384) sin padding ni separador visual entre ambos bloques.
 
 **Pendiente:** agregar espaciado y un separador (línea o `Spacing` de sección) entre la ayuda contextual del panel «Dispositivo seleccionado» y el primer campo editable, coherente con la jerarquía visual del resto del panel.
+
+## 7. Verificación de actualizaciones contra el repositorio de GitHub
+
+**Tipo:** capacidad nueva.
+
+**Síntoma/pedido:** implementar dentro de la app una verificación de actualizaciones contra el repositorio de GitHub, en vez de depender de que el usuario revise manualmente si hay una versión más nueva.
+
+**Antecedente:** ya estaba registrado como punto 4 de [notas de uso 1.5.4](notas-de-uso-1.5.4.md#4-incluir-un-actualizador-en-la-app) («Incluir un actualizador en la app»), sin promoverse todavía a ninguna etapa de un plan. Sigue sin resolverse.
+
+**A definir (heredado de esa nota, más el enfoque de esta):** consultar la API de Releases de GitHub del repositorio (`n-a-monterocarvajal/rightkeyboard`) para detectar si hay una versión publicada más nueva que la instalada; cadencia de la comprobación y si es opt-in; verificación de integridad contra el SHA-256 que ya se publica por versión; cómo se le notifica al usuario y si se ofrece descarga/instalación asistida o solo el aviso; y su convivencia con el instalador de Inno Setup y la carpeta compartida del núcleo y la Configuración WinUI. Respetar CPOL 5(d): la distribución debe seguir siendo gratuita.
+
+**Pendiente:** decidir alcance (solo aviso vs. descarga asistida) y promover a un plan de versión cuando se aborde.
