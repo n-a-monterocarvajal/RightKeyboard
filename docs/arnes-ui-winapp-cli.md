@@ -44,12 +44,17 @@ Verificado en la estación: **winapp 0.6.0**, instalado en
 `%LOCALAPPDATA%\Microsoft\WindowsApps`. Sigue en preview público desde enero de 2026;
 conviene tenerlo en cuenta antes de convertirlo en puerta de CI.
 
-**Corrección — el SDK fijado no está instalado.** `global.json` pide 10.0.301 con
-`rollForward: latestPatch`, y la estación tiene 10.0.400. `latestPatch` no cruza bandas de
-características, de modo que `dotnet build` falla antes de empezar. Ambos proyectos compilan
-sin errores con 10.0.400 cuando se permite el salto. Hay que reconciliar `global.json` con
-lo que se instala en las estaciones, o instalar 10.0.301: mientras tanto, el arnés no puede
-partir de una compilación limpia en esta máquina.
+**El pin del SDK, resuelto.** `global.json` pedía 10.0.301 con `rollForward: latestPatch`,
+que no cruza bandas de características: una estación con 10.0.400 no podía compilar, porque
+la política rechazaba la banda 4 por distinta, no por más nueva. El pin se subió
+deliberadamente a la banda 4 y sigue fijo, en lugar de relajarse a `latestFeature`.
+
+Al compilar con la banda 4 en una estación en español aparece una advertencia `PRI263` sobre
+recursos satélite de MSTest que el CI no reportaba. No rompe la compilación —la emite el
+generador PRI, no el compilador, así que `TreatWarningsAsErrors` no la alcanza— y es idéntica
+con WindowsAppSDK 2.3.1 y 2.4.0. **No la causa la banda**: el CI con el pin ya en 10.0.4xx
+compila con cero advertencias. Es propia de la estación, por idioma o build de Windows, y no
+debería confundirse con una regresión al revisarla localmente.
 
 ## Cómo levantar la ventana
 
