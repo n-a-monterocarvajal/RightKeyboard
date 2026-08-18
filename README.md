@@ -1,84 +1,162 @@
 # RightKeyboard
 
-RightKeyboard asocia cada teclado físico conectado a Windows con una distribución de teclado distinta. Al escribir, la aplicación detecta qué dispositivo generó la pulsación y solicita a la ventana activa que use la distribución elegida para ese teclado.
+Si usas dos teclados en la misma computadora —el del portátil y uno externo, o uno para cada
+idioma—, Windows te obliga a cambiar la distribución a mano cada vez que pasas de uno a otro.
+RightKeyboard se encarga de eso.
 
-La aplicación se ejecuta en segundo plano y su única interfaz permanente es el icono del área de notificación de Windows. El menú secundario contiene estas acciones:
+Cada teclado guarda su propia distribución. Cuando empiezas a escribir, la aplicación reconoce
+por cuál dispositivo llegó la pulsación y le pide a la ventana activa que use la que
+corresponde. No hay atajos que memorizar ni indicador que vigilar: escribes y la distribución
+ya es la correcta.
 
-- **Configuración**: administra nombres, distribuciones, dispositivos ignorados y limpieza de preferencias.
-- **Salir**: detiene RightKeyboard.
+Vive en segundo plano, y su única presencia permanente es el icono del área de notificación.
+Desde su menú se abre **Configuración**, donde está todo lo demás, y **Salir**.
 
-## Requisitos
+> Versión publicada: **1.6.0**. Los cambios están en el [registro](CHANGELOG.md) y el detalle
+> de qué se validó y qué no, en las [notas de esa versión](docs/releases/1.6.0.md). Lo que
+> viene después se planifica en [ROADMAP.md](ROADMAP.md) y [docs/plan-1.7.0.md](docs/plan-1.7.0.md).
+
+## Antes de empezar
 
 - Windows 10 o Windows 11 de 64 bits.
-- El instalador oficial incluye .NET 10 y no requiere un runtime global.
-- .NET 10 SDK para compilar el proyecto.
+- El instalador trae .NET 10 incluido, así que no hace falta instalar ningún runtime aparte.
 
-Las distribuciones que se quieran utilizar deben estar instaladas previamente en **Configuración > Hora e idioma > Idioma y región > Opciones de idioma > Teclados**. RightKeyboard no instala ni modifica la lista de distribuciones de Windows.
+Un detalle que conviene saber de entrada: **RightKeyboard no instala distribuciones**. Solo
+cambia entre las que Windows ya tiene. Si la que quieres usar todavía no está, agrégala primero
+en **Configuración > Hora e idioma > Idioma y región > Opciones de idioma > Teclados**.
 
-## Uso
+## Primeros pasos
 
 1. Inicia `RightKeyboard.exe`.
-2. Presiona una tecla normal en un teclado que todavía no tenga una preferencia.
-3. Selecciona la distribución correspondiente y pulsa **Aceptar**.
-4. Repite el proceso para los demás teclados.
+2. Escribe una tecla normal en un teclado que todavía no tenga preferencia.
+3. Elige su distribución y acepta.
+4. Repite con los demás teclados.
 
-Desde la versión 1.5, las preferencias se guardan en `%LOCALAPPDATA%\RightKeyboard\preferences.json` y sobreviven al reinicio de la aplicación. En una instalación habitual, la ruta completa tiene esta forma:
+Eso es todo: de ahí en adelante cada teclado recuerda lo suyo.
+
+El selector aparece solo cuando hace falta. No lo abren los modificadores por sí solos, ni
+soltar una tecla, ni la entrada sintética —por ejemplo, pegar desde el portapapeles—. Y si lo
+cierras sin aceptar, no se crea ninguna asociación.
+
+Ese mismo selector permite ponerle nombre al dispositivo, agrupa las distribuciones por idioma
+y deja ignorar periféricos que publican pulsaciones sin ser teclados, como ciertos ratones con
+botones avanzados.
+
+El instalador deja activado el inicio con Windows para tu usuario, sin pedir permisos de
+administrador. Se puede cambiar después desde **Configuración** o desde las aplicaciones de
+inicio de Windows.
+
+## Configuración
+
+Es la ventana donde se corrige todo sin repetir la detección: renombrar dispositivos, cambiar
+la distribución, ignorar periféricos ambiguos, agrupar identidades que en realidad son el mismo
+teclado, olvidar dispositivos y limpiar preferencias.
+
+También puedes exportar e importar tus preferencias. La importación muestra primero una vista
+previa y te deja combinar o reemplazar, y siempre guarda un respaldo antes de tocar nada. Eso
+sí: **llevar preferencias de un equipo a otro todavía no está certificado** con pruebas reales.
+
+**Limpiar preferencias** vacía las asociaciones y la lista de ignorados. No toca las
+distribuciones que tienes instaladas en Windows.
+
+## Dónde quedan tus preferencias
+
+Desde la versión 1.5 se guardan aquí y sobreviven a reiniciar la aplicación:
 
 ```text
 C:\Users\<usuario>\AppData\Local\RightKeyboard\preferences.json
 ```
 
-La opción **Limpiar preferencias** vacía las asociaciones y la lista de dispositivos ignorados. No modifica las distribuciones instaladas en Windows. Si existe un `config.txt` creado por la versión 1.4, RightKeyboard lo migra automáticamente al nuevo formato.
+Si vienes de la versión 1.4 y existe un `config.txt`, RightKeyboard lo migra solo al formato
+nuevo. El esquema, las validaciones y el alcance exacto de **Limpiar preferencias** están en
+[Preferencias y portabilidad](docs/preferencias-1.5.md).
 
-El instalador activa de forma predeterminada el inicio con Windows para el usuario actual, sin requerir permisos administrativos. Se puede cambiar posteriormente desde **Configuración** o desde las aplicaciones de inicio de Windows.
+## Compilar y probar
 
-Cerrar el selector sin aceptar no crea una asociación. Las pulsaciones de modificadores, las liberaciones de tecla y los eventos de teclado sintéticos no abren el selector. El selector permite asignar un nombre al dispositivo, agrupa las distribuciones por idioma y permite ignorar periféricos que publican entradas de teclado sin ser teclados, como ciertos mouse con botones avanzados.
-
-Desde **Configuración** se pueden editar preferencias sin repetir el flujo de detección: renombrar dispositivos, cambiar distribución, ignorar periféricos ambiguos, agrupar identidades del mismo teclado, olvidar dispositivos y limpiar preferencias. También se pueden exportar e importar las preferencias —la importación muestra una vista previa y permite combinar o reemplazar, dejando siempre un respaldo— y activar o desactivar **Iniciar con Windows**. La portabilidad entre dos equipos distintos aún no está certificada con pruebas reales.
-
-> **Estado de versión:** el código fuente cierra en `1.6.0`; `1.5.0` sigue siendo la última versión publicada. No se crea etiqueta ni Release hasta ejecutar expresamente el flujo de publicación. La matriz de validación y los pendientes siguen en [docs/calidad-1.5.md](docs/calidad-1.5.md) y [ROADMAP.md](ROADMAP.md); el cierre de etapas está en [docs/plan-1.6.0.md](docs/plan-1.6.0.md).
-
-El contrato del esquema, las validaciones, las rutas y el alcance exacto de **Limpiar preferencias** se documentan en [Preferencias y portabilidad de RightKeyboard 1.5](docs/preferencias-1.5.md).
-
-## Compilación y pruebas
+Hace falta el SDK de .NET 10. El proyecto fija la banda en
+[`global.json`](global.json), así que instala la que ese archivo pida: una banda distinta
+—por ejemplo 10.0.3xx cuando pide 10.0.4xx— no sirve, aunque sea más nueva.
 
 ```powershell
 dotnet restore RightKeyboard.sln
 dotnet build RightKeyboard.sln --configuration Release
 powershell -ExecutionPolicy Bypass -File scripts\run-tests.ps1 -Configuration Release -NoBuild
+```
+
+La aplicación queda en `RightKeyboard\bin\Release\net10.0-windows\`.
+
+Para armar el instalador:
+
+```powershell
 scripts\build-installer.ps1
 ```
 
-La aplicación se genera en `RightKeyboard\bin\Release\net10.0-windows\`.
-El último comando publica para `win-x64`, compila el instalador con Inno Setup 7.0 o posterior y genera su archivo SHA-256 bajo `artifacts\installer`. Si `ISCC.exe` no está en una ubicación conocida, se puede indicar mediante `ISCC_PATH` o el parámetro `-IsccPath`.
+Publica para `win-x64`, compila con Inno Setup 7 y deja el `.exe` junto a su SHA-256 en
+`artifacts\installer`. Si `ISCC.exe` no está en una ruta conocida, indícalo con la variable
+`ISCC_PATH` o el parámetro `-IsccPath`.
 
-## Implementación
+Hay además un arnés que revisa la ventana de Configuración sobre la aplicación en marcha y
+deja una captura para mirar:
 
-- Usa Raw Input (`WM_INPUT`) para distinguir el dispositivo físico sin instalar servicios, controladores ni hooks globales.
-- Lee la estructura completa `RAWKEYBOARD` y actúa solo en eventos de pulsación.
-- Agrupa las distintas funciones HID de un teclado mediante el `ContainerId` de Plug and Play. Esto evita pedir otra distribución cuando una combinación `Fn` se presenta como otra colección del mismo dispositivo.
-- Conserva una huella de modelo como respaldo para recuperar asociaciones cuando Windows cambia el identificador de un dispositivo al reconectarlo.
-- Actualiza el inventario al recibir notificaciones de conexión o desconexión de Raw Input.
-- Clasifica de forma conservadora periféricos claramente no-teclado y permite ignorar manualmente los casos ambiguos.
-- Solicita el cambio con `WM_INPUTLANGCHANGEREQUEST` únicamente a la ventana activa. No cambia el idioma predeterminado global ni difunde mensajes a todas las aplicaciones.
-- No mantiene un formulario principal oculto: utiliza una ventana exclusiva para mensajes y un icono de notificación.
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\ui-harness.ps1
+```
 
-La opción de Windows **Permitir usar un método de entrada diferente para cada ventana de aplicación** puede hacer que Windows recuerde estados propios por ventana. RightKeyboard respeta ese modelo y vuelve a solicitar la distribución asociada cuando llega una pulsación desde cada teclado.
+Necesita Windows con sesión interactiva y el [winapp CLI](https://github.com/microsoft/winappcli).
+Cubre lo que puede afirmarse por propiedades de automatización; qué cubre y qué no —incluido
+un límite que conviene conocer— está en [docs/arnes-ui-winapp-cli.md](docs/arnes-ui-winapp-cli.md).
+
+## Cómo funciona por dentro
+
+La idea de fondo es distinguir el teclado físico sin instalar nada en el sistema. De ahí salen
+casi todas las decisiones:
+
+- Usa Raw Input (`WM_INPUT`), que identifica el dispositivo de origen sin servicios,
+  controladores ni hooks globales.
+- Lee la estructura `RAWKEYBOARD` completa y actúa solo en eventos de pulsación.
+- Agrupa las distintas funciones HID de un mismo teclado por el `ContainerId` de Plug and Play.
+  Sin eso, una combinación `Fn` puede presentarse como otro dispositivo y volver a preguntar.
+- Guarda una huella del modelo como respaldo, para recuperar la asociación cuando Windows
+  cambia el identificador de un dispositivo al reconectarlo.
+- Actualiza el inventario cuando Raw Input avisa de una conexión o desconexión.
+- Descarta de forma conservadora los periféricos que claramente no son teclados, y deja que
+  ignores a mano los casos dudosos.
+- Pide el cambio con `WM_INPUTLANGCHANGEREQUEST` **solo a la ventana activa**. Nunca cambia el
+  idioma global ni difunde el mensaje a todas las aplicaciones.
+- No mantiene un formulario principal oculto: le alcanza una ventana de solo mensajes y el
+  icono de notificación.
+
+Si tienes activada la opción de Windows **Permitir usar un método de entrada diferente para cada
+ventana de aplicación**, Windows recuerda un estado por ventana. RightKeyboard respeta ese
+modelo y vuelve a pedir la distribución asociada cuando llega una pulsación de cada teclado.
 
 ## Origen y estado legal
 
-Este fork conserva el trabajo previo de los autores y colaboradores de RightKeyboard. El código llegó aquí desde [gmcouto](https://github.com/gmcouto/RightKeyboard), que lo importó de un origen externo en enero de 2020, a través de su fork [mnivet](https://github.com/mnivet/RightKeyboard).
+Este fork conserva el trabajo previo de los autores y colaboradores de RightKeyboard. El código
+llegó aquí desde [gmcouto](https://github.com/gmcouto/RightKeyboard), que lo importó de un
+origen externo en enero de 2020, a través de su fork [mnivet](https://github.com/mnivet/RightKeyboard).
 
-Ese origen se atribuye al artículo «Using multiple keyboards with different layouts on the same machine», publicado por Antoine Aubry en CodeProject el 23 de octubre de 2007 bajo la Code Project Open License 1.02. La atribución descansa en las declaraciones de gmcouto y de [agabor](https://github.com/agabor/RightKeyboard) —un tercero independiente que atribuye su propio código al mismo artículo—, no en una comparación directa: CodeProject dejó de operar y el artículo ya no está disponible, de modo que **se desconoce si el código heredado coincide con el que lo acompañaba**. Ante esa incertidumbre el proyecto trata CPOL 1.02 como vinculante.
+Ese origen se atribuye al artículo «Using multiple keyboards with different layouts on the same
+machine», publicado por Antoine Aubry en CodeProject el 23 de octubre de 2007 bajo la Code
+Project Open License 1.02. La atribución descansa en las declaraciones de gmcouto y de
+[agabor](https://github.com/agabor/RightKeyboard) —un tercero independiente que atribuye su
+propio código al mismo artículo—, no en una comparación directa: CodeProject dejó de operar y el
+artículo ya no está disponible, de modo que **se desconoce si el código heredado coincide con el
+que lo acompañaba**. Ante esa incertidumbre el proyecto trata CPOL 1.02 como vinculante.
 
 Ninguno de los repositorios anteriores declara licencia para sus propias modificaciones.
 
-El proyecto se distribuye en tres capas, detalladas en [LICENSE](LICENSE): la obra original de 2007 bajo CPOL 1.02, los forks intermedios sin licencia declarada, y los cambios introducidos en este repositorio desde el fork bajo licencia MIT. Ninguna capa relicencia a otra.
+El proyecto se distribuye en tres capas, detalladas en [LICENSE](LICENSE): la obra original de
+2007 bajo CPOL 1.02, los forks intermedios sin licencia declarada, y los cambios introducidos en
+este repositorio desde el fork bajo licencia MIT. Ninguna capa relicencia a otra.
 
-Consecuencia práctica: por la sección 5(d) de CPOL, **RightKeyboard no puede venderse, arrendarse ni alquilarse por sí solo**, aunque los aportes de este fork sean MIT. Distribuirlo gratuitamente es compatible con las tres capas. La investigación de procedencia está en [Procedencia y licencia](docs/procedencia-y-licencia.md).
+Consecuencia práctica: por la sección 5(d) de CPOL, **RightKeyboard no puede venderse,
+arrendarse ni alquilarse por sí solo**, aunque los aportes de este fork sean MIT. Distribuirlo
+gratuitamente es compatible con las tres capas. La investigación de procedencia completa está en
+[Procedencia y licencia](docs/procedencia-y-licencia.md).
 
 ## Idioma del proyecto
 
-La documentación, las notas de cambios, los mensajes visibles para el usuario y las descripciones de cambios nuevos se escriben en español. Consulta [CONTRIBUTING.md](CONTRIBUTING.md) antes de aportar cambios.
-
-Las mejoras previstas para la siguiente versión se mantienen en [ROADMAP.md](ROADMAP.md).
+Escribimos en español la documentación, las notas de cambios y todo lo que ve el usuario. Los
+nombres de tipos, métodos y APIs quedan en inglés, siguiendo las convenciones de .NET y Win32.
+Si vas a aportar algo, pasa antes por [CONTRIBUTING.md](CONTRIBUTING.md).
