@@ -352,9 +352,10 @@ Hecho:
 - `docs/releases/1.6.0.md` recoge las notas inmutables de la publicación.
 - `docs/plan-1.7.0.md` recibe la nota 7 como su etapa 1.
 
+- CI de Windows en verde sobre el PR #41: `dotnet build RightKeyboard.sln -c Release` con **0 advertencias y 0 errores**, y `scripts/run-tests.ps1` con **228/228 pruebas NUnit** (las 220 previas más 8 nuevas) y **2/2 pruebas WinUI**, sin omitidas.
+
 Pendiente, y **no ejecutable desde esta VM Linux sin SDK .NET ni destino Windows**:
 
-- Suite y compilación Release en verde en el runner Windows (`scripts/run-tests.ps1`).
 - Validación visual en la estación física, especialmente el cambio de radio 8 → 4 y el material de fondo.
 - Validación física del refresco automático con hardware real.
 - `scripts/build-installer.ps1` para instalador y ZIP portable, con su verificación de `App.xbf` y `RightKeyboard.WinUI.pri`.

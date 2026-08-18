@@ -34,7 +34,7 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 ### Pruebas
 
 - Dos pruebas nuevas fijan que los contratos residen en `RightKeyboard.Shared`, separados del ejecutable, y que la versión compartida cierra en 1.6.0.
-- El contrato visual compartido incorpora los textos de cabecera y ayuda, el padding de fila y los radios de respaldo, con pruebas que los fijan. Tres casos nuevos cubren el round-trip de la revisión de inventario —incluida una respuesta anterior que no la declaraba— y el del diagnóstico de material.
+- El contrato visual compartido incorpora los textos de cabecera y ayuda, el padding de fila y los radios de respaldo, con pruebas que los fijan. Tres casos nuevos cubren el round-trip de la revisión de inventario —incluida una respuesta anterior que no la declaraba— y el del diagnóstico de material. La suite alcanza 228 pruebas NUnit y 2 pruebas WinUI.
 
 ## [1.5.10] - 2026-08-02
 
