@@ -20,6 +20,7 @@ internal static class SettingsIpcProtocol
     internal const string GroupAction = "group";
     internal const string UngroupAction = "ungroup";
     internal const string FocusDiagnosticsAction = "focus-diagnostics";
+    internal const string MaterialDiagnosticsAction = "material-diagnostics";
 }
 
 internal sealed record SettingsRequest(
@@ -34,7 +35,8 @@ internal sealed record SettingsRequest(
     bool? Replace = null,
     bool? StartupEnabled = null,
     string? TargetIdentity = null,
-    SettingsFrontendFocus? FrontendFocus = null);
+    SettingsFrontendFocus? FrontendFocus = null,
+    SettingsFrontendMaterial? FrontendMaterial = null);
 
 internal sealed record SettingsResponse(
     bool Success,
@@ -49,7 +51,10 @@ internal sealed record SettingsImportPreview(int DeviceCount, IReadOnlyList<stri
 
 internal sealed record SettingsStartup(bool Enabled);
 
-internal sealed record SettingsActivity(long Sequence, string? Identity);
+// InventoryRevision avanza cuando el residente reconstruye su inventario tras
+// WM_INPUT_DEVICE_CHANGE. El valor por omisión conserva el round-trip con respuestas
+// anteriores que no lo declaraban.
+internal sealed record SettingsActivity(long Sequence, string? Identity, long InventoryRevision = 0);
 
 internal sealed record SettingsDiagnostics(bool Enabled, string DirectoryPath);
 
@@ -66,6 +71,12 @@ internal sealed record SettingsFrontendFocus(
     bool TopmostPulseApplied,
     bool ForegroundAcquired,
     bool XamlFocusAcquired);
+
+// Registra qué material pidió el frontend y si la API lo aceptó sin lanzar. WinUI puede
+// aun así caer a un color sólido del tema —VM o escritorio remoto, hardware sin soporte,
+// transparencia desactivada, alto contraste— sin que la aplicación pueda observarlo, de
+// modo que Accepted significa «no falló al pedirlo», no «se está viendo Mica».
+internal sealed record SettingsFrontendMaterial(string Requested, bool Accepted);
 
 internal sealed record SettingsSnapshot(
     int Version,

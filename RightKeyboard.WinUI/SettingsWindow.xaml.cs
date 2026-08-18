@@ -17,8 +17,8 @@ namespace RightKeyboard.WinUI;
 
 public sealed class SettingsWindow : Window
 {
-    private const int InitialWidth = 1080;
-    private const int InitialHeight = 720;
+    // La ventana abre en el mínimo operativo: es el tamaño en el que la disposición está
+    // validada y evita que el usuario tenga que reducirla a mano.
     private const int MinimumWidth = 900;
     private const int MinimumHeight = 640;
     private const uint WmGetMinMaxInfo = 0x0024;
@@ -54,6 +54,12 @@ public sealed class SettingsWindow : Window
     private readonly List<TextBlock> secondaryText = [];
     private readonly TextBlock activityText = new();
     private readonly TextBlock activityHintText = new();
+    private readonly FontIcon activityHintIcon = new();
+    private readonly StackPanel activityHintPanel = new()
+    {
+        Orientation = Orientation.Horizontal,
+        Spacing = 6
+    };
     private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer activityTimer;
     private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer activityHintTimer;
     private Grid? contentRoot;
@@ -69,6 +75,8 @@ public sealed class SettingsWindow : Window
     private Visual? activityVisual;
     private Visual? activityHintVisual;
     private bool activityHintVisible;
+    private bool backdropAccepted;
+    private long lastInventoryRevision;
     private NativeMethods.SubclassProc? minimumSizeSubclass;
 
     public SettingsWindow(SettingsIpcClient client)
@@ -81,7 +89,7 @@ public sealed class SettingsWindow : Window
         ApplyFluentResources();
         TryEnableBackdrop();
         ConfigureMinimumSize();
-        ResizeForCurrentDpi(InitialWidth, InitialHeight);
+        ResizeForCurrentDpi(MinimumWidth, MinimumHeight);
         activityTimer = DispatcherQueue.CreateTimer();
         activityTimer.Interval = TimeSpan.FromMilliseconds(500);
         activityTimer.Tick += PollActivityAsync;
@@ -164,25 +172,35 @@ public sealed class SettingsWindow : Window
         });
         TextBlock subtitle = new()
         {
-            Text = "Administra los teclados detectados.",
+            Text = SettingsPanelVisualContract.SettingsSubtitle,
             TextWrapping = TextWrapping.Wrap
         };
         secondaryText.Add(subtitle);
         heading.Children.Add(subtitle);
+        // Ambas líneas de actividad van en cursiva: describen un estado transitorio del
+        // sistema, no una etiqueta fija de la interfaz.
         activityText.Text = "Pulsa una tecla para identificar su dispositivo.";
         activityText.FontSize = 12;
+        activityText.FontStyle = Windows.UI.Text.FontStyle.Italic;
         activityText.Opacity = 1;
         activityText.TextWrapping = TextWrapping.Wrap;
         secondaryText.Add(activityText);
-        activityHintText.Text = "· La identificación se reanudará al dejar de escribir.";
+        activityHintText.Text = SettingsPanelVisualContract.AliasEditingHint;
         activityHintText.FontSize = 12;
+        activityHintText.FontStyle = Windows.UI.Text.FontStyle.Italic;
         activityHintText.Opacity = 1;
         activityHintText.TextWrapping = TextWrapping.Wrap;
-        // Oculto salvo durante la edición del alias: colapsado para no reservar altura.
-        activityHintText.Visibility = Visibility.Collapsed;
         secondaryText.Add(activityHintText);
+        activityHintIcon.Glyph = SettingsPanelVisualContract.InformationGlyph;
+        activityHintIcon.FontSize = 12;
+        activityHintIcon.VerticalAlignment = VerticalAlignment.Top;
+        activityHintPanel.Children.Add(activityHintIcon);
+        activityHintPanel.Children.Add(activityHintText);
+        // Oculto salvo durante la edición del alias: colapsado para no reservar altura.
+        // El contenedor es lo que se colapsa y se anima, para que el glifo acompañe al texto.
+        activityHintPanel.Visibility = Visibility.Collapsed;
         heading.Children.Add(activityText);
-        heading.Children.Add(activityHintText);
+        heading.Children.Add(activityHintPanel);
         Grid.SetRow(heading, 0);
         leftColumn.Children.Add(heading);
 
@@ -213,7 +231,6 @@ public sealed class SettingsWindow : Window
             MinHeight = SettingsPanelVisualContract.ReloadButtonSize,
             Padding = new Thickness(0),
             VerticalAlignment = VerticalAlignment.Center,
-            CornerRadius = new CornerRadius(SettingsPanelVisualContract.ReloadButtonCornerRadius),
             Background = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0)),
             BorderBrush = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0))
         };
@@ -238,7 +255,9 @@ public sealed class SettingsWindow : Window
         Border devicesCard = new()
         {
             Padding = new Thickness(12),
-            CornerRadius = new CornerRadius(8),
+            CornerRadius = ThemeCornerRadius(
+                "OverlayCornerRadius",
+                SettingsPanelVisualContract.OverlayCornerRadius),
             BorderThickness = new Thickness(1),
             Child = devicesPanel
         };
@@ -260,7 +279,6 @@ public sealed class SettingsWindow : Window
             Content = "Exportar",
             HorizontalAlignment = HorizontalAlignment.Stretch
         };
-        export.CornerRadius = new CornerRadius(8);
         export.Click += ExportButton_Click;
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(export, "ExportPreferencesButton");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(export, "Exportar preferencias a un archivo");
@@ -271,7 +289,6 @@ public sealed class SettingsWindow : Window
             Content = "Importar",
             HorizontalAlignment = HorizontalAlignment.Stretch
         };
-        import.CornerRadius = new CornerRadius(8);
         import.Click += ImportButton_Click;
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(import, "ImportPreferencesButton");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(import, "Importar preferencias desde un archivo");
@@ -305,7 +322,6 @@ public sealed class SettingsWindow : Window
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Center
         };
-        clear.CornerRadius = new CornerRadius(8);
         clear.Click += ClearButton_Click;
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(clear, "ClearPreferencesButton");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(
@@ -356,7 +372,6 @@ public sealed class SettingsWindow : Window
                 "DetailedDiagnosticsCheckBox");
             diagnosticsRow.Children.Add(DiagnosticsCheckBox);
             Button openDiagnostics = new() { Content = "Abrir registros" };
-            openDiagnostics.CornerRadius = new CornerRadius(8);
             openDiagnostics.Click += OpenDiagnostics_Click;
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(
                 openDiagnostics,
@@ -380,10 +395,12 @@ public sealed class SettingsWindow : Window
         StackPanel editorFields = new() { Spacing = 12 };
         editorFields.Children.Add(CreateSectionHeading(
             "Dispositivo seleccionado",
-            "Edita el grupo lógico o el teclado seleccionado. Las identidades técnicas agrupadas permanecen visibles en la lista."));
+            SettingsPanelVisualContract.EditorSectionDescription));
+        // Separa la ayuda de la sección del primer campo editable, como ya hacen los
+        // bloques de la columna izquierda.
+        editorFields.Children.Add(CreateSeparator());
         AliasTextBox.Header = "Nombre para este teclado";
         AliasTextBox.PlaceholderText = "Nombre reconocible";
-        AliasTextBox.CornerRadius = new CornerRadius(8);
         ApplyRoundedTextBoxResources(AliasTextBox);
         AliasTextBox.TextChanged += AliasTextBox_TextChanged;
         AliasTextBox.KeyDown += AliasTextBox_KeyDown;
@@ -408,20 +425,16 @@ public sealed class SettingsWindow : Window
         editorFields.Children.Add(IgnoredCheckBox);
         LayoutComboBox.Header = "Distribución";
         LayoutComboBox.HorizontalAlignment = HorizontalAlignment.Stretch;
-        LayoutComboBox.CornerRadius = new CornerRadius(8);
         LayoutComboBox.SelectionChanged += EditorField_Changed;
         editorFields.Children.Add(LayoutComboBox);
         GroupTargetComboBox.Header = "Agrupar con otra identidad";
         GroupTargetComboBox.PlaceholderText = "Selecciona una identidad técnica";
         GroupTargetComboBox.HorizontalAlignment = HorizontalAlignment.Stretch;
-        GroupTargetComboBox.CornerRadius = new CornerRadius(8);
         GroupTargetComboBox.SelectionChanged += (_, _) => SetEditorEnabled(editorEnabled);
         editorFields.Children.Add(GroupTargetComboBox);
         GroupButton.Content = "Agrupar identidades";
-        GroupButton.CornerRadius = new CornerRadius(8);
         GroupButton.Click += GroupButton_Click;
         UngroupButton.Content = "Separar del grupo";
-        UngroupButton.CornerRadius = new CornerRadius(8);
         UngroupButton.Click += UngroupButton_Click;
         buttons.Add(GroupButton);
         buttons.Add(UngroupButton);
@@ -430,10 +443,8 @@ public sealed class SettingsWindow : Window
         editorFields.Children.Add(GroupButtonsPanel);
         StackPanel editorButtons = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
         SaveButton.Content = "Guardar cambios";
-        SaveButton.CornerRadius = new CornerRadius(8);
         SaveButton.Click += SaveButton_Click;
         ForgetButton.Content = "Olvidar dispositivo";
-        ForgetButton.CornerRadius = new CornerRadius(8);
         ForgetButton.Click += ForgetButton_Click;
         buttons.Add(SaveButton);
         buttons.Add(ForgetButton);
@@ -484,7 +495,10 @@ public sealed class SettingsWindow : Window
         Border card = new()
         {
             Padding = padding,
-            CornerRadius = new CornerRadius(8),
+            // Una tarjeta es una superficie, no un control: Fluent le asigna OverlayCornerRadius.
+            CornerRadius = ThemeCornerRadius(
+                "OverlayCornerRadius",
+                SettingsPanelVisualContract.OverlayCornerRadius),
             BorderThickness = new Thickness(1),
             Child = child
         };
@@ -525,12 +539,28 @@ public sealed class SettingsWindow : Window
 
     private static void ApplyRoundedCheckBoxResources(CheckBox checkBox)
     {
-        CornerRadius radius = new(SettingsPanelVisualContract.CheckBoxGlyphCornerRadius);
-        // WinUI inicializa la propiedad desde ControlCornerRadius y su template
-        // enlaza esa propiedad con el rectángulo del glifo. La clave usada en 1.5.5
-        // (CheckBoxCornerRadius) no forma parte de ese template y no tenía efecto.
+        // El template enlaza el rectángulo del glifo con CheckBox.CornerRadius, comprobado
+        // sobre el árbol visual real en 1.5.9. Ya no se impone un radio propio: se propaga
+        // el de Fluent, y el helper permanece como punto único que la prueba de árbol
+        // visual ejerce para detectar una regresión del glifo.
+        CornerRadius radius = ThemeCornerRadius(
+            "ControlCornerRadius",
+            SettingsPanelVisualContract.ControlCornerRadius);
         checkBox.Resources["ControlCornerRadius"] = radius;
         checkBox.CornerRadius = radius;
+    }
+
+    private static CornerRadius ThemeCornerRadius(string resourceKey, double fallback)
+    {
+        // Los radios los define el tema de Fluent. La constante del contrato es solo el
+        // respaldo documentado para cuando el recurso no se resuelve.
+        if (Application.Current.Resources.TryGetValue(resourceKey, out object value) &&
+            value is CornerRadius radius)
+        {
+            return radius;
+        }
+
+        return new CornerRadius(fallback);
     }
 
     private void ConfigureMinimumSize()
@@ -629,9 +659,12 @@ public sealed class SettingsWindow : Window
             text.Foreground = foreground;
         }
 
+        // El glifo del aviso acompaña al texto secundario y comparte su color.
+        activityHintIcon.Foreground = foreground;
+
         foreach (Button button in buttons)
         {
-            button.CornerRadius = new CornerRadius(8);
+            // El radio lo aporta el template de Fluent; aquí solo se fija el objetivo táctil.
             button.MinHeight = 36;
             button.Padding = new Thickness(14, 6, 14, 6);
         }
@@ -645,20 +678,33 @@ public sealed class SettingsWindow : Window
 
     private void TryEnableBackdrop()
     {
+        // Mica es el material que Fluent reserva para el fondo de la ventana principal;
+        // Desktop Acrylic está pensado para superficies transitorias. No se encadena
+        // Acrylic como respaldo: WinUI ya cae por su cuenta a un color sólido del tema
+        // cuando Mica no puede renderizarse (VM o escritorio remoto, hardware sin soporte,
+        // transparencia desactivada o alto contraste).
         try
         {
-            SystemBackdrop = new DesktopAcrylicBackdrop();
+            SystemBackdrop = new MicaBackdrop();
+            backdropAccepted = true;
         }
         catch
         {
-            try
-            {
-                SystemBackdrop = new MicaBackdrop();
-            }
-            catch
-            {
-                SystemBackdrop = null;
-            }
+            SystemBackdrop = null;
+            backdropAccepted = false;
+        }
+    }
+
+    private async Task ReportBackdropDiagnosticsAsync()
+    {
+        try
+        {
+            await client.ReportMaterialDiagnosticsAsync(
+                new SettingsFrontendMaterial("mica", backdropAccepted));
+        }
+        catch
+        {
+            // El diagnóstico es auxiliar y nunca debe impedir el uso de la ventana.
         }
     }
 
@@ -667,12 +713,13 @@ public sealed class SettingsWindow : Window
         Activated -= OnActivated;
         GetActivityVisual().Opacity = 0.78f;
         GetActivityHintVisual().Opacity = 0;
-        ResizeForCurrentDpi(InitialWidth, InitialHeight);
+        ResizeForCurrentDpi(MinimumWidth, MinimumHeight);
         await ReloadAsync();
         await ReloadStartupAsync();
         if (DiagnosticsAvailability.IsAvailable)
         {
             await ReloadDiagnosticsAsync();
+            await ReportBackdropDiagnosticsAsync();
         }
         activityTimer.Start();
     }
@@ -690,6 +737,22 @@ public sealed class SettingsWindow : Window
         try
         {
             SettingsActivity activity = await client.GetActivityAsync();
+
+            // La revisión de inventario se comprueba antes que la actividad de teclado:
+            // conectar o desconectar un dispositivo no trae identidad, de modo que la
+            // guardia siguiente se tragaría el aviso y la lista nunca se refrescaría.
+            // La revisión solo se consume cuando la recarga llega a ejecutarse: si el
+            // momento no es seguro, el cambio queda pendiente para un sondeo posterior en
+            // lugar de perderse. Recargar mientras se escribe un alias deshabilitaría el
+            // cuadro de texto y le robaría el foco al usuario.
+            if (activity.InventoryRevision != lastInventoryRevision &&
+                !closeConfirmationPending &&
+                AliasTextBox.FocusState == FocusState.Unfocused)
+            {
+                lastInventoryRevision = activity.InventoryRevision;
+                await ReloadAsync();
+            }
+
             if (activity.Sequence == 0 || activity.Sequence == lastActivitySequence || activity.Identity is null)
             {
                 return;
@@ -783,7 +846,7 @@ public sealed class SettingsWindow : Window
         }
 
         activityHintVisible = true;
-        activityHintText.Visibility = Visibility.Visible;
+        activityHintPanel.Visibility = Visibility.Visible;
         AnimateOpacity(GetActivityVisual(), 0.78f, 0.52f, 180);
         AnimateOpacity(GetActivityHintVisual(), 0, 0.78f, 180);
     }
@@ -801,7 +864,7 @@ public sealed class SettingsWindow : Window
         activityHintVisible = false;
         AnimateOpacity(GetActivityVisual(), 0.52f, 0.78f, 500);
         AnimateOpacity(GetActivityHintVisual(), 0.78f, 0, 500);
-        activityHintText.Visibility = Visibility.Collapsed;
+        activityHintPanel.Visibility = Visibility.Collapsed;
     }
 
     private void SetActivityText(string text)
@@ -816,7 +879,7 @@ public sealed class SettingsWindow : Window
     }
 
     private Visual GetActivityHintVisual() =>
-        activityHintVisual ??= ElementCompositionPreview.GetElementVisual(activityHintText);
+        activityHintVisual ??= ElementCompositionPreview.GetElementVisual(activityHintPanel);
 
     private static void AnimateOpacity(Visual visual, float from, float to, int milliseconds)
     {
@@ -1057,9 +1120,17 @@ public sealed class SettingsWindow : Window
         {
             Tag = row,
             Content = content,
-            CornerRadius = new CornerRadius(8),
+            CornerRadius = ThemeCornerRadius(
+                "ControlCornerRadius",
+                SettingsPanelVisualContract.ControlCornerRadius),
             Margin = row.IsGroupMember ? new Thickness(20, 0, 0, 0) : new Thickness(0, 2, 0, 2),
-            Padding = new Thickness(10, 8, 10, 8),
+            // El lado izquierdo es mayor que el resto: la barra nativa de selección se
+            // dibuja fuera del contenido y sin ese margen queda pegada al texto de la fila.
+            Padding = new Thickness(
+                SettingsPanelVisualContract.DeviceRowContentLeftPadding,
+                SettingsPanelVisualContract.DeviceRowContentVerticalPadding,
+                SettingsPanelVisualContract.DeviceRowContentPadding,
+                SettingsPanelVisualContract.DeviceRowContentVerticalPadding),
             HorizontalContentAlignment = HorizontalAlignment.Stretch
         };
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(item, row.AccessibleName);
@@ -1577,7 +1648,6 @@ public sealed class SettingsWindow : Window
         Button primary = new()
         {
             Content = primaryText,
-            CornerRadius = new CornerRadius(8),
             MinHeight = 40,
             HorizontalAlignment = HorizontalAlignment.Stretch
         };
@@ -1588,7 +1658,6 @@ public sealed class SettingsWindow : Window
             cancel = new Button
             {
                 Content = "Cancelar",
-                CornerRadius = new CornerRadius(8),
                 MinHeight = 40,
                 HorizontalAlignment = HorizontalAlignment.Stretch
             };
@@ -1710,14 +1779,12 @@ public sealed class SettingsWindow : Window
         Button replace = new()
         {
             Content = "Reemplazar",
-            CornerRadius = new CornerRadius(8),
             MinHeight = 40,
             HorizontalAlignment = HorizontalAlignment.Stretch
         };
         Button merge = new()
         {
             Content = "Combinar",
-            CornerRadius = new CornerRadius(8),
             MinHeight = 40,
             HorizontalAlignment = HorizontalAlignment.Stretch
         };
@@ -1729,7 +1796,6 @@ public sealed class SettingsWindow : Window
         Button cancel = new()
         {
             Content = "Cancelar",
-            CornerRadius = new CornerRadius(8),
             MinHeight = 40,
             HorizontalAlignment = HorizontalAlignment.Stretch
         };

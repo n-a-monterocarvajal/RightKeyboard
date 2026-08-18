@@ -39,7 +39,7 @@ public sealed class SettingsIpcClient
     {
         SettingsResponse response = await SendResponseAsync(
             new SettingsRequest(SettingsIpcProtocol.Version, SettingsIpcProtocol.ActivityAction));
-        return response.Activity ?? new SettingsActivity(0, null);
+        return response.Activity ?? new SettingsActivity(0, null, 0);
     }
 
     internal async Task<SettingsDiagnostics> GetDiagnosticsAsync() =>
@@ -89,6 +89,12 @@ public sealed class SettingsIpcClient
             SettingsIpcProtocol.Version,
             SettingsIpcProtocol.FocusDiagnosticsAction,
             FrontendFocus: focus));
+
+    internal async Task ReportMaterialDiagnosticsAsync(SettingsFrontendMaterial material) =>
+        _ = await SendResponseAsync(new SettingsRequest(
+            SettingsIpcProtocol.Version,
+            SettingsIpcProtocol.MaterialDiagnosticsAction,
+            FrontendMaterial: material));
 
     private static async Task<SettingsSnapshot> SendAsync(SettingsRequest request)
     {

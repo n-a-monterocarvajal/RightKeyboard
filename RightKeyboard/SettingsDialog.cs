@@ -20,6 +20,7 @@ internal sealed class SettingsDialog : FluentForm
     private readonly PreferenceResetService preferenceReset;
     private readonly SettingsEditorStateTracker editorStateTracker = new();
     private string? selectedIdentity;
+    private bool pendingDevicesChanged;
     private string? lastTriggeredIdentity;
     private RadioButton? selectedDeviceButton;
     private bool applyingEditorState;
@@ -149,6 +150,7 @@ internal sealed class SettingsDialog : FluentForm
             AccessibleDescription = "Alias opcional que se muestra en lugar del nombre detectado."
         };
         customNameTextBox.TextChanged += (_, _) => TrackEditorState();
+        customNameTextBox.Leave += (_, _) => FlushPendingDevicesChanged();
         editor.Controls.Add(customNameTextBox);
 
         detectedNameLabel = DetailLabel();
@@ -280,6 +282,44 @@ internal sealed class SettingsDialog : FluentForm
         };
         FormClosing += SettingsDialog_FormClosing;
         RefreshDeviceList();
+    }
+
+    // El residente avisa aquí cuando WM_INPUT_DEVICE_CHANGE reconstruye el inventario, de
+    // modo que conectar o desconectar un teclado se refleja sin pulsar «Recargar».
+    internal void NotifyDevicesChanged()
+    {
+        if (IsDisposed || !IsHandleCreated)
+        {
+            return;
+        }
+
+        if (InvokeRequired)
+        {
+            BeginInvoke(NotifyDevicesChanged);
+            return;
+        }
+
+        // Recargar mientras se escribe un alias sacaría el foco del cuadro de texto. El
+        // aviso queda pendiente y se aplica al abandonarlo, en lugar de perderse.
+        if (customNameTextBox.Focused)
+        {
+            pendingDevicesChanged = true;
+            return;
+        }
+
+        pendingDevicesChanged = false;
+        RefreshDeviceList(selectedIdentity, preserveEditorContext: true);
+    }
+
+    private void FlushPendingDevicesChanged()
+    {
+        if (!pendingDevicesChanged)
+        {
+            return;
+        }
+
+        pendingDevicesChanged = false;
+        RefreshDeviceList(selectedIdentity, preserveEditorContext: true);
     }
 
     private void RefreshDeviceList(

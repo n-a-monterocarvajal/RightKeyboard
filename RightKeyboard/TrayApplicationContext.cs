@@ -375,6 +375,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private void OnDevicesChanged()
     {
         devices.Refresh();
+        settingsIpc.NotifyDevicesChanged();
+        settingsDialog?.NotifyDevicesChanged();
         diagnostics?.Write("inventario_dispositivos_actualizado", details: new
         {
             connectedDevices = devices.Count(),

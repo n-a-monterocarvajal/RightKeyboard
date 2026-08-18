@@ -163,4 +163,67 @@ public sealed class SettingsIpcProtocolTests
             Assert.That(restored?.FrontendFocus?.XamlFocusAcquired, Is.True);
         });
     }
+
+    [Test]
+    public void Response_RoundTrip_PreservesInventoryRevision()
+    {
+        SettingsResponse response = new(
+            true,
+            null,
+            null,
+            new SettingsActivity(7, "device:1", 42));
+        JsonSerializerOptions options = new(JsonSerializerDefaults.Web);
+
+        SettingsResponse? restored = JsonSerializer.Deserialize<SettingsResponse>(
+            JsonSerializer.Serialize(response, options), options);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(restored?.Activity?.InventoryRevision, Is.EqualTo(42));
+            Assert.That(restored?.Activity?.Sequence, Is.EqualTo(7));
+            Assert.That(restored?.Activity?.Identity, Is.EqualTo("device:1"));
+        });
+    }
+
+    [Test]
+    public void Response_SinRevisionDeclarada_ConservaElRoundTripAnterior()
+    {
+        // Una respuesta anterior al campo nuevo debe seguir deserializando: la revisión
+        // ausente equivale a «sin cambios de inventario», no a un error de protocolo.
+        JsonSerializerOptions options = new(JsonSerializerDefaults.Web);
+
+        SettingsResponse? restored = JsonSerializer.Deserialize<SettingsResponse>(
+            """{"success":true,"error":null,"snapshot":null,"activity":{"sequence":3,"identity":"device:9"}}""",
+            options);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(restored?.Activity?.Sequence, Is.EqualTo(3));
+            Assert.That(restored?.Activity?.InventoryRevision, Is.EqualTo(0));
+        });
+    }
+
+    [Test]
+    public void Request_RoundTrip_PreservesBackdropMaterialDiagnostics()
+    {
+        SettingsFrontendMaterial material = new("mica", false);
+        SettingsRequest request = new(
+            SettingsIpcProtocol.Version,
+            SettingsIpcProtocol.MaterialDiagnosticsAction,
+            FrontendMaterial: material);
+        JsonSerializerOptions options = new(JsonSerializerDefaults.Web);
+
+        SettingsRequest? restored = JsonSerializer.Deserialize<SettingsRequest>(
+            JsonSerializer.Serialize(request, options), options);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(restored?.Action, Is.EqualTo(SettingsIpcProtocol.MaterialDiagnosticsAction));
+            Assert.That(restored?.FrontendMaterial, Is.EqualTo(material));
+            Assert.That(
+                restored?.FrontendMaterial?.Accepted,
+                Is.False,
+                "Un material rechazado debe poder distinguirse de uno aceptado.");
+        });
+    }
 }

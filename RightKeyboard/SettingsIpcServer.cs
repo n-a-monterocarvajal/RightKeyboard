@@ -14,6 +14,7 @@ internal sealed class SettingsIpcServer : IDisposable
     private readonly Task serverTask;
     private readonly DiagnosticLogger? diagnostics;
     private long activitySequence;
+    private long inventoryRevision;
     private string? activeDeviceIdentity;
 
     internal SettingsIpcServer(
@@ -34,6 +35,11 @@ internal sealed class SettingsIpcServer : IDisposable
         activeDeviceIdentity = identity;
         Interlocked.Increment(ref activitySequence);
     }
+
+    // La Configuración abierta consulta esta revisión en su sondeo de actividad y recarga
+    // el inventario cuando avanza, de modo que conectar o desconectar un teclado se refleja
+    // sin que el usuario pulse «Recargar».
+    internal void NotifyDevicesChanged() => Interlocked.Increment(ref inventoryRevision);
 
     private async Task ListenAsync()
     {
@@ -98,7 +104,10 @@ internal sealed class SettingsIpcServer : IDisposable
                     true,
                     null,
                     null,
-                    new SettingsActivity(Interlocked.Read(ref activitySequence), activeDeviceIdentity));
+                    new SettingsActivity(
+                        Interlocked.Read(ref activitySequence),
+                        activeDeviceIdentity,
+                        Interlocked.Read(ref inventoryRevision)));
             case SettingsIpcProtocol.DiagnosticsAction:
                 if (diagnostics is null)
                 {
@@ -140,6 +149,14 @@ internal sealed class SettingsIpcServer : IDisposable
                 }
 
                 diagnostics?.Write("selector_foco", details: focus);
+                return new SettingsResponse(true, null, null);
+            case SettingsIpcProtocol.MaterialDiagnosticsAction:
+                if (request.FrontendMaterial is not SettingsFrontendMaterial material)
+                {
+                    return new SettingsResponse(false, "No se indicó el material solicitado.", null);
+                }
+
+                diagnostics?.Write("material_fondo", details: material);
                 return new SettingsResponse(true, null, null);
             case SettingsIpcProtocol.SnapshotAction:
                 break;

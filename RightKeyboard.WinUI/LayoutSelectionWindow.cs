@@ -69,7 +69,6 @@ public sealed class LayoutSelectionWindow : Window
 
         alias.Header = "Nombre para este teclado";
         alias.PlaceholderText = "Nombre reconocible";
-        alias.CornerRadius = new CornerRadius(8);
         SettingsWindow.ApplyRoundedTextBoxResources(alias);
         Grid.SetRow(alias, 2);
         root.Children.Add(alias);
@@ -91,7 +90,6 @@ public sealed class LayoutSelectionWindow : Window
         Grid.SetColumn(cancel, 1);
         actions.Children.Add(cancel);
         accept.Content = "Aceptar";
-        accept.CornerRadius = new CornerRadius(8);
         accept.MinHeight = 36;
         accept.Padding = new Thickness(16, 6, 16, 6);
         accept.IsEnabled = false;
@@ -142,7 +140,6 @@ public sealed class LayoutSelectionWindow : Window
     private static Button ActionButton(string text) => new()
     {
         Content = text,
-        CornerRadius = new CornerRadius(8),
         MinHeight = 36,
         Padding = new Thickness(16, 6, 16, 6)
     };
@@ -191,7 +188,6 @@ public sealed class LayoutSelectionWindow : Window
             {
                 Tag = layout,
                 Content = layout.LayoutName,
-                CornerRadius = new CornerRadius(8),
                 Margin = new Thickness(12, 2, 0, 2),
                 Padding = new Thickness(12, 8, 12, 8)
             };
