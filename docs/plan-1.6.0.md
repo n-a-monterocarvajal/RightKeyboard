@@ -36,6 +36,17 @@ Secuenciales. Cada una es una sesión, una rama, un PR y un bump de versión.
 | 18 | 1.5.9 | Casillas de verificación: prueba de árbol visual y cuarto intento | Completada; revalidación física pendiente |
 | 19 | 1.5.10 | Estado visual y orden lógico de dispositivos | Completada |
 | 20 | 1.6.0 | Extraer contratos compartidos y cerrar versión | Completada |
+| 21 | 1.6.0 | Textos, cursiva y espaciado de la Configuración | Completada |
+| 22 | 1.6.0 | Material Mica, radios Fluent nativos y ancho inicial | Completada; validación física pendiente |
+| 23 | 1.6.0 | Refresco automático de conexión y desconexión | Completada; validación física pendiente |
+| 24 | 1.6.0 | Publicar 1.6.0 definitiva | En curso |
+
+Las etapas 21 a 24 no llevan bump: `1.6.0` nunca se etiquetó ni se publicó, de modo que
+se acumulan sobre esa misma versión igual que hizo la corrección de empaquetado del 3 de
+agosto. Salen de las siete observaciones de [notas de uso 1.6.0](notas-de-uso-1.6.0.md),
+recogidas al probar el artifact previo a la publicación; la séptima —verificación de
+actualizaciones— se difiere a [`plan-1.7.0.md`](plan-1.7.0.md) por ser una capacidad nueva
+y no un ajuste de interfaz.
 
 ### Etapa 9 — Sincronizar documentación con el código · completada el 19 de julio de 2026
 
@@ -282,6 +293,72 @@ Refactor diferido a 1.6: mover los DTO de IPC, `VersionPresentation` y modelos c
 **Evidencia:** la biblioteca, el residente y el frontend WinUI compilan por separado en Release con 0 advertencias. 220/220 pruebas NUnit incluyen dos invariantes nuevas que fijan el ensamblado compartido y la versión 1.6.0; las 2 pruebas WinUI se mantienen como puerta de regresión visual. El CI limpio de GitHub Actions es el criterio definitivo de cierre.
 
 **Corrección de empaquetado posterior al cierre · 3 de agosto de 2026:** la primera publicación de prueba de 1.6.0 omitía `App.xbf` y `RightKeyboard.WinUI.pri`, aunque ambos existían en la salida de compilación usada por la prueba WinUI. El mismo ZIP afectado mostró las casillas rectas en la VM y en la estación física; al agregar únicamente esos dos recursos recuperó las esquinas redondeadas en la VM. El proyecto copia ahora los recursos generados a `PublishDir` y los scripts de instalador y portable detienen el empaquetado si faltan o están vacíos. Se conserva la versión 1.6.0 porque todavía no se había creado su etiqueta ni su Release.
+
+### Etapa 21 — Textos, cursiva y espaciado (1.6.0) · completada el 18 de agosto de 2026
+
+Puntos 1, 5 y 6 de las notas de uso. Sin lógica nueva: copy, estilo tipográfico y separadores.
+
+**Resultado:**
+
+- El subtítulo pasa a «Administra los dispositivos detectados. Asigna a los teclados la distribución deseada.», que describe el alcance real de una lista donde también aparecen periféricos no-teclado. La ayuda del editor precisa «… en la lista de dispositivos detectados».
+- Las dos líneas de actividad se muestran en cursiva. El aviso de edición sustituye el «·» por el glifo Fluent de información y dice ahora que la identificación **automática** se reanudará al dejar de escribir.
+- La fila seleccionada recibe padding izquierdo mayor que el del resto de lados: la barra de selección de `ListViewItem` se dibuja fuera del contenido y sin ese margen quedaba pegada al nombre y al estado.
+- Un `CreateSeparator()` —el helper que ya usaba la columna izquierda— separa la ayuda de la sección «Dispositivo seleccionado» del campo «Nombre para este teclado».
+
+**Decisión de diseño:** el aviso pasó de ser un `TextBlock` suelto a un `StackPanel` horizontal con el glifo y el texto. El colapso y la animación de opacidad se trasladaron al contenedor para que el glifo acompañe al texto en lugar de quedar visible cuando el aviso se oculta.
+
+**Evidencia:** los textos, el padding de fila y el glifo viven ahora en `SettingsPanelVisualContract`, con seis casos NUnit nuevos que los fijan sin depender de WinUI.
+
+### Etapa 22 — Material Mica, radios Fluent y ancho inicial (1.6.0) · completada el 18 de agosto de 2026
+
+Puntos 3 y 4 de las notas de uso. El punto 3 llegó pidiendo lo contrario de lo que se implementó: la revisión de la [guía de materiales](https://learn.microsoft.com/en-us/windows/apps/develop/ui/materials) mostró que Mica es el material recomendado para el fondo de la ventana principal y que Desktop Acrylic está reservado a superficies transitorias.
+
+**Resultado:**
+
+- `TryEnableBackdrop` pide `MicaBackdrop` y, si lanza, deja `SystemBackdrop` en nulo. No se encadena Acrylic como red de seguridad: WinUI cae por su cuenta a un color sólido del tema cuando el material no puede renderizarse.
+- Los radios proceden de los recursos del tema mediante un helper `ThemeCornerRadius`: `ControlCornerRadius` para controles y filas, `OverlayCornerRadius` para las tarjetas. Desaparece el 8 fijo repetido en trece sitios. **Cambio visible y deliberado:** los controles pasan de radio 8 a 4.
+- La ventana abre en `MinimumWidth`/`MinimumHeight` (900 × 640) en lugar de 1080 × 720. Las constantes de tamaño inicial se retiraron.
+- El selector (`LayoutSelectionWindow`) conserva `DesktopAcrylicBackdrop` **a propósito**: es exactamente la superficie transitoria para la que la guía reserva ese material. Sus botones y campos sí adoptaron el radio nativo, para no dejar dos ventanas con radios distintos. Su `ListView` conserva el radio 10 declarado, que no es un botón y queda fuera del alcance de la nota.
+
+**Sobre `ApplyRoundedCheckBoxResources`:** el helper **se conserva** en lugar de eliminarse. Ya no impone un radio propio —propaga el del tema— pero sigue siendo el punto único que la prueba de árbol visual de 1.5.9 ejerce por reflexión. Borrarlo habría desactivado la única puerta de regresión del defecto que 1.5.5, 1.5.5.1 y 1.5.9 persiguieron.
+
+**Diagnóstico nuevo:** la acción IPC `material-diagnostics` registra `material_fondo` con el material solicitado y si la API lo aceptó. El campo se llama `Accepted`, no `Applied`, porque Windows puede caer a color sólido sin que la aplicación pueda observarlo: el registro dice que la petición no falló, no que Mica se esté viendo. Sin ese matiz el diagnóstico afirmaría más de lo que sabe.
+
+### Etapa 23 — Refresco automático de conexión y desconexión (1.6.0) · completada el 18 de agosto de 2026
+
+Punto 2 de las notas de uso, y la única etapa que toca el residente y el IPC.
+
+**Hallazgo que abarató la etapa:** el núcleo ya detectaba el cambio. `RawInputWindow` recibe `WM_INPUT_DEVICE_CHANGE`, lo debounce 200 ms y dispara `DevicesChanged`, que `TrayApplicationContext` ya usaba para refrescar el inventario. La Configuración WinUI, además, ya sondeaba al núcleo cada 500 ms para la actividad de teclado. No hacía falta un canal nuevo ni un segundo temporizador: solo faltaba que el frontend se enterara.
+
+**Resultado:**
+
+- `SettingsIpcServer` mantiene una revisión de inventario que avanza en `OnDevicesChanged`, espejo del `activitySequence` que ya existía. Viaja en `SettingsActivity` con valor por omisión, de modo que una respuesta anterior que no la declaraba sigue deserializando.
+- El sondeo comprueba la revisión **antes** que la actividad de teclado. Una conexión o desconexión sin pulsación no trae identidad, y la guardia existente se habría tragado el aviso.
+- La revisión solo se consume cuando la recarga llega a ejecutarse. Si el momento no es seguro —confirmación modal abierta, o el usuario escribiendo un alias— el cambio queda pendiente para un sondeo posterior en lugar de perderse. Recargar durante la edición deshabilitaría el cuadro de texto y le robaría el foco.
+- La recarga reutiliza `ApplySnapshot(preserveEditorContext: true)`, que desde 1.5.10 ya conservaba selección, cambios pendientes y desplazamiento.
+- El respaldo WinForms se entera en proceso, sin IPC, y aplica la misma regla con un aviso pendiente que se vacía al abandonar el cuadro de alias.
+
+**Evidencia:** tres casos NUnit nuevos cubren el round-trip de la revisión, la compatibilidad con una respuesta que no la declara y el del diagnóstico de material. **La validación física queda pendiente en el carril C:** enchufar y desenchufar un teclado real con la ventana abierta es la única prueba de que el camino completo funciona, y esta VM no puede producirla.
+
+### Etapa 24 — Publicar 1.6.0 definitiva · en curso
+
+Sin cambios de código. La versión permanece en 1.6.0 en los tres `.csproj` y la prueba de `SharedContractsTests` que la fija sigue sin tocarse.
+
+Hecho:
+
+- `CHANGELOG.md` describe el impacto de las etapas 21 a 23 para el usuario, con la fecha movida al cierre de contenido.
+- Este plan registra las cuatro etapas nuevas y su evidencia.
+- Las siete observaciones de `notas-de-uso-1.6.0.md` quedan marcadas con su etapa o su diferimiento.
+- `docs/releases/1.6.0.md` recoge las notas inmutables de la publicación.
+- `docs/plan-1.7.0.md` recibe la nota 7 como su etapa 1.
+
+Pendiente, y **no ejecutable desde esta VM Linux sin SDK .NET ni destino Windows**:
+
+- Suite y compilación Release en verde en el runner Windows (`scripts/run-tests.ps1`).
+- Validación visual en la estación física, especialmente el cambio de radio 8 → 4 y el material de fondo.
+- Validación física del refresco automático con hardware real.
+- `scripts/build-installer.ps1` para instalador y ZIP portable, con su verificación de `App.xbf` y `RightKeyboard.WinUI.pri`.
+- Etiqueta anotada `v1.6.0` sobre el commit de squash y Release de GitHub con instalador y SHA-256 verificados.
 
 ## Carril B — Licencia · resuelto el 19 de julio de 2026
 

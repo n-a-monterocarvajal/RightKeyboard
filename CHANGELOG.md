@@ -4,7 +4,23 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [Sin publicar]
 
-## [1.6.0] - 2026-08-03
+## [1.6.0] - 2026-08-18
+
+### Interfaz
+
+- La Configuración abre en su tamaño mínimo operativo y ya no obliga a reducirla a mano. El fondo pide Mica —el material que Fluent reserva para la ventana principal— y se apoya en el respaldo nativo a color sólido cuando el equipo no puede renderizarlo, en lugar de encadenar Desktop Acrylic, que está pensado para superficies transitorias como el selector.
+- Los radios de botones, campos y tarjetas proceden ahora de los recursos del tema (`ControlCornerRadius` para controles y `OverlayCornerRadius` para superficies) en vez de un valor fijo repetido en cada control. Las casillas heredan ese mismo radio, sin imponer uno propio.
+- La fila seleccionada de «Dispositivos detectados» separa la barra de selección del nombre y del estado de conexión, que antes quedaban pegados a ella.
+- El subtítulo describe el alcance real de la lista: «Administra los dispositivos detectados. Asigna a los teclados la distribución deseada». La ayuda del editor precisa que las identidades técnicas agrupadas permanecen visibles en la lista de dispositivos detectados, y un separador la despega del primer campo editable.
+- Las dos líneas de actividad se muestran en cursiva por describir un estado transitorio. El aviso que aparece al escribir un alias sustituye el separador «·» por un glifo de información y pasa a decir que la identificación automática se reanudará al dejar de escribir.
+
+### Detección de teclado
+
+- Conectar o desconectar un teclado con la Configuración abierta actualiza la lista sola, sin pulsar «Recargar». El residente ya recibía el aviso del sistema; ahora avanza una revisión de inventario que la ventana consulta en su sondeo existente. La recarga respeta la edición en curso: si ocurre mientras se escribe un alias, queda pendiente y se aplica al terminar en lugar de robar el foco o descartar el cambio. El respaldo WinForms sigue la misma regla.
+
+### Diagnóstico
+
+- La variante diagnóstica registra qué material de fondo solicitó el frontend y si la API lo aceptó. Windows puede caer a un color sólido sin avisar a la aplicación —máquinas virtuales, escritorio remoto, hardware sin soporte, transparencia desactivada o alto contraste—, de modo que el registro indica que la petición no falló, no que Mica se esté viendo.
 
 ### Distribución
 
@@ -17,7 +33,8 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ### Pruebas
 
-- Dos pruebas nuevas fijan que los contratos residen en `RightKeyboard.Shared`, separados del ejecutable, y que la versión compartida cierra en 1.6.0. La suite alcanza 220 pruebas NUnit y 2 pruebas WinUI.
+- Dos pruebas nuevas fijan que los contratos residen en `RightKeyboard.Shared`, separados del ejecutable, y que la versión compartida cierra en 1.6.0.
+- El contrato visual compartido incorpora los textos de cabecera y ayuda, el padding de fila y los radios de respaldo, con pruebas que los fijan. Tres casos nuevos cubren el round-trip de la revisión de inventario —incluida una respuesta anterior que no la declaraba— y el del diagnóstico de material.
 
 ## [1.5.10] - 2026-08-02
 

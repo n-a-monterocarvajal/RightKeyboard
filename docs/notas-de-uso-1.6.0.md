@@ -1,6 +1,6 @@
 # Notas de uso — RightKeyboard 1.6.0
 
-Observaciones recogidas al probar 1.6.0 como artifact, antes de su publicación. No son notas de publicación (esas viven, inmutables, en `docs/releases/`) ni bugs ya triados: son un cuaderno de campo que un agente puede leer cuando busca pendientes y articular en un plan cuando se requiera.
+Observaciones recogidas al probar 1.6.0 como artifact, antes de su publicación. **Los seis puntos de interfaz quedaron resueltos en las etapas 21 a 23 de [`plan-1.6.0.md`](plan-1.6.0.md); el séptimo se difirió a 1.7.0.** Cada punto conserva abajo su resolución y la validación física que siga pendiente. No son notas de publicación (esas viven, inmutables, en `docs/releases/`) ni bugs ya triados: son un cuaderno de campo que un agente puede leer cuando busca pendientes y articular en un plan cuando se requiera.
 
 Cada punto describe lo observado, lo que se sabe del código y lo que quedaría por decidir o hacer. Al convertir uno en trabajo real, trasládese al backlog (`.agent-context/05-siguientes-pasos.md`), a `ROADMAP.md` o a un plan de versión según corresponda, y déjese aquí la referencia.
 
@@ -14,6 +14,8 @@ Cada punto describe lo observado, lo que se sabe del código y lo que quedaría 
 
 **Pendiente:** aumentar el padding izquierdo del contenido de la fila (o el margen del contenedor) para separar visualmente el indicador nativo del texto, sin afectar filas no seleccionadas ni la jerarquía de grupo/identidad técnica anidada.
 
+**Resuelto en la etapa 21** de [`plan-1.6.0.md`](plan-1.6.0.md#etapa-21--textos-cursiva-y-espaciado-160): el padding izquierdo de la fila es mayor que el de los otros tres lados, declarado en `SettingsPanelVisualContract` y fijado por una prueba.
+
 ## 2. Refresco automático de dispositivos conectados/desconectados
 
 **Tipo:** mejora de comportamiento.
@@ -23,6 +25,8 @@ Cada punto describe lo observado, lo que se sabe del código y lo que quedaría 
 **Qué dice el código:** el botón «Recargar» (`ReloadDevicesButton`, etapa 14/1.5.5) dispara la única vía de actualización de la lista; no hay una suscripción a eventos de llegada/salida de dispositivo mientras la ventana está abierta.
 
 **Pendiente:** decidir el mecanismo de detección en vivo (por ejemplo `WM_DEVICECHANGE` o el mismo camino de Raw Input que ya usa el núcleo) y cómo conservarlo coherente con la continuidad de edición ya existente (selección, cambios pendientes y desplazamiento se preservan al recargar, etapa 19/1.5.10) para que un refresco automático no descarte trabajo en curso a mitad de edición.
+
+**Resuelto en la etapa 23** de [`plan-1.6.0.md`](plan-1.6.0.md#etapa-23--refresco-automático-de-conexión-y-desconexión-160). El núcleo ya recibía `WM_INPUT_DEVICE_CHANGE` y la ventana ya sondeaba cada 500 ms, así que bastó con una revisión de inventario en la respuesta de actividad: sin canal nuevo ni segundo temporizador. Un cambio que llega mientras se edita un alias queda pendiente en lugar de robar el foco. **Validación física pendiente:** enchufar y desenchufar hardware real con la ventana abierta.
 
 ## 3. Mica como material principal (no Acrylic) y radios de botones a Fluent nativo
 
@@ -36,6 +40,8 @@ Cada punto describe lo observado, lo que se sabe del código y lo que quedaría 
 
 **Pendiente:** invertir `TryEnableBackdrop` para que `MicaBackdrop` sea el intento principal, y apoyarse en el fallback nativo a color sólido en vez de encadenar `DesktopAcrylicBackdrop` como alternativa manual; conservar un `FallbackColor`/color de tema que se vea bien como plano. Sobre los botones, `ApplyFluentResources` fija `button.CornerRadius = new CornerRadius(8)` explícitamente (línea 634) en vez de heredar `ControlCornerRadius`/el recurso de tema del sistema; evaluar quitar el valor fijo y dejar que hereden el recurso de tema, como ya hacen las casillas desde 1.5.9, salvo que exista una razón deliberada para el 8.
 
+**Resuelto en la etapa 22** de [`plan-1.6.0.md`](plan-1.6.0.md#etapa-22--material-mica-radios-fluent-y-ancho-inicial-160): Mica como material principal apoyado en el respaldo nativo, radios desde `ControlCornerRadius` y `OverlayCornerRadius`, y un diagnóstico `material_fondo` que registra si la API aceptó la petición. El selector conserva Acrylic a propósito, por ser la superficie transitoria para la que la guía lo reserva. **Validación física pendiente:** el cambio visible de radio 8 → 4 y qué material se ve realmente en la estación.
+
 ## 4. Ancho mínimo al abrir la ventana
 
 **Tipo:** mejora de comportamiento.
@@ -43,6 +49,8 @@ Cada punto describe lo observado, lo que se sabe del código y lo que quedaría 
 **Síntoma:** la ventana no abre al ancho mínimo operativo; requiere redimensionar manualmente.
 
 **Pendiente:** fijar el tamaño inicial de `SettingsWindow` al mínimo operativo declarado (el mismo que ya se valida en 1.5.5 a 900×640, `docs/plan-1.6.0.md` etapa 14) en vez de heredar el tamaño por defecto de WinUI.
+
+**Resuelto en la etapa 22**: la ventana abre en 900 × 640 y las constantes de tamaño inicial se retiraron.
 
 ## 5. Textos de la cabecera y de ayuda contextual
 
@@ -57,6 +65,8 @@ Cada punto describe lo observado, lo que se sabe del código y lo que quedaría 
 
 **Pendiente:** aplicar los cuatro cambios de texto y el estilo cursiva donde corresponda; decidir el glifo de información a usar si se reemplaza el «·».
 
+**Resuelto en la etapa 21**: los cuatro textos y la cursiva están aplicados, y el «·» se sustituyó por el glifo Fluent de información. El aviso pasó a un contenedor horizontal para que el glifo se colapse y se anime junto al texto.
+
 ## 6. Separador entre la ayuda del panel y «Nombre para este teclado»
 
 **Tipo:** mejora visual.
@@ -64,6 +74,8 @@ Cada punto describe lo observado, lo que se sabe del código y lo que quedaría 
 **Síntoma:** el texto de ayuda «Edita el grupo lógico o el teclado seleccionado. …» (línea 383) queda pegado al campo «Nombre para este teclado» (línea 384) sin padding ni separador visual entre ambos bloques.
 
 **Pendiente:** agregar espaciado y un separador (línea o `Spacing` de sección) entre la ayuda contextual del panel «Dispositivo seleccionado» y el primer campo editable, coherente con la jerarquía visual del resto del panel.
+
+**Resuelto en la etapa 21**, reutilizando el helper `CreateSeparator()` que ya usaba la columna izquierda.
 
 ## 7. Verificación de actualizaciones contra el repositorio de GitHub
 
@@ -90,3 +102,5 @@ Además de esas dos, existen otras dos vías nativas de Microsoft, descartadas p
 **Opción más simple — ping directo a la API de Releases de GitHub, sin framework:** dado que RightKeyboard ya publica el SHA-256 de cada versión y no busca (por ahora) instalación silenciosa ni delta updates, alcanza con una llamada HTTP a `GET https://api.github.com/repos/n-a-monterocarvajal/rightkeyboard/releases/latest` (JSON, sin autenticación para repos públicos, con límite de tasa por IP), comparar `tag_name` contra la versión compartida (`VersionPresentation`, ya centralizada en `RightKeyboard.Shared` desde 1.6.0) y, si hay una versión más nueva, avisar al usuario con un enlace a la Release (y opcionalmente al asset del instalador y su SHA-256) en vez de automatizar la descarga/instalación. Ventajas: cero dependencias nuevas, ningún cambio al instalador ni al pipeline de publicación, y reutiliza infraestructura que ya existe (Releases + SHA-256 publicados). Desventajas frente a Velopack/NetSparkleUpdater: sin descarga asistida, sin instalación desatendida y sin manejo de reintentos/backoff o caché de la respuesta de GitHub (a implementar a mano si se quiere evitar el límite de tasa anónimo, ~60 solicitudes/hora por IP).
 
 **Pendiente:** decidir alcance (solo aviso vs. descarga asistida vs. instalación desatendida) y elegir entre: (a) el ping directo a la API de Releases sin framework, más simple y ya suficiente si solo se quiere avisar; (b) NetSparkleUpdater + appcast propio, si más adelante se quiere descarga/instalación asistida conservando Inno Setup; o (c) migrar el empaquetado a Velopack o MSIX, solo si delta updates o integración nativa del sistema pesan más que conservar el pipeline actual. Promover a un plan de versión cuando se aborde.
+
+**Diferido a 1.7.0:** es una capacidad nueva, no un ajuste de interfaz, y no debía retrasar una versión lista salvo por los otros seis puntos. Trasladado como etapa 1 de [`plan-1.7.0.md`](plan-1.7.0.md).
