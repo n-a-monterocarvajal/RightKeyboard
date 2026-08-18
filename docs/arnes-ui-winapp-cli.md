@@ -179,6 +179,14 @@ código 1 cuando no hay coincidencia o vence el tiempo. Confirmado: `wait-for` d
 - **El radio de las esquinas.** Se resuelve del tema en tiempo de ejecución y no se expone
   por UIA. Es el caso que motivó todo esto en 1.5.5, y sigue necesitando ojo humano; lo que
   cambia es que ahora la captura se produce sola en cada corrida.
+- **La alineación y los estados visuales.** Es el límite que más conviene tener presente. En
+  la revisión previa a 1.6.0 aparecieron tres defectos —un botón que fingía ser subtle y
+  parpadeaba al pasar el puntero, un glifo tres píxeles por encima de su texto y una barra de
+  desplazamiento superpuesta al contenido— y el arnés los pasó **los tres en verde**. No es un
+  fallo suyo: afirma propiedades, y ninguno de los tres cambia una propiedad. Lo que sí sirvió
+  para cerrarlos fue medir píxeles sobre la captura, comparando extensiones verticales o
+  perfiles de columna. Si alguna de esas comprobaciones se vuelve recurrente, ese es el
+  camino, no más aserciones de UIA.
 - **La matriz física** de DPI, varios monitores, cuentas estándar y hardware real. El arnés
   sí es correcto bajo escalado, porque replica la cuenta de DPI, pero eso no es lo mismo que
   haberlo probado en una estación escalada.

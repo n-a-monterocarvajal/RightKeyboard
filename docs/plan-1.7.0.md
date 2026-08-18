@@ -94,3 +94,43 @@ natural sin desandar lo hecho.
 Los carriles C (validación física), D (mediciones) y E (cobertura automatizada) de
 [`plan-1.6.0.md`](plan-1.6.0.md) siguen abiertos y se arrastran sin cambios, además de la
 validación física que 1.6.0 dejó declarada en su nota de publicación.
+
+## Barra de desplazamiento del editor superpuesta al contenido
+
+Observado en la revisión física previa a 1.6.0. La barra vertical del panel derecho se dibuja
+**encima** del contenido en lugar de reservarle sitio: medido sobre la ventana real, el
+indicador pasivo caía cinco píxeles dentro del borde derecho de los campos.
+
+Se probó un arreglo y se descartó de 1.6.0 para no ampliar el alcance de la publicación. Queda
+anotado porque la vía quedó comprobada y no hace falta re-derivarla.
+
+### Lo que se comprobó
+
+- **WinUI no expone ningún interruptor** para que un `ScrollViewer` reserve espacio a su
+  barra. La superposición es intencional en Fluent, de modo que la solución pasa por dar
+  padding al contenido desplazable. Es la mitigación estándar, no un mecanismo del framework.
+- **No hay riesgo de hueco doble.** Con «Mostrar siempre las barras de desplazamiento»
+  activado en Accesibilidad, el ancho del contenido no cambia: el `ScrollViewer` tampoco
+  reserva sitio en ese modo. La reserva propia no se suma a ninguna del framework.
+- **El recurso `ScrollBarSize` del tema no sirve como medida.** Vale 8 y describe el
+  indicador compacto; el track expandido —el que se ve al pasar el puntero, y el que se ve
+  siempre con la opción de accesibilidad activada— mide 12. Reservar el valor del tema deja
+  cuatro píxeles de solapamiento justo en el estado más visible. Fue el primer intento y
+  parecía el más idiomático precisamente por leer del tema.
+
+### La vía que funcionaba
+
+Padding derecho de 12 en el contenido del `ScrollViewer` del editor, con el valor como
+constante documentada del contrato visual, no leído del tema:
+
+```csharp
+editorFields.Padding = new Thickness(0, 0, ScrollBarReservedWidth, 0);
+```
+
+Verificado en píxeles sobre la ventana real: el borde dibujado de los campos queda a siete
+píxeles del indicador pasivo, y exactamente adyacente al track expandido, sin solaparlo.
+
+Una advertencia para quien lo retome: UIA informa 406 píxeles de ancho para los `ComboBox`
+frente a 402 del resto del contenido, porque incluye el área de foco. El borde dibujado sí
+respeta la reserva. Medir esto por el árbol de automatización da un falso solapamiento de
+cuatro píxeles; hay que mirar los píxeles.

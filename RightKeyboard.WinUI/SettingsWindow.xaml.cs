@@ -19,6 +19,10 @@ public sealed class SettingsWindow : Window
 {
     // La ventana abre en el mínimo operativo: es el tamaño en el que la disposición está
     // validada y evita que el usuario tenga que reducirla a mano.
+    // Alto de línea del aviso de edición, a 12 px de tamaño de fuente. Es la medida que
+    // toma el propio TextBlock, comprobada sobre la ventana real.
+    private const int ActivityHintLineHeight = 16;
+
     private const int MinimumWidth = 900;
     private const int MinimumHeight = 640;
     private const uint WmGetMinMaxInfo = 0x0024;
@@ -194,6 +198,13 @@ public sealed class SettingsWindow : Window
         activityHintIcon.Glyph = SettingsPanelVisualContract.InformationGlyph;
         activityHintIcon.FontSize = 12;
         activityHintIcon.VerticalAlignment = VerticalAlignment.Top;
+        // La fuente de iconos y Segoe UI no comparten altura de línea al mismo tamaño, de
+        // modo que alinear ambas cajas por arriba dejaba el glifo tres píxeles por encima
+        // del centro óptico del texto. Igualar la caja del icono a la línea del texto lo
+        // centra dentro de ella y reduce el desfase a un píxel, medido sobre la ventana
+        // real, sin cambiar el alto de la fila. Al seguir anclado arriba, el glifo acompaña
+        // a la primera línea aunque el aviso llegue a partirse.
+        activityHintIcon.Height = ActivityHintLineHeight;
         activityHintPanel.Children.Add(activityHintIcon);
         activityHintPanel.Children.Add(activityHintText);
         // Oculto salvo durante la edición del alias: colapsado para no reservar altura.
@@ -230,10 +241,17 @@ public sealed class SettingsWindow : Window
             MinWidth = SettingsPanelVisualContract.ReloadButtonSize,
             MinHeight = SettingsPanelVisualContract.ReloadButtonSize,
             Padding = new Thickness(0),
-            VerticalAlignment = VerticalAlignment.Center,
-            Background = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0)),
-            BorderBrush = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0))
+            VerticalAlignment = VerticalAlignment.Center
         };
+        // Fluent ya define este control: un botón que descansa transparente y se resalta al
+        // pasar el puntero. SubtleButtonStyle trae la serie completa y coherente de pinceles
+        // —SubtleButtonBackground/BorderBrush/Foreground en reposo, PointerOver, Pressed y
+        // Disabled—, en lugar de apagar a mano solo el reposo y dejar que hover y pressed
+        // sigan usando los del botón normal, que están pensados para un botón con relleno.
+        if (Application.Current.Resources["SubtleButtonStyle"] is Style subtleButton)
+        {
+            reload.Style = subtleButton;
+        }
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(reload, "ReloadDevicesButton");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(
             reload,
