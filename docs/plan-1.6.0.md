@@ -356,6 +356,7 @@ Hecho:
 
 Pendiente, y **no ejecutable desde esta VM Linux sin SDK .NET ni destino Windows**:
 
+- Arnés de UI sobre la ventana de Configuración con winapp CLI, decidido como paso previo a la publicación para volver repetible la revisión visual que hoy se repite a mano en cada versión. Traspaso en [`arnes-ui-winapp-cli.md`](arnes-ui-winapp-cli.md).
 - Validación visual en la estación física, especialmente el cambio de radio 8 → 4 y el material de fondo.
 - Validación física del refresco automático con hardware real.
 - `scripts/build-installer.ps1` para instalador y ZIP portable, con su verificación de `App.xbf` y `RightKeyboard.WinUI.pri`.
