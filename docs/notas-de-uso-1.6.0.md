@@ -1,10 +1,14 @@
 # Notas de uso — RightKeyboard 1.6.0
 
-Observaciones recogidas al probar 1.6.0 como artifact, antes de su publicación. **Los seis puntos de interfaz quedaron resueltos en las etapas 21 a 23 de [`plan-1.6.0.md`](plan-1.6.0.md); el séptimo se difirió a 1.7.0.** Cada punto conserva abajo su resolución y la validación física que siga pendiente. No son notas de publicación (esas viven, inmutables, en `docs/releases/`) ni bugs ya triados: son un cuaderno de campo que un agente puede leer cuando busca pendientes y articular en un plan cuando se requiera.
+Cuaderno de campo de 1.6.0, en dos bloques: los puntos 1 a 7 se recogieron probando el **artefacto**, antes de publicar, y los puntos 8 en adelante usando la **release publicada**. No son notas de publicación (esas viven, inmutables, en `docs/releases/`) ni bugs ya triados: son observaciones que un agente puede leer cuando busca pendientes y articular en un plan cuando se requiera.
 
 Cada punto describe lo observado, lo que se sabe del código y lo que quedaría por decidir o hacer. Al convertir uno en trabajo real, trasládese al backlog (`.agent-context/05-siguientes-pasos.md`), a `ROADMAP.md` o a un plan de versión según corresponda, y déjese aquí la referencia.
 
-## 1. Falta padding entre el indicador de selección y el texto de la fila
+## Observaciones sobre el artefacto, antes de publicar
+
+**Los seis puntos de interfaz quedaron resueltos en las etapas 21 a 23 de [`plan-1.6.0.md`](plan-1.6.0.md); el séptimo se difirió a 1.7.0.** Cada punto conserva abajo su resolución y la validación física que siga pendiente.
+
+### 1. Falta padding entre el indicador de selección y el texto de la fila
 
 **Tipo:** defecto visual menor.
 
@@ -16,7 +20,7 @@ Cada punto describe lo observado, lo que se sabe del código y lo que quedaría 
 
 **Resuelto en la etapa 21** de [`plan-1.6.0.md`](plan-1.6.0.md#etapa-21--textos-cursiva-y-espaciado-160): el padding izquierdo de la fila es mayor que el de los otros tres lados, declarado en `SettingsPanelVisualContract` y fijado por una prueba.
 
-## 2. Refresco automático de dispositivos conectados/desconectados
+### 2. Refresco automático de dispositivos conectados/desconectados
 
 **Tipo:** mejora de comportamiento.
 
@@ -28,7 +32,7 @@ Cada punto describe lo observado, lo que se sabe del código y lo que quedaría 
 
 **Resuelto en la etapa 23** de [`plan-1.6.0.md`](plan-1.6.0.md#etapa-23--refresco-automático-de-conexión-y-desconexión-160). El núcleo ya recibía `WM_INPUT_DEVICE_CHANGE` y la ventana ya sondeaba cada 500 ms, así que bastó con una revisión de inventario en la respuesta de actividad: sin canal nuevo ni segundo temporizador. Un cambio que llega mientras se edita un alias queda pendiente en lugar de robar el foco. **Validación física pendiente:** enchufar y desenchufar hardware real con la ventana abierta.
 
-## 3. Mica como material principal (no Acrylic) y radios de botones a Fluent nativo
+### 3. Mica como material principal (no Acrylic) y radios de botones a Fluent nativo
 
 **Tipo:** mejora visual; el pedido original de esta nota se corrigió tras revisar la guía oficial.
 
@@ -42,7 +46,7 @@ Cada punto describe lo observado, lo que se sabe del código y lo que quedaría 
 
 **Resuelto en la etapa 22** de [`plan-1.6.0.md`](plan-1.6.0.md#etapa-22--material-mica-radios-fluent-y-ancho-inicial-160): Mica como material principal apoyado en el respaldo nativo, radios desde `ControlCornerRadius` y `OverlayCornerRadius`, y un diagnóstico `material_fondo` que registra si la API aceptó la petición. El selector conserva Acrylic a propósito, por ser la superficie transitoria para la que la guía lo reserva. **Validación física pendiente:** el cambio visible de radio 8 → 4 y qué material se ve realmente en la estación.
 
-## 4. Ancho mínimo al abrir la ventana
+### 4. Ancho mínimo al abrir la ventana
 
 **Tipo:** mejora de comportamiento.
 
@@ -52,7 +56,7 @@ Cada punto describe lo observado, lo que se sabe del código y lo que quedaría 
 
 **Resuelto en la etapa 22**: la ventana abre en 900 × 640 y las constantes de tamaño inicial se retiraron.
 
-## 5. Textos de la cabecera y de ayuda contextual
+### 5. Textos de la cabecera y de ayuda contextual
 
 **Tipo:** corrección de copy.
 
@@ -67,7 +71,7 @@ Cada punto describe lo observado, lo que se sabe del código y lo que quedaría 
 
 **Resuelto en la etapa 21**: los cuatro textos y la cursiva están aplicados, y el «·» se sustituyó por el glifo Fluent de información. El aviso pasó a un contenedor horizontal para que el glifo se colapse y se anime junto al texto.
 
-## 6. Separador entre la ayuda del panel y «Nombre para este teclado»
+### 6. Separador entre la ayuda del panel y «Nombre para este teclado»
 
 **Tipo:** mejora visual.
 
@@ -77,7 +81,7 @@ Cada punto describe lo observado, lo que se sabe del código y lo que quedaría 
 
 **Resuelto en la etapa 21**, reutilizando el helper `CreateSeparator()` que ya usaba la columna izquierda.
 
-## 7. Verificación de actualizaciones contra el repositorio de GitHub
+### 7. Verificación de actualizaciones contra el repositorio de GitHub
 
 **Tipo:** capacidad nueva.
 
@@ -104,3 +108,35 @@ Además de esas dos, existen otras dos vías nativas de Microsoft, descartadas p
 **Pendiente:** decidir alcance (solo aviso vs. descarga asistida vs. instalación desatendida) y elegir entre: (a) el ping directo a la API de Releases sin framework, más simple y ya suficiente si solo se quiere avisar; (b) NetSparkleUpdater + appcast propio, si más adelante se quiere descarga/instalación asistida conservando Inno Setup; o (c) migrar el empaquetado a Velopack o MSIX, solo si delta updates o integración nativa del sistema pesan más que conservar el pipeline actual. Promover a un plan de versión cuando se aborde.
 
 **Diferido a 1.7.0:** es una capacidad nueva, no un ajuste de interfaz, y no debía retrasar una versión lista salvo por los otros seis puntos. Trasladado como etapa 1 de [`plan-1.7.0.md`](plan-1.7.0.md).
+
+## Observaciones sobre la release publicada
+
+Recogidas al usar 1.6.0 ya instalada desde su publicación. Ninguna está triada todavía.
+
+### 8. No se pueden agrupar dispositivos ignorados
+
+**Tipo:** limitación de diseño a revisar.
+
+**Síntoma:** en la Configuración, un dispositivo ignorado no puede agruparse con otra identidad: no aparece como origen ni como destino de «Agrupar identidades». Es útil poder hacerlo, por ejemplo, cuando un dispositivo ignorado se conecta a otro puerto USB y vuelve a presentarse con una identidad técnica distinta: hoy hay que ignorarlo otra vez, puerto por puerto, y la intención «ignorar este dispositivo» no se traslada a todas sus identidades.
+
+**Antecedente:** es el punto 3 de [notas de uso 1.5.4](notas-de-uso-1.5.4.md#3-evaluar-la-agrupación-de-identidades-ignoradas), «Evaluar la agrupación de identidades ignoradas», que sigue sin triar según el backlog (`.agent-context/05-siguientes-pasos.md`). Esta nota lo confirma como observación de uso real sobre la versión publicada, no ya como hipótesis.
+
+**Lo que ya cubre otra ruta:** el cambio de puerto de un ignorado se resuelve solo cuando la coincidencia es inequívoca. `Configuration.IsIgnored` (`RightKeyboard/Configuration.cs:160-226`) recupera el estado ignorado por huella —un único conectado con esa huella, un único portador ignorado y ninguna preferencia con distribución que la comparta— y, desde la Etapa 5, por firma HID parcial, pero esta última solo aplica a dispositivos de huella vacía. La huella (`DeviceIdentityResolver.BuildFingerprint`) se calcula con fabricante, nombre mostrado e identificadores de hardware, así que suele sobrevivir al cambio de puerto; la identidad, en cambio, cambia cuando no hay `ContainerId` persistente y el `InstanceId` incluye el puerto. El hueco que queda es el ambiguo: dos dispositivos conectados con la misma huella, una huella que sí cambia con el puerto, o una firma compartida con un dispositivo que tiene distribución. Ahí no hay recuperación automática —deliberadamente— y tampoco existe la vía manual, que es justo lo que la agrupación aportaría.
+
+**Qué dice el código:** la exclusión de ignorados de la agrupación es una decisión propia, sostenida hoy en cuatro capas:
+
+- **Núcleo, al agrupar:** `Configuration.GroupDevices` rechaza el conjunto si cualquier miembro está ignorado — «Reactiva las identidades ignoradas antes de agruparlas.» (`RightKeyboard/Configuration.cs:406`).
+- **Núcleo, al ignorar:** `Configuration.UpdatePreference` rechaza ignorar una identidad agrupada — «Separa la identidad del grupo antes de ignorarla.» (línea 302) — y `Configuration.Ignore` llama antes a `Ungroup` (línea 264), de modo que ignorar disuelve la membresía en vez de heredarla. `MergeFrom` aplica la misma regla al importar: quita de `IgnoredDevices` a todo miembro de un grupo importado (línea 521).
+- **Persistencia:** el invariante está fijado en la carga y en la validación previa a guardar — «El miembro '…' no puede estar ignorado.» (línea 863) y la comprobación equivalente de `ValidateState` (línea 1085).
+- **Interfaz:** `SettingsEditorAvailability.CanGroupAsSource` y `CanBeGroupTarget` exigen `!ignored` (`RightKeyboard.Shared/SettingsEditorAvailability.cs:50-54`), así que un ignorado no puede ser origen ni figurar entre los candidatos del desplegable; `ShowIgnored`/`IgnoredEnabled` solo valen para filas de tipo `Device` (líneas 38 y 44), por lo que la cabecera de un grupo no tiene casilla «Ignorar»; y `DevicePresentation.CreateGroup` fija `ignored: false` para el grupo (`RightKeyboard.Shared/DevicePresentation.cs:31-35`), con lo que ni el texto de estado, ni el nombre accesible, ni el rango de orden contemplan un grupo ignorado.
+
+**A definir antes de implementar:**
+
+- **Estado del grupo.** Si el grupo es ignorado por completo o no lo es —sin miembros en estados mixtos, coherente con que hoy el grupo gobierna alias y distribución—, y si la casilla «Ignorar» pasa a aparecer en la cabecera del grupo aplicándose a todos sus miembros.
+- **Distribución y alias.** Un grupo ignorado no puede tener distribución (el invariante «ignorado sin distribución» ya existe por identidad); decidir si conserva alias y qué se muestra en su fila.
+- **Presentación y orden.** Extender `DevicePresentation.CreateGroup` para admitir el estado ignorado y revisar cómo hereda el rango de orden un grupo ignorado con miembros conectados y desconectados, sin romper la regla «Conectados arriba» de 1.5.10.
+- **Reversibilidad.** Qué recupera «Separar del grupo»: si cada miembro vuelve a su estado ignorado individual latente, igual que hoy recupera alias y distribución.
+- **Esquema y compatibilidad.** Relajar el invariante de miembro no ignorado toca la carga, `ValidateState`, `MergeFrom` y `Ignore`/`UpdatePreference`; decidir si eso cabe en el esquema 5 (un archivo nuevo sería ilegible para versiones anteriores aunque el número no cambie) o exige un esquema 6 con su migración.
+- **Sin fusión automática.** La agrupación de ignorados sigue siendo manual y explícita: no debe reintroducir fusiones automáticas para dispositivos ambiguos ni abrir selectores falsos, y la recuperación por huella o por firma no debe crear membresía.
+
+**Pendiente:** promoverlo a una etapa de [`plan-1.7.0.md`](plan-1.7.0.md) cuando se aborde, y dejar aquí la referencia.

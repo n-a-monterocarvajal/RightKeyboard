@@ -111,6 +111,8 @@ Las notas recogidas al usar cada versión viven en `docs/notas-de-uso-<versión>
 
 Pendientes de `docs/notas-de-uso-1.5.4.md`: el indicador gráfico de conexión y la regla de orden «Conectados arriba» quedaron **resueltos en la Etapa 19 (1.5.10)**; siguen sin triar la evaluación de agrupar identidades ignoradas y el actualizador en la app. El desplegable de agrupación vacío quedó **corregido en 1.5.5.2** (`SettingsEditorAvailability.IsGroupTargetCandidate`), pendiente solo de validación física.
 
+Pendientes de `docs/notas-de-uso-1.6.0.md`: los puntos 1 a 6, recogidos sobre el artefacto, quedaron resueltos en las etapas 21 a 23; el 7 (actualizador) se difirió a la etapa 1 de `docs/plan-1.7.0.md`. El punto 8 se recogió ya sobre la release publicada y **sigue sin triar**: no se pueden agrupar dispositivos ignorados, lo que obliga a ignorar puerto por puerto un mismo dispositivo cuando su identidad técnica cambia. Es el mismo asunto que el punto 3 de `docs/notas-de-uso-1.5.4.md`, ahora confirmado en uso real; la nota deja documentadas las cuatro capas que hoy sostienen la restricción y lo que habría que decidir antes de levantarla.
+
 Pendientes abiertos en `docs/notas-de-uso-1.5.7.md`, ya incorporados a `docs/plan-1.6.0.md`: la Etapa 17 (1.5.8) añadió instrumentación para decidir con evidencia física si la falta de cambio de distribución con el Escritorio en foco es una limitación de Explorer/Shell o un defecto propio. La Etapa 18 (1.5.9) añadió la prueba del árbol visual real y confirmó radio 4 en el glifo de `CheckBox`; no hizo un cuarto cambio de producción porque el defecto no se reprodujo en el árbol ni en la revisión visual actual. Ambos puntos conservan validación pendiente en la estación física.
 
 ## Puerta propuesta
