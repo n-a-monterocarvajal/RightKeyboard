@@ -177,7 +177,7 @@ public sealed class ConfigurationTests
     public void LoadImport_RejectsFutureSchemaWithoutReadingItAsCurrent()
     {
         string path = WriteJson("future.json", """
-        { "version": 6, "devices": [], "mappings": [], "ignoredDeviceIds": [] }
+        { "version": 7, "devices": [], "mappings": [], "ignoredDeviceIds": [] }
         """);
 
         InvalidDataException error = Assert.Throws<InvalidDataException>(
