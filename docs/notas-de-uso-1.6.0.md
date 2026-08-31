@@ -111,7 +111,7 @@ Además de esas dos, existen otras dos vías nativas de Microsoft, descartadas p
 
 ## Observaciones sobre la release publicada
 
-Recogidas al usar 1.6.0 ya instalada desde su publicación. Ninguna está triada todavía.
+Recogidas al usar 1.6.0 ya instalada desde su publicación.
 
 ### 8. No se pueden agrupar dispositivos ignorados
 
@@ -140,3 +140,5 @@ Recogidas al usar 1.6.0 ya instalada desde su publicación. Ninguna está triada
 - **Sin fusión automática.** La agrupación de ignorados sigue siendo manual y explícita: no debe reintroducir fusiones automáticas para dispositivos ambiguos ni abrir selectores falsos, y la recuperación por huella o por firma no debe crear membresía.
 
 **Pendiente:** promoverlo a una etapa de [`plan-1.7.0.md`](plan-1.7.0.md) cuando se aborde, y dejar aquí la referencia.
+
+**Resuelto en 1.6.1**, etapa 2 de [`plan-1.7.0.md`](plan-1.7.0.md#etapa-2--agrupación-de-dispositivos-ignorados-161). Se levantó el invariante en las cuatro capas: un grupo lógico admite ahora estar ignorado, con un solo estado para todos sus miembros y sin distribución. Agrupar exige que origen y destino coincidan en ese estado; ignorar o reactivar un grupo alcanza a todos sus miembros; ignorar desde el selector una identidad agrupada ignora el dispositivo lógico completo en vez de disolver el grupo; y separar deja a cada identidad ignorada por su cuenta. El esquema de preferencias pasó a 6 para que las versiones anteriores rechacen con un mensaje correcto un archivo que no pueden interpretar. **Validación física pendiente:** el recorrido completo con el dispositivo real y un cambio de puerto USB.

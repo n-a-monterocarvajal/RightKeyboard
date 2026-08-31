@@ -19,6 +19,7 @@ y de los cambios visuales, registrada en su nota de publicación.
 | Etapa | Versión | Asunto | Estado |
 |---|---|---|---|
 | 1 | 1.7.0 | Verificación de actualizaciones contra GitHub | Pendiente |
+| 2 | 1.6.1 | Agrupación de dispositivos ignorados | Hecho, validación física pendiente |
 
 ### Etapa 1 — Verificación de actualizaciones contra GitHub
 
@@ -88,6 +89,43 @@ natural sin desandar lo hecho.
   descarga a mano.
 - Dónde aparece el aviso: Configuración, menú de bandeja, o ambos.
 - Respetar CPOL 5(d): la distribución debe seguir siendo gratuita.
+
+### Etapa 2 — Agrupación de dispositivos ignorados (1.6.1)
+
+Punto 8 de [notas de uso 1.6.0](notas-de-uso-1.6.0.md#8-no-se-pueden-agrupar-dispositivos-ignorados), recogido ya sobre la
+release publicada y registrado desde antes como punto 3 de
+[notas de uso 1.5.4](notas-de-uso-1.5.4.md#3-evaluar-la-agrupación-de-identidades-ignoradas). Se adelantó a la etapa 1
+porque cierra una observación de uso concreta y acotada, no una capacidad nueva
+con decisiones de ecosistema abiertas.
+
+**Problema.** Un dispositivo ignorado conectado en otro puerto USB reaparecía con
+otra identidad técnica y había que ignorarlo de nuevo, puerto por puerto: la
+recuperación automática por huella y por firma solo cubre los casos inequívocos,
+y la vía manual —agrupar— excluía a los ignorados por diseño.
+
+**Decisiones tomadas.**
+
+- **Un solo estado por grupo.** O todas sus identidades están ignoradas o
+  ninguna; no hay miembros mixtos. Un grupo con estados mezclados no tendría una
+  respuesta única a «¿debe ignorarse este dispositivo?», que es justo lo que el
+  residente le pregunta.
+- **Un grupo ignorado no conserva distribución**, igual que una identidad
+  ignorada. Asignarle una reactiva al grupo entero.
+- **Ignorar y reactivar alcanzan a todos los miembros**, también por el camino
+  del selector: ignorar una identidad agrupada ignora el dispositivo lógico
+  completo en lugar de disolver el grupo.
+- **Reversible sin sorpresas.** Separar deja a cada identidad ignorada por su
+  cuenta, como estaba antes de agrupar.
+- **Sin fusión automática.** La membresía sigue cambiando solo por acción manual
+  o importación explícita; la recuperación por huella y por firma nunca la crea.
+- **Esquema 6.** La estructura del archivo no cambia, pero un 6 con un grupo
+  ignorado sería ilegible para 1.6.0. Subir el número hace que esas versiones lo
+  rechacen indicando que procede de una versión más reciente, en vez de darlo por
+  inválido. El 5 se carga sin transformación y el siguiente guardado escribe 6.
+
+**Pendiente:** la validación física del recorrido completo —ignorar, cambiar de
+puerto, ignorar la identidad nueva y agrupar ambas— junto con la de la
+agrupación no ignorada, abierta desde 1.5.1.
 
 ## Carriles heredados
 

@@ -1217,8 +1217,10 @@ public sealed class SettingsWindow : Window
                              candidate.CanBeGroupTarget,
                              candidate.GroupId,
                              candidate.TargetIdentity,
+                             candidate.Ignored,
                              row.GroupId,
-                             row.TargetIdentity)))
+                             row.TargetIdentity,
+                             row.Ignored)))
             {
                 GroupTargetComboBox.Items.Add(candidate);
             }
@@ -1444,10 +1446,10 @@ public sealed class SettingsWindow : Window
             return;
         }
 
-        if (!await ShowOverlayAsync(
-                "Agrupar identidades",
-                $"\"{AliasTextBox.Text.Trim()}\" gobernará el alias y la distribución compartidos con \"{target.DisplayName}\". Las identidades técnicas seguirán visibles y podrán separarse.",
-                "Agrupar"))
+        string groupingMessage = row.Ignored
+            ? $"\"{AliasTextBox.Text.Trim()}\" y \"{target.DisplayName}\" pasarán a ser el mismo dispositivo ignorado. Las identidades técnicas seguirán visibles y podrán separarse."
+            : $"\"{AliasTextBox.Text.Trim()}\" gobernará el alias y la distribución compartidos con \"{target.DisplayName}\". Las identidades técnicas seguirán visibles y podrán separarse.";
+        if (!await ShowOverlayAsync("Agrupar identidades", groupingMessage, "Agrupar"))
         {
             return;
         }
@@ -1482,10 +1484,10 @@ public sealed class SettingsWindow : Window
             return;
         }
 
-        if (!await ShowOverlayAsync(
-                "Separar identidad",
-                $"\"{row.DisplayName}\" dejará el grupo y recuperará sus preferencias individuales anteriores.",
-                "Separar"))
+        string ungroupingMessage = row.Ignored
+            ? $"\"{row.DisplayName}\" dejará el grupo y seguirá ignorada por su cuenta."
+            : $"\"{row.DisplayName}\" dejará el grupo y recuperará sus preferencias individuales anteriores.";
+        if (!await ShowOverlayAsync("Separar identidad", ungroupingMessage, "Separar"))
         {
             return;
         }
@@ -1959,11 +1961,13 @@ public sealed class SettingsWindow : Window
             not null => SettingsEditorRowKind.Device,
             _ => SettingsEditorRowKind.None
         };
+        bool ignored = IgnoredCheckBox.IsChecked == true;
         SettingsEditorAvailability availability = SettingsEditorAvailability.Create(
             enabled,
             rowKind,
-            IgnoredCheckBox.IsChecked == true,
-            GroupTargetComboBox.SelectedItem is DeviceRow);
+            ignored,
+            GroupTargetComboBox.SelectedItem is DeviceRow,
+            ignoredChangePending: row is not null && row.Ignored != ignored);
         if (availability.ClearInvalidGroupTargetSelection)
         {
             GroupTargetComboBox.SelectedIndex = -1;
@@ -2099,8 +2103,10 @@ public sealed class DeviceRow
         LastSeenUtc = members.Select(member => member.LastSeenUtc).DefaultIfEmpty().Max();
         DevicePresentation presentation = DevicePresentation.CreateGroup(
             members.Select(member => member.Connected),
+            members.Select(member => member.Ignored),
             layout?.Name);
         Connected = presentation.Connected;
+        Ignored = presentation.Ignored;
         Layout = layout;
         IsGroup = true;
         MemberCount = members.Length;
@@ -2124,8 +2130,7 @@ public sealed class DeviceRow
     public bool IsGroup { get; }
     public bool IsGroupMember { get; }
     public bool CanBeGroupTarget => SettingsEditorAvailability.CanBeGroupTarget(
-        IsGroup ? SettingsEditorRowKind.Group : IsGroupMember ? SettingsEditorRowKind.GroupMember : SettingsEditorRowKind.Device,
-        Ignored);
+        IsGroup ? SettingsEditorRowKind.Group : IsGroupMember ? SettingsEditorRowKind.GroupMember : SettingsEditorRowKind.Device);
     public int MemberCount { get; }
     internal SettingsLayout? Layout { get; }
 

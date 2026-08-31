@@ -46,7 +46,7 @@ public sealed class ConfigurationTests
             Assert.That(loaded.Devices[keyboard.Identity].LastSeenUtc, Is.EqualTo(keyboardLastSeen));
             Assert.That(loaded.IgnoredDevices.Contains(mouse.Identity), Is.True);
             Assert.That(loaded.Devices[mouse.Identity].CustomName, Is.EqualTo("Mouse principal"));
-            Assert.That(File.ReadAllText(path), Does.Contain("\"version\": 5"));
+            Assert.That(File.ReadAllText(path), Does.Contain("\"version\": 6"));
         });
     }
 
@@ -685,7 +685,7 @@ public sealed class ConfigurationTests
         {
             Assert.That(loaded.IgnoredSignatures, Is.Empty);
             Assert.That(loaded.Devices["device:a"].Signature, Is.Null);
-            Assert.That(File.ReadAllText(path), Does.Contain("\"version\": 5"));
+            Assert.That(File.ReadAllText(path), Does.Contain("\"version\": 6"));
         });
     }
 
@@ -813,7 +813,7 @@ public sealed class ConfigurationTests
     }
 
     [Test]
-    public void GroupDevices_IgnoredMember_IsRejectedWithoutMutation()
+    public void GroupDevices_IgnoredMemberWithActiveGoverning_IsRejectedWithoutMutation()
     {
         Configuration configuration = new();
         KeyboardDevice first = Device("device:port-a", "MODEL-A", "Teclado A");
@@ -823,7 +823,7 @@ public sealed class ConfigurationTests
 
         Assert.That(
             () => configuration.GroupDevices(first.Identity, second.Identity),
-            Throws.InvalidOperationException.With.Message.Contains("Reactiva"));
+            Throws.InvalidOperationException.With.Message.Contains("mismo estado"));
         Assert.Multiple(() =>
         {
             Assert.That(configuration.DeviceGroups, Is.Empty);
@@ -833,7 +833,7 @@ public sealed class ConfigurationTests
     }
 
     [Test]
-    public void GroupDevices_IgnoredGoverningDevice_IsRejectedWithoutMutation()
+    public void GroupDevices_IgnoredGoverningWithActiveMember_IsRejectedWithoutMutation()
     {
         Configuration configuration = new();
         KeyboardDevice first = Device("device:port-a", "MODEL-A", "Teclado A");
@@ -843,7 +843,7 @@ public sealed class ConfigurationTests
 
         Assert.That(
             () => configuration.GroupDevices(first.Identity, second.Identity),
-            Throws.InvalidOperationException.With.Message.Contains("Reactiva"));
+            Throws.InvalidOperationException.With.Message.Contains("mismo estado"));
         Assert.Multiple(() =>
         {
             Assert.That(configuration.DeviceGroups, Is.Empty);
@@ -852,9 +852,297 @@ public sealed class ConfigurationTests
     }
 
     [Test]
+    public void GroupDevices_BothIgnored_CreatesOneIgnoredLogicalDevice()
+    {
+        // El caso de uso de 1.6.1: el mismo dispositivo ignorado reaparece con
+        // otra identidad técnica al cambiar de puerto USB.
+        Configuration configuration = new();
+        KeyboardDevice frontPort = Device("device:port-a", "", "Control", signature: BaseusSignature);
+        KeyboardDevice backPort = Device("device:port-b", "", "Control", signature: BaseusSignature);
+        configuration.Ignore(frontPort, "Control Baseus", extendToSignature: true);
+        configuration.Ignore(backPort, extendToSignature: true);
+
+        string groupId = configuration.GroupDevices(
+            frontPort.Identity,
+            backPort.Identity,
+            "Control Baseus",
+            layoutOverride: null,
+            overridePreference: true);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(configuration.DeviceGroups[groupId].MemberIdentities,
+                Is.EquivalentTo(new[] { frontPort.Identity, backPort.Identity }));
+            Assert.That(configuration.DeviceGroups[groupId].Layout, Is.Null);
+            Assert.That(configuration.IgnoredDevices,
+                Is.EquivalentTo(new[] { frontPort.Identity, backPort.Identity }));
+            Assert.That(configuration.GetDisplayName(backPort), Is.EqualTo("Control Baseus"));
+        });
+    }
+
+    [Test]
+    public void GroupDevices_IgnoredGoverningWithLayoutOverride_KeepsTheGroupWithoutLayout()
+    {
+        Configuration configuration = new();
+        KeyboardDevice first = Device("device:port-a", "MODEL-A", "Control");
+        KeyboardDevice second = Device("device:port-b", "MODEL-B", "Control");
+        configuration.Ignore(first);
+        configuration.Ignore(second);
+
+        string groupId = configuration.GroupDevices(
+            first.Identity,
+            second.Identity,
+            "Control",
+            layoutOverride: spanish,
+            overridePreference: true);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(configuration.DeviceGroups[groupId].Layout, Is.Null);
+            Assert.That(configuration.TryGetEffectiveLayout(second.Identity, out _), Is.False);
+        });
+    }
+
+    [Test]
+    public void UpdatePreference_IgnoreGroup_IgnoresEveryMemberAndDropsTheLayout()
+    {
+        Configuration configuration = new();
+        KeyboardDevice first = Device("device:port-a", "MODEL-A", "Teclado A");
+        KeyboardDevice second = Device("device:port-b", "MODEL-B", "Teclado B");
+        configuration.SetLayout(first, spanish, "Teclado escritorio");
+        configuration.TouchDevice(second);
+        string groupId = configuration.GroupDevices(first.Identity, second.Identity);
+
+        configuration.UpdatePreference(second.Identity, "Teclado escritorio", null, ignored: true);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(configuration.DeviceGroups[groupId].Layout, Is.Null);
+            Assert.That(configuration.IgnoredDevices,
+                Is.EquivalentTo(new[] { first.Identity, second.Identity }));
+            Assert.That(configuration.LayoutMappings, Is.Empty, "Un ignorado no conserva distribución.");
+            Assert.That(configuration.DeviceGroups[groupId].MemberIdentities, Has.Count.EqualTo(2));
+        });
+    }
+
+    [Test]
+    public void UpdatePreference_ReactivateIgnoredGroup_ClearsTheIgnoreForEveryMember()
+    {
+        Configuration configuration = new();
+        KeyboardDevice first = Device("device:port-a", "", "Control", signature: BaseusSignature);
+        KeyboardDevice second = Device("device:port-b", "", "Control", signature: BaseusSignature);
+        configuration.Ignore(first, extendToSignature: true);
+        configuration.Ignore(second, extendToSignature: true);
+        string groupId = configuration.GroupDevices(first.Identity, second.Identity);
+
+        configuration.UpdatePreference(first.Identity, "Control", spanish, ignored: false);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(configuration.IgnoredDevices, Is.Empty);
+            Assert.That(configuration.IgnoredSignatures, Is.Empty, "Reactivar retira la firma registrada.");
+            Assert.That(configuration.DeviceGroups[groupId].Layout, Is.SameAs(spanish));
+            Assert.That(configuration.TryGetEffectiveLayout(second.Identity, out Layout? layout), Is.True);
+            Assert.That(layout, Is.SameAs(spanish));
+        });
+    }
+
+    [Test]
+    public void Ignore_GroupedIdentity_IgnoresTheWholeGroupInsteadOfDissolvingIt()
+    {
+        // Camino del selector: el grupo declara que esas identidades son el mismo
+        // teclado, así que ignorar una ignora el dispositivo lógico completo.
+        Configuration configuration = new();
+        KeyboardDevice first = Device("device:port-a", "MODEL-A", "Teclado A");
+        KeyboardDevice second = Device("device:port-b", "MODEL-B", "Teclado B");
+        configuration.TouchDevice(first, "Teclado compartido");
+        configuration.TouchDevice(second);
+        string groupId = configuration.GroupDevices(first.Identity, second.Identity);
+
+        configuration.Ignore(second);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(configuration.DeviceGroups.ContainsKey(groupId), Is.True);
+            Assert.That(configuration.IgnoredDevices,
+                Is.EquivalentTo(new[] { first.Identity, second.Identity }));
+            Assert.That(configuration.GetGroup(first.Identity)?.DisplayName, Is.EqualTo("Teclado compartido"));
+        });
+    }
+
+    [Test]
+    public void SetLayout_IgnoredGroup_ReactivatesEveryMember()
+    {
+        Configuration configuration = new();
+        KeyboardDevice first = Device("device:port-a", "MODEL-A", "Teclado A");
+        KeyboardDevice second = Device("device:port-b", "MODEL-B", "Teclado B");
+        configuration.Ignore(first);
+        configuration.Ignore(second);
+        string groupId = configuration.GroupDevices(first.Identity, second.Identity);
+
+        configuration.SetLayout(second, spanish, "Teclado recuperado");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(configuration.IgnoredDevices, Is.Empty);
+            Assert.That(configuration.DeviceGroups[groupId].Layout, Is.SameAs(spanish));
+            Assert.That(configuration.DeviceGroups[groupId].DisplayName, Is.EqualTo("Teclado recuperado"));
+        });
+    }
+
+    [Test]
+    public void Ungroup_IgnoredGroup_KeepsEveryIdentityIgnoredOnItsOwn()
+    {
+        Configuration configuration = new();
+        KeyboardDevice first = Device("device:port-a", "MODEL-A", "Control");
+        KeyboardDevice second = Device("device:port-b", "MODEL-B", "Control");
+        configuration.Ignore(first);
+        configuration.Ignore(second);
+        configuration.GroupDevices(first.Identity, second.Identity);
+
+        configuration.Ungroup(second.Identity);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(configuration.DeviceGroups, Is.Empty);
+            Assert.That(configuration.IgnoredDevices,
+                Is.EquivalentTo(new[] { first.Identity, second.Identity }));
+        });
+    }
+
+    [Test]
+    public void IgnoredGroup_RoundTrip_KeepsEveryMemberIgnoredUnderSchema6()
+    {
+        string path = Path.Combine(temporaryDirectory, "ignored-group-v6.json");
+        Configuration configuration = new();
+        KeyboardDevice first = Device("device:port-a", "MODEL-A", "Control");
+        KeyboardDevice second = Device("device:port-b", "MODEL-B", "Control");
+        configuration.Ignore(first, "Control Baseus");
+        configuration.Ignore(second);
+        configuration.GroupDevices(first.Identity, second.Identity, "Control Baseus", null, overridePreference: true);
+
+        configuration.Save(path);
+        Configuration loaded = Configuration.LoadConfiguration(new KeyboardDevicesCollection(), path, [spanish]);
+
+        LogicalDeviceGroup group = loaded.DeviceGroups.Values.Single();
+        Assert.Multiple(() =>
+        {
+            Assert.That(group.DisplayName, Is.EqualTo("Control Baseus"));
+            Assert.That(group.Layout, Is.Null);
+            Assert.That(loaded.IgnoredDevices,
+                Is.EquivalentTo(new[] { first.Identity, second.Identity }));
+            Assert.That(File.ReadAllText(path), Does.Contain("\"version\": 6"));
+        });
+    }
+
+    [Test]
+    public void MergeFrom_ImportedIgnoredGroup_KeepsItsMembersIgnored()
+    {
+        Configuration imported = new();
+        KeyboardDevice first = Device("device:port-a", "MODEL-A", "Control");
+        KeyboardDevice second = Device("device:port-b", "MODEL-B", "Control");
+        imported.Ignore(first);
+        imported.Ignore(second);
+        imported.GroupDevices(first.Identity, second.Identity);
+
+        Configuration current = new();
+        current.MergeFrom(imported, replace: false);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(current.DeviceGroups.Values.Single().MemberIdentities,
+                Is.EquivalentTo(new[] { first.Identity, second.Identity }));
+            Assert.That(current.IgnoredDevices,
+                Is.EquivalentTo(new[] { first.Identity, second.Identity }));
+        });
+    }
+
+    [Test]
+    public void LoadConfiguration_Version5GroupFile_IsMigratedToSchema6()
+    {
+        string path = WriteJson("group-v5.json", """
+        {
+          "version": 5,
+          "devices": [
+            { "identity": "device:a", "detectedName": "A" },
+            { "identity": "device:b", "detectedName": "B" }
+          ],
+          "mappings": [],
+          "ignoredDeviceIds": [],
+          "ignoredSignatures": [],
+          "groups": [
+            { "id": "group:1", "displayName": "Uno", "memberIdentities": ["device:a", "device:b"] }
+          ]
+        }
+        """);
+
+        Configuration loaded = Configuration.LoadConfiguration(new KeyboardDevicesCollection(), path, [spanish]);
+        loaded.Save(path);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(loaded.DeviceGroups.Values.Single().MemberIdentities, Has.Count.EqualTo(2));
+            Assert.That(File.ReadAllText(path), Does.Contain("\"version\": 6"));
+        });
+    }
+
+    [Test]
+    public void LoadImport_GroupMixingIgnoredAndActiveMembers_IsRejected()
+    {
+        string path = WriteJson("mixed-group.json", """
+        {
+          "version": 6,
+          "devices": [
+            { "identity": "device:a", "detectedName": "A" },
+            { "identity": "device:b", "detectedName": "B" }
+          ],
+          "mappings": [],
+          "ignoredDeviceIds": ["device:a"],
+          "ignoredSignatures": [],
+          "groups": [
+            { "id": "group:1", "displayName": "Uno", "memberIdentities": ["device:a", "device:b"] }
+          ]
+        }
+        """);
+
+        Assert.That(
+            () => Configuration.LoadImport(path, [spanish]),
+            Throws.TypeOf<InvalidDataException>().With.Message.Contains("mezcla identidades ignoradas"));
+    }
+
+    [Test]
+    public void LoadImport_IgnoredGroupWithLayout_IsRejected()
+    {
+        string path = WriteJson("ignored-group-with-layout.json", """
+        {
+          "version": 6,
+          "devices": [
+            { "identity": "device:a", "detectedName": "A" },
+            { "identity": "device:b", "detectedName": "B" }
+          ],
+          "mappings": [],
+          "ignoredDeviceIds": ["device:a", "device:b"],
+          "ignoredSignatures": [],
+          "groups": [
+            {
+              "id": "group:1",
+              "displayName": "Uno",
+              "layout": "000000000000040A",
+              "memberIdentities": ["device:a", "device:b"]
+            }
+          ]
+        }
+        """);
+
+        Assert.That(
+            () => Configuration.LoadImport(path, [spanish]),
+            Throws.TypeOf<InvalidDataException>().With.Message.Contains("no puede tener distribución"));
+    }
+
+    [Test]
     public void GroupedConfiguration_RoundTrip_PreservesLogicalPreferenceAndTechnicalMembers()
     {
-        string path = Path.Combine(temporaryDirectory, "grouped-v5.json");
+        string path = Path.Combine(temporaryDirectory, "grouped-v6.json");
         Configuration configuration = new();
         KeyboardDevice first = Device("device:port-a", "MODEL-A", "Teclado A");
         KeyboardDevice second = Device("device:port-b", "MODEL-A", "Teclado B");
@@ -872,7 +1160,7 @@ public sealed class ConfigurationTests
             Assert.That(group.MemberIdentities, Is.EquivalentTo(new[] { first.Identity, second.Identity }));
             Assert.That(group.Layout, Is.SameAs(spanish));
             Assert.That(loaded.Devices.Keys, Is.EquivalentTo(new[] { first.Identity, second.Identity }));
-            Assert.That(File.ReadAllText(path), Does.Contain("\"version\": 5"));
+            Assert.That(File.ReadAllText(path), Does.Contain("\"version\": 6"));
         });
     }
 

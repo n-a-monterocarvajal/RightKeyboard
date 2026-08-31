@@ -20,7 +20,7 @@ Implementado y sin publicar. Ignorar manualmente un dispositivo de huella vacía
 
 ### Agrupar identidades del mismo dispositivo — implementado, sin validación física
 
-Implementado y sin publicar. La Configuración WinUI permite agrupar manualmente identidades que el usuario reconoce como el mismo teclado, sobre el esquema 5 de preferencias y el protocolo IPC v2.
+Publicado. La Configuración WinUI permite agrupar manualmente identidades que el usuario reconoce como el mismo teclado, sobre el esquema 6 de preferencias y el protocolo IPC v2. Desde 1.6.1 la agrupación alcanza también a los dispositivos ignorados, con un solo estado por grupo.
 
 **Criterios, todos cumplidos en el código:**
 
@@ -44,11 +44,11 @@ Revisión del ejecutable de `1.5.0` del 19 de julio de 2026. Cada punto indica q
 
 `DeviceList_SelectionChanged` reescribe el editor con la fila nueva sin comprobar nada, y no existe seguimiento de estado sucio en la ventana. Seleccionar otro dispositivo, o cerrar la ventana, descarta alias, distribución e ignorado en silencio. Falta detectar el estado sucio y confirmar antes de perderlo.
 
-### Relación entre Ignorar y Agrupar
+### Relación entre Ignorar y Agrupar — resuelta en 1.6.1
 
-La dependencia existe y es unidireccional: ignorar bloquea agrupar en ambos sentidos. Como origen, `SetEditorEnabled` deshabilita el desplegable de agrupación cuando la fila está ignorada; como destino, `CanBeGroupTarget` excluye las filas ignoradas. Por tanto **Ignorar es una precondición y su posición sobre Agrupar es correcta**, pero hoy queda por debajo de Distribución, a la que también gobierna. Conviene situar Ignorar antes de todo lo que condiciona.
+Hasta 1.6.0 la dependencia era unidireccional: ignorar bloqueaba agrupar en ambos sentidos, como origen (`SetEditorEnabled` deshabilitaba el desplegable) y como destino (`CanBeGroupTarget` excluía las filas ignoradas). Desde 1.6.1 Ignorar deja de ser una precondición de Agrupar y pasa a ser un atributo compartido: se agrupan identidades que ya coinciden en ese estado y el grupo conserva uno solo. Lo único que espera ahora es un cambio de la casilla sin guardar, porque los candidatos se listan según el estado guardado.
 
-Hay además un defecto real: `IgnoredCheckBox_Changed` solo reevalúa `LayoutComboBox.IsEnabled`. Al marcar Ignorar, los controles de agrupación siguen habilitados hasta reseleccionar la fila, de modo que se puede iniciar una agrupación que el núcleo rechaza.
+El defecto que acompañaba a esta sección —`IgnoredCheckBox_Changed` reevaluaba únicamente `LayoutComboBox.IsEnabled`, así que los controles de agrupación seguían habilitados hasta reseleccionar la fila— quedó corregido: el manejador vuelve a calcular toda la disponibilidad del editor.
 
 ### Pulsaciones sintéticas y falsos dispositivos
 

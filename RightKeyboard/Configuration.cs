@@ -5,7 +5,7 @@ namespace RightKeyboard;
 
 public sealed class Configuration
 {
-    public const int CurrentSchemaVersion = 5;
+    public const int CurrentSchemaVersion = 6;
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -241,10 +241,9 @@ public sealed class Configuration
         {
             group.CustomName = NormalizeGroupName(customName, group.DisplayName);
             group.Layout = layout;
-            foreach (string memberIdentity in group.MemberIdentities)
-            {
-                RemoveSignature(Devices[memberIdentity].Signature);
-            }
+            // Asignar distribución reactiva el grupo entero: sus miembros
+            // comparten estado, de modo que ninguno puede quedar ignorado.
+            ReactivateGroup(group);
         }
         else
         {
@@ -261,17 +260,54 @@ public sealed class Configuration
     /// </summary>
     public bool Ignore(KeyboardDevice device, string? customName = null, bool extendToSignature = false)
     {
-        Ungroup(device.Identity);
-        TouchDevice(device, customName);
-        LayoutMappings.Remove(device.Identity);
-        IgnoredDevices.Add(device.Identity);
-        if (extendToSignature && string.IsNullOrEmpty(device.Fingerprint) && device.Signature is not null)
+        // Ignorar una identidad agrupada ignora el dispositivo lógico completo:
+        // el grupo declara que esas identidades son el mismo teclado, así que
+        // disolverlo aquí contradiría la intención del usuario.
+        LogicalDeviceGroup? group = GetGroup(device.Identity);
+        TouchDevice(device, group is null ? customName : null);
+        if (group is not null)
         {
-            IgnoredSignatures.Add(device.Signature);
-            return true;
+            group.CustomName = NormalizeGroupName(customName, group.DisplayName);
         }
 
-        return false;
+        IgnoreLogicalDevice(device.Identity);
+        return extendToSignature && TryRegisterSignature(device);
+    }
+
+    /// <summary>
+    /// Ignora la identidad y, si pertenece a un grupo, al resto de sus miembros:
+    /// un grupo lógico no admite estados mixtos y un grupo ignorado no conserva
+    /// distribución.
+    /// </summary>
+    private void IgnoreLogicalDevice(string identity)
+    {
+        if (GetGroup(identity) is LogicalDeviceGroup group)
+        {
+            group.Layout = null;
+            foreach (string memberIdentity in group.MemberIdentities)
+            {
+                LayoutMappings.Remove(memberIdentity);
+                IgnoredDevices.Add(memberIdentity);
+            }
+
+            return;
+        }
+
+        LayoutMappings.Remove(identity);
+        IgnoredDevices.Add(identity);
+    }
+
+    /// <summary>
+    /// Reactiva todos los miembros del grupo y retira las firmas que su
+    /// exclusión hubiera registrado.
+    /// </summary>
+    private void ReactivateGroup(LogicalDeviceGroup group)
+    {
+        foreach (string memberIdentity in group.MemberIdentities)
+        {
+            IgnoredDevices.Remove(memberIdentity);
+            RemoveSignature(Devices[memberIdentity].Signature);
+        }
     }
 
     public void UpdatePreference(string identity, string? customName, Layout? layout, bool ignored) =>
@@ -297,36 +333,27 @@ public sealed class Configuration
         bool wasIgnored = IgnoredDevices.Contains(identity);
         if (GetGroup(identity) is LogicalDeviceGroup group)
         {
+            group.CustomName = NormalizeGroupName(customName, group.DisplayName);
             if (ignored)
             {
-                throw new InvalidOperationException("Separa la identidad del grupo antes de ignorarla.");
+                IgnoreLogicalDevice(identity);
+                return TryRegisterSignature(connectedDevice);
             }
 
-            group.CustomName = NormalizeGroupName(customName, group.DisplayName);
             group.Layout = layout;
-            if (layout is not null)
+            if (wasIgnored || layout is not null)
             {
-                foreach (string memberIdentity in group.MemberIdentities)
-                {
-                    RemoveSignature(Devices[memberIdentity].Signature);
-                }
+                ReactivateGroup(group);
             }
+
             return false;
         }
 
         preference.CustomName = NormalizeCustomName(customName, preference.DetectedName);
         if (ignored)
         {
-            IgnoredDevices.Add(identity);
-            LayoutMappings.Remove(identity);
-            if (connectedDevice is KeyboardDevice device &&
-                string.IsNullOrEmpty(device.Fingerprint) && device.Signature is not null)
-            {
-                IgnoredSignatures.Add(device.Signature);
-                return true;
-            }
-
-            return false;
+            IgnoreLogicalDevice(identity);
+            return TryRegisterSignature(connectedDevice);
         }
 
         IgnoredDevices.Remove(identity);
@@ -391,9 +418,6 @@ public sealed class Configuration
         string displayName = overridePreference
             ? NormalizeGroupName(customName, currentDisplayName)
             : currentDisplayName;
-        Layout? layout = overridePreference
-            ? layoutOverride
-            : governingGroup?.Layout ?? GetEffectiveLayout(governingIdentity);
         string groupId = governingGroup?.Id ?? $"group:{Guid.NewGuid():N}";
         HashSet<string> members = new(StringComparer.OrdinalIgnoreCase) { governingIdentity, memberIdentity };
         if (governingGroup is not null)
@@ -401,10 +425,21 @@ public sealed class Configuration
             members.UnionWith(governingGroup.MemberIdentities);
         }
 
-        if (members.Any(IgnoredDevices.Contains))
+        // Un grupo lógico tiene un solo estado efectivo: o todos sus miembros
+        // están ignorados o ninguno lo está. Mezclarlos dejaría al grupo sin una
+        // respuesta única a «¿debe ignorarse este dispositivo?».
+        bool ignored = IgnoredDevices.Contains(governingIdentity);
+        if (members.Any(identity => IgnoredDevices.Contains(identity) != ignored))
         {
-            throw new InvalidOperationException("Reactiva las identidades ignoradas antes de agruparlas.");
+            throw new InvalidOperationException(
+                "Agrupa identidades con el mismo estado: todas ignoradas o ninguna.");
         }
+
+        Layout? layout = ignored
+            ? null
+            : overridePreference
+                ? layoutOverride
+                : governingGroup?.Layout ?? GetEffectiveLayout(governingIdentity);
 
         if (governingGroup is not null)
         {
@@ -453,6 +488,23 @@ public sealed class Configuration
         {
             GroupMembership.Remove(identity);
         }
+    }
+
+    /// <summary>
+    /// Registra la firma HID parcial del dispositivo cuando es seguro: solo con
+    /// huella vacía y firma disponible. Devuelve si la regla se aplicó, no si la
+    /// firma era nueva.
+    /// </summary>
+    private bool TryRegisterSignature(KeyboardDevice? connectedDevice)
+    {
+        if (connectedDevice is not KeyboardDevice device ||
+            !string.IsNullOrEmpty(device.Fingerprint) || device.Signature is null)
+        {
+            return false;
+        }
+
+        IgnoredSignatures.Add(device.Signature);
+        return true;
     }
 
     private void RemoveSignature(string? signature)
@@ -515,10 +567,11 @@ public sealed class Configuration
                 : importedGroup.Id;
             LogicalDeviceGroup group = importedGroup.Clone(groupId);
             DeviceGroups[groupId] = group;
+            // El estado ignorado de cada miembro ya quedó fijado por las
+            // colecciones importadas de arriba; un grupo ignorado lo conserva.
             foreach (string identity in group.MemberIdentities)
             {
                 GroupMembership[identity] = groupId;
-                IgnoredDevices.Remove(identity);
             }
         }
         PruneOrphanSignatures();
@@ -600,7 +653,7 @@ public sealed class Configuration
         PruneOrphanSignatures();
         string fullPath = Path.GetFullPath(path);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-        StoredConfigurationV5 stored = new()
+        StoredConfigurationV6 stored = new()
         {
             Devices = Devices.Values
                 .OrderBy(preference => preference.DisplayName)
@@ -675,7 +728,11 @@ public sealed class Configuration
             2 => LoadV2(json, layouts, warnings),
             3 => LoadV3(json, layouts, warnings),
             4 => LoadV4(json, layouts, warnings),
-            CurrentSchemaVersion => LoadV5(json, layouts, warnings),
+            // El esquema 6 comparte estructura con el 5 y solo relaja un
+            // invariante: un grupo puede tener todos sus miembros ignorados.
+            // Todo archivo 5 válido lo es también bajo el 6, así que se cargan
+            // por el mismo camino y el siguiente guardado escribe el 6.
+            5 or CurrentSchemaVersion => LoadCurrent(json, layouts, warnings),
             > CurrentSchemaVersion => throw InvalidData(
                 $"El esquema {version} fue creado por una versión más reciente de RightKeyboard. " +
                 $"Esta versión admite hasta el esquema {CurrentSchemaVersion}."),
@@ -688,7 +745,7 @@ public sealed class Configuration
         IReadOnlyList<Layout> layouts,
         List<string>? warnings)
     {
-        StoredConfigurationV5 stored = DeserializeStored(json);
+        StoredConfigurationV6 stored = DeserializeStored(json);
         // El esquema 3 no porta firmas ni grupos; se migra en memoria y el
         // siguiente guardado escribe el esquema vigente.
         stored.IgnoredSignatures = [];
@@ -709,19 +766,19 @@ public sealed class Configuration
         IReadOnlyList<Layout> layouts,
         List<string>? warnings)
     {
-        StoredConfigurationV5 stored = DeserializeStored(json);
+        StoredConfigurationV6 stored = DeserializeStored(json);
         stored.Groups = [];
         return BuildFromStored(stored, layouts, warnings);
     }
 
-    private static Configuration LoadV5(
+    private static Configuration LoadCurrent(
         string json,
         IReadOnlyList<Layout> layouts,
         List<string>? warnings) => BuildFromStored(DeserializeStored(json), layouts, warnings);
 
-    private static StoredConfigurationV5 DeserializeStored(string json)
+    private static StoredConfigurationV6 DeserializeStored(string json)
     {
-        StoredConfigurationV5 stored = JsonSerializer.Deserialize<StoredConfigurationV5>(json, JsonOptions)
+        StoredConfigurationV6 stored = JsonSerializer.Deserialize<StoredConfigurationV6>(json, JsonOptions)
             ?? throw InvalidData("El documento JSON no contiene preferencias.");
         stored.Devices ??= [];
         stored.Mappings ??= [];
@@ -732,7 +789,7 @@ public sealed class Configuration
     }
 
     private static Configuration BuildFromStored(
-        StoredConfigurationV5 stored,
+        StoredConfigurationV6 stored,
         IReadOnlyList<Layout> layouts,
         List<string>? warnings)
     {
@@ -858,10 +915,12 @@ public sealed class Configuration
                 {
                     throw InvalidData($"La identidad '{identity}' pertenece a más de un grupo.");
                 }
-                if (configuration.IgnoredDevices.Contains(identity))
-                {
-                    throw InvalidData($"El miembro '{identity}' no puede estar ignorado.");
-                }
+            }
+
+            if (members.Any(configuration.IgnoredDevices.Contains) &&
+                !members.All(configuration.IgnoredDevices.Contains))
+            {
+                throw InvalidData($"El grupo '{groupId}' mezcla identidades ignoradas y activas.");
             }
 
             Layout? groupLayout = null;
@@ -869,6 +928,11 @@ public sealed class Configuration
                 !TryReadLayout(storedGroup.Layout, storedGroup.LanguageName, storedGroup.LayoutName, layouts, out groupLayout))
             {
                 warnings?.Add($"No se encontró la distribución del grupo '{groupId}'; se importará sin asociación.");
+            }
+
+            if (groupLayout is not null && members.All(configuration.IgnoredDevices.Contains))
+            {
+                throw InvalidData($"El grupo ignorado '{groupId}' no puede tener distribución.");
             }
 
             LogicalDeviceGroup group = new(groupId, storedGroup.DisplayName, groupLayout, members);
@@ -1082,7 +1146,7 @@ public sealed class Configuration
 
             foreach (string identity in group.MemberIdentities)
             {
-                if (!Devices.ContainsKey(identity) || !groupedIdentities.Add(identity) || IgnoredDevices.Contains(identity))
+                if (!Devices.ContainsKey(identity) || !groupedIdentities.Add(identity))
                 {
                     throw InvalidData($"La membresía de grupo de '{identity}' no es válida.");
                 }
@@ -1091,6 +1155,22 @@ public sealed class Configuration
                     !string.Equals(groupId, group.Id, StringComparison.OrdinalIgnoreCase))
                 {
                     throw InvalidData($"El índice de membresía de '{identity}' no coincide con su grupo.");
+                }
+            }
+
+            // Un grupo lógico responde una sola vez a «¿se ignora?»: o todos sus
+            // miembros están ignorados —y entonces no conserva distribución— o
+            // ninguno lo está.
+            if (group.MemberIdentities.Any(IgnoredDevices.Contains))
+            {
+                if (!group.MemberIdentities.All(IgnoredDevices.Contains))
+                {
+                    throw InvalidData($"El grupo '{group.Id}' mezcla identidades ignoradas y activas.");
+                }
+
+                if (group.Layout is not null)
+                {
+                    throw InvalidData($"El grupo ignorado '{group.Id}' no puede tener distribución.");
                 }
             }
         }
@@ -1191,7 +1271,7 @@ public sealed class Configuration
         return normalized ?? fallback;
     }
 
-    private sealed class StoredConfigurationV5
+    private sealed class StoredConfigurationV6
     {
         public int Version { get; set; } = CurrentSchemaVersion;
         public List<StoredDevice> Devices { get; set; } = [];

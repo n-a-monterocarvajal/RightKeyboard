@@ -25,7 +25,7 @@ Este backlog sustituye para continuidad técnica el orden histórico de `ROADMAP
 - ningún teclado real se excluye solo por coincidencia débil — hecho por construcción: los dispositivos con huella quedan fuera del sistema de firmas;
 - el diagnóstico muestra por qué se aplicó o no la regla — hecho: `firma_registrada/no_registrada/no_aplicada/retirada`, `ignorado_recuperado_por_firma`.
 
-### 3. Agrupar identidades del mismo dispositivo — **implementado (Etapa 6), pendiente de validación física**
+### 3. Agrupar identidades del mismo dispositivo — **implementado (Etapa 6 y 1.6.1), pendiente de validación física**
 
 **Trabajo:** permitir que la UI anide/fusione manualmente identidades que el usuario reconoce como el mismo teclado conectado en distintos puertos.
 
@@ -35,7 +35,8 @@ Este backlog sustituye para continuidad técnica el orden histórico de `ROADMAP
 - una distribución/alias gobierna el grupo lógico — hecho: `Configuration.TryGetEffectiveLayout` y `GetDisplayName` priorizan el grupo;
 - los miembros del grupo siguen visibles como identidades técnicas secundarias — hecho en `SettingsWindow` mediante encabezado lógico y filas indentadas;
 - no hay fusión automática en dispositivos ambiguos — hecho: solo las acciones IPC v2 `group`/`ungroup` cambian membresía; la recuperación por huella nunca lo hace;
-- falta ejecutar la matriz física con dos teclados y cambio de puerto en la estación real.
+- los dispositivos ignorados también se agrupan desde 1.6.1 — hecho: un grupo tiene un solo estado ignorado, sin miembros mixtos y sin distribución mientras lo esté; esquema 6;
+- falta ejecutar la matriz física con dos teclados y cambio de puerto en la estación real, incluido el recorrido del dispositivo ignorado que cambia de puerto.
 
 ### 4. Completar la Configuración WinUI
 
@@ -109,9 +110,9 @@ Probar equipo A→B, layout ausente y dispositivo desconectado. Decidir si una a
 
 Las notas recogidas al usar cada versión viven en `docs/notas-de-uso-<versión>.md` (p. ej. `docs/notas-de-uso-1.5.4.md`), separadas de este backlog porque aún no están priorizadas ni convertidas en criterios de aceptación. Revísalas al planificar: cada punto es candidato a entrar aquí, en `ROADMAP.md` o en `docs/plan-1.6.0.md`. Al promover uno, déjalo referenciado desde el documento de notas para no duplicar el seguimiento.
 
-Pendientes de `docs/notas-de-uso-1.5.4.md`: el indicador gráfico de conexión y la regla de orden «Conectados arriba» quedaron **resueltos en la Etapa 19 (1.5.10)**; siguen sin triar la evaluación de agrupar identidades ignoradas y el actualizador en la app. El desplegable de agrupación vacío quedó **corregido en 1.5.5.2** (`SettingsEditorAvailability.IsGroupTargetCandidate`), pendiente solo de validación física.
+Pendientes de `docs/notas-de-uso-1.5.4.md`: el indicador gráfico de conexión y la regla de orden «Conectados arriba» quedaron **resueltos en la Etapa 19 (1.5.10)**; la evaluación de agrupar identidades ignoradas quedó **resuelta en 1.6.1**; sigue sin triar el actualizador en la app. El desplegable de agrupación vacío quedó **corregido en 1.5.5.2** (`SettingsEditorAvailability.IsGroupTargetCandidate`), pendiente solo de validación física.
 
-Pendientes de `docs/notas-de-uso-1.6.0.md`: los puntos 1 a 6, recogidos sobre el artefacto, quedaron resueltos en las etapas 21 a 23; el 7 (actualizador) se difirió a la etapa 1 de `docs/plan-1.7.0.md`. El punto 8 se recogió ya sobre la release publicada y **sigue sin triar**: no se pueden agrupar dispositivos ignorados, lo que obliga a ignorar puerto por puerto un mismo dispositivo cuando su identidad técnica cambia. Es el mismo asunto que el punto 3 de `docs/notas-de-uso-1.5.4.md`, ahora confirmado en uso real; la nota deja documentadas las cuatro capas que hoy sostienen la restricción y lo que habría que decidir antes de levantarla.
+Pendientes de `docs/notas-de-uso-1.6.0.md`: los puntos 1 a 6, recogidos sobre el artefacto, quedaron resueltos en las etapas 21 a 23; el 7 (actualizador) se difirió a la etapa 1 de `docs/plan-1.7.0.md`. El punto 8 —no se podían agrupar dispositivos ignorados— quedó **resuelto en 1.6.1** (etapa 2 de `docs/plan-1.7.0.md`), con validación física pendiente. Cierra también el punto 3 de `docs/notas-de-uso-1.5.4.md`, que llevaba sin triar desde entonces.
 
 Pendientes abiertos en `docs/notas-de-uso-1.5.7.md`, ya incorporados a `docs/plan-1.6.0.md`: la Etapa 17 (1.5.8) añadió instrumentación para decidir con evidencia física si la falta de cambio de distribución con el Escritorio en foco es una limitación de Explorer/Shell o un defecto propio. La Etapa 18 (1.5.9) añadió la prueba del árbol visual real y confirmó radio 4 en el glifo de `CheckBox`; no hizo un cuarto cambio de producción porque el defecto no se reprodujo en el árbol ni en la revisión visual actual. Ambos puntos conservan validación pendiente en la estación física.
 

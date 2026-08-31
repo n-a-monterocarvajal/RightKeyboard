@@ -81,13 +81,45 @@ public sealed class DevicePresentationTests
         bool second,
         bool expectedConnected)
     {
-        DevicePresentation presentation = DevicePresentation.CreateGroup([first, second], SpanishName);
+        DevicePresentation presentation = DevicePresentation.CreateGroup(
+            [first, second],
+            [false, false],
+            SpanishName);
 
         Assert.Multiple(() =>
         {
             Assert.That(presentation.Connected, Is.EqualTo(expectedConnected));
             Assert.That(presentation.LayoutName, Is.EqualTo(SpanishName));
+            Assert.That(presentation.Ignored, Is.False);
         });
+    }
+
+    [Test]
+    public void CreateGroup_TodosLosMiembrosIgnorados_PresentaElGrupoComoIgnorado()
+    {
+        DevicePresentation presentation = DevicePresentation.CreateGroup(
+            [true, false],
+            [true, true],
+            layoutName: null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(presentation.Ignored, Is.True);
+            Assert.That(presentation.Connected, Is.True);
+            Assert.That(presentation.SecondaryText, Is.EqualTo("Conectado · Ignorado"));
+            Assert.That(presentation.SortRank, Is.EqualTo(DevicePresentation.GetSortRank(
+                connected: true,
+                ignored: true,
+                configured: false)));
+        });
+    }
+
+    [Test]
+    public void CreateGroup_SinMiembros_NoSePresentaComoIgnorado()
+    {
+        DevicePresentation presentation = DevicePresentation.CreateGroup([], [], SpanishName);
+
+        Assert.That(presentation.Ignored, Is.False);
     }
 
     [Test]

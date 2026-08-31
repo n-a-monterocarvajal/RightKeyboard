@@ -50,7 +50,9 @@ Agregar una prueba directa sobre el evento JSON sería buena mejora, pero ya no 
 
 Si no hay `ContainerId` persistente, cambia `InstanceId` y existen dos dispositivos con igual huella o asociaciones conflictivas, RightKeyboard sigue sin adivinar automáticamente. La Etapa 6 añade en Configuración WinUI una operación manual para agrupar las identidades que el usuario reconoce como el mismo teclado.
 
-El grupo lógico tiene un solo alias/layout efectivo y muestra debajo sus identidades técnicas. Separar restaura las preferencias individuales que quedaron latentes, y la recuperación por huella puede reutilizar la distribución sin crear membresía. No se admiten miembros ignorados y no existe fusión automática para dispositivos ambiguos.
+El grupo lógico tiene un solo alias/layout efectivo y muestra debajo sus identidades técnicas. Separar restaura las preferencias individuales que quedaron latentes, y la recuperación por huella puede reutilizar la distribución sin crear membresía. No existe fusión automática para dispositivos ambiguos.
+
+Desde 1.6.1 sí se admiten miembros ignorados, con un solo estado para todo el grupo: o todas sus identidades están ignoradas o ninguna, y mientras lo estén el grupo no conserva distribución. Es la vía manual para el dispositivo ignorado que cambia de puerto USB y reaparece con otra identidad técnica; la automática (huella y firma HID parcial) solo cubre los casos inequívocos.
 
 **Pendiente:** validar en la estación física con dos teclados, reconexión y cambio de puerto. Esta VM no dispone de passthrough directo de dispositivos.
 
