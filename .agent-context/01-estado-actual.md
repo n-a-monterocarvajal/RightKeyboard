@@ -1,10 +1,10 @@
 # Estado actual real
 
-Snapshot actualizado el **2026-08-03** tras corregir el empaquetado de 1.6.0. Contrastar siempre con `git status`, `git log -1 --oneline` y los metadatos de versión del checkout actual.
+Snapshot actualizado el **2026-08-31** al cerrar 1.6.1. Contrastar siempre con `git status`, `git log -1 --oneline` y los metadatos de versión del checkout actual.
 
 ## Resumen ejecutivo
 
-`1.5.0` es la última versión publicada; el código fuente cierra en `1.6.0`. El camino instalado normal usa un residente WinForms/Win32 (`RightKeyboard.exe`) y un frontend WinUI bajo demanda (`ui/RightKeyboard.WinUI.exe`), ambos apoyados en la biblioteca neutral `RightKeyboard.Shared.dll`.
+`1.6.0` es la última versión publicada; el código fuente cierra en `1.6.1`, pendiente de etiquetar y publicar desde `master`. El camino instalado normal usa un residente WinForms/Win32 (`RightKeyboard.exe`) y un frontend WinUI bajo demanda (`ui/RightKeyboard.WinUI.exe`), ambos apoyados en la biblioteca neutral `RightKeyboard.Shared.dll`.
 
 ## Funciona en el código actual
 
@@ -58,4 +58,4 @@ No hay servicios falsos en producción. `RightKeyboard.WinUI` usa IPC real, `Con
 
 ## Evidencia automatizada
 
-En el snapshot inicial había **98 pruebas NUnit**; tras la Etapa 20 hay **220 NUnit y 2 pruebas WinUI de árbol visual real**. Las nuevas pruebas fijan el límite del ensamblado compartido y la versión 1.6.0; las pruebas WinUI levantan una aplicación XAML, resuelven el template de `CheckBox` y verifican los indicadores de conexión y sus nombres accesibles. Es una cobertura UI deliberadamente estrecha: la suite aún no cubre extremo a extremo el pipe, ventanas completas, foco/foreground, SetupAPI real, instalador ni hardware.
+En el snapshot inicial había **98 pruebas NUnit**; tras 1.6.1 hay **246 NUnit y 2 pruebas WinUI de árbol visual real**, verificadas en CI (ejecución 93). Las nuevas de 1.6.1 cubren la agrupación de ignorados, el esquema 6 y su migración desde el 5; las pruebas WinUI levantan una aplicación XAML, resuelven el template de `CheckBox` y verifican los indicadores de conexión y sus nombres accesibles. Es una cobertura UI deliberadamente estrecha: la suite aún no cubre extremo a extremo el pipe, ventanas completas, foco/foreground, SetupAPI real, instalador ni hardware.
