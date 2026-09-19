@@ -4,7 +4,7 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [Sin publicar]
 
-## [1.6.1] - 2026-08-31
+## [1.6.1] - 2026-09-19
 
 ### Detección de teclado
 

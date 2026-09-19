@@ -1,6 +1,6 @@
 # Estado actual real
 
-Snapshot actualizado el **2026-08-31** al cerrar 1.6.1. Contrastar siempre con `git status`, `git log -1 --oneline` y los metadatos de versión del checkout actual.
+Snapshot actualizado el **2026-09-19** al publicar 1.6.1. Contrastar siempre con `git status`, `git log -1 --oneline` y los metadatos de versión del checkout actual.
 
 ## Resumen ejecutivo
 
