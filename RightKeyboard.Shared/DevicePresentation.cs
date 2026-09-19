@@ -28,10 +28,22 @@ internal readonly record struct DevicePresentation(
         ignored,
         layoutName);
 
-    public static DevicePresentation CreateGroup(IEnumerable<bool> connectedMembers, string? layoutName)
+    /// <summary>
+    /// Un grupo se presenta conectado si cualquier miembro lo está e ignorado
+    /// solo si lo están todos: su estado es único, sin miembros mixtos.
+    /// </summary>
+    public static DevicePresentation CreateGroup(
+        IEnumerable<bool> connectedMembers,
+        IEnumerable<bool> ignoredMembers,
+        string? layoutName)
     {
         ArgumentNullException.ThrowIfNull(connectedMembers);
-        return Create(connectedMembers.Any(connected => connected), ignored: false, layoutName);
+        ArgumentNullException.ThrowIfNull(ignoredMembers);
+        bool[] ignored = ignoredMembers.ToArray();
+        return Create(
+            connectedMembers.Any(connected => connected),
+            ignored.Length > 0 && ignored.All(member => member),
+            layoutName);
     }
 
     public static int GetSortRank(bool connected, bool ignored, bool configured)

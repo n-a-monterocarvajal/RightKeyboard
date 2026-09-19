@@ -417,6 +417,7 @@ internal sealed class SettingsDialog : FluentForm
                 .ToArray();
             DevicePresentation groupPresentation = DevicePresentation.CreateGroup(
                 members.Select(member => connected.Contains(member.Identity)),
+                members.Select(member => configuration.IgnoredDevices.Contains(member.Identity)),
                 group.Layout?.Name);
             SettingsDeviceListRow parent = new(
                 members[0].Identity,

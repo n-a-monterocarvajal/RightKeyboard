@@ -4,6 +4,27 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [Sin publicar]
 
+## [1.6.1] - 2026-08-31
+
+### Detección de teclado
+
+- Los dispositivos ignorados se pueden agrupar. Hasta ahora la agrupación manual los excluía por diseño, de modo que un mismo dispositivo ignorado conectado en otro puerto USB reaparecía como una identidad técnica nueva y había que ignorarlo otra vez, puerto por puerto. Ahora esas identidades se declaran como un solo dispositivo lógico y la exclusión las cubre a todas.
+- Un grupo lógico tiene un único estado: o todas sus identidades están ignoradas o ninguna lo está. Solo se agrupan identidades que ya coinciden en ese estado, ignorar o reactivar un grupo alcanza a todos sus miembros, y un grupo ignorado no conserva distribución. Separar una identidad la deja ignorada por su cuenta, de modo que la operación sigue siendo reversible.
+- Ignorar desde el selector una identidad agrupada ignora el dispositivo lógico completo en lugar de disolver el grupo: la agrupación declara que esas identidades son el mismo aparato.
+
+### Interfaz
+
+- La casilla «Ignorar eventos de este dispositivo» aparece también al seleccionar un grupo lógico, en la Configuración WinUI y en el respaldo WinForms. El desplegable «Agrupar con otra identidad» ofrece candidatos con el mismo estado ignorado que el dispositivo seleccionado, y espera a que un cambio de esa casilla se guarde antes de permitir agrupar.
+- La fila de un grupo ignorado muestra «Ignorado» en su estado y en su nombre accesible, y se ordena con el resto de ignorados de su bloque de conexión.
+
+### Preferencias
+
+- El esquema de preferencias pasa a la versión 6. Solo relaja el invariante que impedía miembros de grupo ignorados: comparte estructura con el 5, que se carga sin transformación, y el siguiente guardado escribe 6. Un archivo con un grupo ignorado no puede leerse con versiones anteriores, que lo rechazan indicando que procede de una versión más reciente en lugar de darlo por inválido.
+
+### Pruebas
+
+- La suite cubre agrupar dos ignorados, el rechazo de estados mixtos, ignorar y reactivar un grupo completo, separar conservando el estado, el round-trip del esquema 6, la migración desde el 5 y el rechazo de un grupo ignorado con distribución. La suite alcanza 246 pruebas NUnit y 2 pruebas WinUI.
+
 ## [1.6.0] - 2026-08-18
 
 ### Interfaz

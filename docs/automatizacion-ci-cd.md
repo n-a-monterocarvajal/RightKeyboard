@@ -27,7 +27,7 @@ compilaciones programadas, artefactos permanentes y jobs redundantes.
    modo que una sola compilación cubre la biblioteca compartida, el núcleo WinForms,
    el frontend WinUI y ambos proyectos de pruebas. `Directory.Build.props` activa `TreatWarningsAsErrors`, por lo
    que cualquier advertencia detiene el build (política AUT-15).
-3. Ejecuta `scripts/run-tests.ps1`: 220 pruebas NUnit mediante `dotnet test` y
+3. Ejecuta `scripts/run-tests.ps1`: 246 pruebas NUnit mediante `dotnet test` y
    dos pruebas dentro de una aplicación WinUI real que resuelve el árbol XAML.
 
 Un fallo de restauración, compilación o pruebas hace fallar el workflow de forma
