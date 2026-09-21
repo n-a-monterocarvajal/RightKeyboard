@@ -14,6 +14,7 @@ public sealed class SharedContractsTests
             typeof(SettingsSnapshot),
             typeof(VersionPresentation),
             typeof(DevicePresentation),
+            typeof(DeviceNaming),
             typeof(SettingsEditorStateTracker),
             typeof(SettingsEditorAvailability),
             typeof(SettingsPanelVisualContract),
@@ -31,8 +32,8 @@ public sealed class SharedContractsTests
     }
 
     [Test]
-    public void VersionCompartida_CierraEnUnoSeisUno()
+    public void VersionCompartida_CierraEnUnoSeisDos()
     {
-        Assert.That(VersionPresentation.Current, Is.EqualTo("1.6.1"));
+        Assert.That(VersionPresentation.Current, Is.EqualTo("1.6.2"));
     }
 }

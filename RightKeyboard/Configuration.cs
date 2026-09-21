@@ -93,7 +93,7 @@ public sealed class Configuration
     public string GetDisplayName(KeyboardDevice device) => GetGroup(device.Identity)?.DisplayName ??
         (Devices.TryGetValue(device.Identity, out DevicePreference? preference)
             ? preference.DisplayName
-            : BuildSuggestedName(device.DisplayName, device.TechnicalId));
+            : DeviceNaming.GetIdentityLabel(device.DisplayName, device.TechnicalId));
 
     public LogicalDeviceGroup? GetGroup(string identity) =>
         GroupMembership.TryGetValue(identity, out string? groupId) && DeviceGroups.TryGetValue(groupId, out LogicalDeviceGroup? group)
@@ -987,7 +987,7 @@ public sealed class Configuration
             {
                 Identity = identity,
                 Fingerprint = mapping.Fingerprint ?? string.Empty,
-                DetectedName = mapping.DisplayName ?? "Teclado",
+                DetectedName = mapping.DisplayName ?? DeviceNaming.UnnamedDevice,
                 LastSeenUtc = DateTimeOffset.UtcNow
             };
             if (TryReadLayout(mapping.Layout, null, null, layouts, out Layout? layout))
@@ -1254,11 +1254,6 @@ public sealed class Configuration
         return layout is not null;
     }
 
-    private static string BuildSuggestedName(string detectedName, string technicalId) =>
-        string.Equals(detectedName, "Teclado sin nombre", StringComparison.CurrentCultureIgnoreCase)
-            ? $"Teclado {technicalId.Split(' ').LastOrDefault()}".Trim()
-            : detectedName;
-
     private static string? NormalizeCustomName(string? customName, string detectedName)
     {
         string? normalized = string.IsNullOrWhiteSpace(customName) ? null : customName.Trim();
@@ -1326,7 +1321,9 @@ public sealed class Configuration
 
         public DevicePreference ToPreference(string identity)
         {
-            string detectedName = string.IsNullOrWhiteSpace(DetectedName) ? "Teclado" : DetectedName.Trim();
+            string detectedName = string.IsNullOrWhiteSpace(DetectedName)
+                ? DeviceNaming.UnnamedDevice
+                : DetectedName.Trim();
             return new DevicePreference
             {
                 Identity = identity,
@@ -1405,7 +1402,7 @@ public sealed class LogicalDeviceGroup
     public LogicalDeviceGroup(string id, string? displayName, Layout? layout, IEnumerable<string> memberIdentities)
     {
         Id = id;
-        CustomName = string.IsNullOrWhiteSpace(displayName) ? "Teclado agrupado" : displayName.Trim();
+        CustomName = string.IsNullOrWhiteSpace(displayName) ? DeviceNaming.UnnamedGroup : displayName.Trim();
         Layout = layout;
         MemberIdentities = new HashSet<string>(memberIdentities, StringComparer.OrdinalIgnoreCase);
     }

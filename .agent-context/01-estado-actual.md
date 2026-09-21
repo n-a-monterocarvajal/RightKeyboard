@@ -1,10 +1,10 @@
 # Estado actual real
 
-Snapshot actualizado el **2026-09-19** al publicar 1.6.1. Contrastar siempre con `git status`, `git log -1 --oneline` y los metadatos de versión del checkout actual.
+Snapshot actualizado el **2026-09-21** al cerrar 1.6.2. Contrastar siempre con `git status`, `git log -1 --oneline` y los metadatos de versión del checkout actual.
 
 ## Resumen ejecutivo
 
-`1.6.0` es la última versión publicada; el código fuente cierra en `1.6.1`, pendiente de etiquetar y publicar desde `master`. El camino instalado normal usa un residente WinForms/Win32 (`RightKeyboard.exe`) y un frontend WinUI bajo demanda (`ui/RightKeyboard.WinUI.exe`), ambos apoyados en la biblioteca neutral `RightKeyboard.Shared.dll`.
+`1.6.1` es la última versión publicada; el código fuente cierra en `1.6.2`. El camino instalado normal usa un residente WinForms/Win32 (`RightKeyboard.exe`) y un frontend WinUI bajo demanda (`ui/RightKeyboard.WinUI.exe`), ambos apoyados en la biblioteca neutral `RightKeyboard.Shared.dll`.
 
 ## Funciona en el código actual
 
@@ -23,6 +23,7 @@ Snapshot actualizado el **2026-09-19** al publicar 1.6.1. Contrastar siempre con
 - Detección conservadora de no-teclados por nombre y de la firma sintética observada al usar el historial del portapapeles.
 - Exclusión por firma HID parcial (Etapa 5): ignorar manualmente un dispositivo con huella vacía registra su firma (`HidSignature`); reconectarlo con otra identidad no reabre el selector si la coincidencia es inequívoca. Esquema de preferencias 4 (`ignoredSignatures`); el 3 migra al guardar.
 - Agrupación manual de identidades (Etapa 6): esquema 6 y protocolo IPC v2; un grupo lógico gobierna alias/layout, conserva visibles sus miembros técnicos y al separarlos reaparecen sus preferencias individuales latentes. La recuperación por huella nunca crea membresía.
+- Nombres de identidad técnica (1.6.2): un HID sin nombre útil se presenta como «Dispositivo sin nombre», no como teclado, porque la clasificación se hace por el propio nombre y no hay señal para atribuirle categoría. La fila subordinada de un grupo se nombra por su identificador técnico cuando el detectado es genérico, y lleva ese identificador en la línea de estado cuando el detectado es útil pero se repite entre miembros. El contrato vive en `RightKeyboard.Shared/DeviceNaming.cs`; la huella conserva el literal anterior y una prueba fija su valor.
 - Agrupación de dispositivos ignorados (1.6.1): un grupo puede estar ignorado y su estado es único —todos sus miembros o ninguno—, sin distribución mientras lo esté. Solo se agrupan identidades que ya coinciden en ese estado; ignorar o reactivar alcanza a todo el grupo, también desde el selector; separar deja a cada identidad ignorada por su cuenta. El esquema pasó a 6 para que las versiones anteriores rechacen con el mensaje correcto un archivo que no pueden interpretar.
 - Configuración reordenada (Etapa 7): una tarjeta Preferencias reúne Exportar, Importar y Limpiar; Sistema conserva aparte el inicio con Windows y, solo en compilaciones diagnósticas, sus herramientas. La ventana parte de 1080 × 720 y exige un mínimo de 900 × 640 píxeles lógicos ajustados al DPI; el editor ocupa toda la columna derecha, fija Guardar/Olvidar al pie y deja que la lista de dispositivos absorba la reducción de altura mediante desplazamiento.
 - Diagnóstico detallado fuera del build normal; el código del logger queda disponible para compilaciones de desarrollo con `RIGHTKEYBOARD_DIAGNOSTICS`.
@@ -58,4 +59,4 @@ No hay servicios falsos en producción. `RightKeyboard.WinUI` usa IPC real, `Con
 
 ## Evidencia automatizada
 
-En el snapshot inicial había **98 pruebas NUnit**; tras 1.6.1 hay **246 NUnit y 2 pruebas WinUI de árbol visual real**, verificadas en CI (ejecución 93). Las nuevas de 1.6.1 cubren la agrupación de ignorados, el esquema 6 y su migración desde el 5; las pruebas WinUI levantan una aplicación XAML, resuelven el template de `CheckBox` y verifican los indicadores de conexión y sus nombres accesibles. Es una cobertura UI deliberadamente estrecha: la suite aún no cubre extremo a extremo el pipe, ventanas completas, foco/foreground, SetupAPI real, instalador ni hardware.
+En el snapshot inicial había **98 pruebas NUnit**; tras 1.6.2 hay **262 NUnit y 2 pruebas WinUI de árbol visual real**, verificadas en CI. Las nuevas de 1.6.1 cubren la agrupación de ignorados, el esquema 6 y su migración desde el 5, y las de 1.6.2 el contrato de nombres y la estabilidad de la huella; las pruebas WinUI levantan una aplicación XAML, resuelven el template de `CheckBox` y verifican los indicadores de conexión y sus nombres accesibles. Es una cobertura UI deliberadamente estrecha: la suite aún no cubre extremo a extremo el pipe, ventanas completas, foco/foreground, SetupAPI real, instalador ni hardware.

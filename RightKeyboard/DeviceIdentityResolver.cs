@@ -64,7 +64,11 @@ internal sealed class DeviceIdentityResolver
 
     internal static DeviceDescriptor BuildDescriptor(string devicePath, DeviceProperties properties)
     {
-        string displayName = BuildDisplayName(properties);
+        string? reportedName = FirstUsefulName(
+            properties.BusReportedDescription,
+            properties.FriendlyName,
+            properties.Description);
+        string displayName = BuildDisplayName(properties, reportedName);
         string fingerprint = BuildFingerprint(properties, displayName);
 
         string identity;
@@ -92,15 +96,16 @@ internal sealed class DeviceIdentityResolver
             fingerprint,
             displayName,
             technicalId,
-            DeviceClassifier.IsClearlyNonKeyboard(displayName));
+            // Sin un nombre informado por Windows no hay nada que clasificar: el
+            // de reemplazo es nuestro y el del fabricante por sí solo no dice qué
+            // es el dispositivo. Clasificarlo entonces convertiría a un fabricante
+            // llamado «Mouse …» en un auto-ignorado.
+            reportedName is not null && DeviceClassifier.IsClearlyNonKeyboard(displayName));
     }
 
-    private static string BuildDisplayName(DeviceProperties properties)
+    private static string BuildDisplayName(DeviceProperties properties, string? reportedName)
     {
-        string name = FirstUsefulName(
-            properties.BusReportedDescription,
-            properties.FriendlyName,
-            properties.Description) ?? "Teclado sin nombre";
+        string name = reportedName ?? DeviceNaming.UnnamedDevice;
 
         if (!string.IsNullOrWhiteSpace(properties.Manufacturer) &&
             !name.Contains(properties.Manufacturer, StringComparison.CurrentCultureIgnoreCase) &&
@@ -115,11 +120,25 @@ internal sealed class DeviceIdentityResolver
     private static string BuildFingerprint(DeviceProperties properties, string displayName)
     {
         string hardware = string.Join('|', properties.HardwareIds.Order(StringComparer.OrdinalIgnoreCase));
-        string material = $"{properties.Manufacturer}|{displayName}|{hardware}".Trim().ToUpperInvariant();
+        string material = $"{properties.Manufacturer}|{ToFingerprintName(displayName)}|{hardware}"
+            .Trim()
+            .ToUpperInvariant();
         return IsGenericName(displayName) && string.IsNullOrWhiteSpace(hardware)
             ? string.Empty
             : Hash(material);
     }
+
+    /// <summary>
+    /// La huella conserva el literal anterior a 1.6.2. El nombre mostrado dejó de
+    /// decir «Teclado», pero cambiar el material del hash invalidaría las huellas
+    /// ya guardadas y con ellas la recuperación de ignorado y de distribución
+    /// justo en los dispositivos mal nombrados, que son los que dependen de ella.
+    /// </summary>
+    private static string ToFingerprintName(string displayName) =>
+        displayName.Replace(
+            DeviceNaming.UnnamedDevice,
+            DeviceNaming.LegacyUnnamedDevice,
+            StringComparison.Ordinal);
 
     private static string? FirstUsefulName(params string?[] candidates) =>
         candidates.FirstOrDefault(candidate => !string.IsNullOrWhiteSpace(candidate) && !IsGenericName(candidate));
@@ -132,7 +151,8 @@ internal sealed class DeviceIdentityResolver
         "Dispositivo de teclado HID",
         "Standard PS/2 Keyboard",
         "Teclado estándar PS/2",
-        "Teclado sin nombre"
+        DeviceNaming.UnnamedDevice,
+        DeviceNaming.LegacyUnnamedDevice
     };
 
     private static bool IsGenericManufacturer(string value) =>

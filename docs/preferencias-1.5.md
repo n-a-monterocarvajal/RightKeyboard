@@ -29,7 +29,7 @@ Cada elemento de `devices` conserva:
 - `identity`: identidad persistente y clave lógica, comparada sin distinguir mayúsculas;
 - `fingerprint`: huella de modelo usada solo para recuperación no ambigua;
 - `signature`: firma HID parcial canónica opcional; no es una identidad;
-- `detectedName`: último nombre informado por Windows;
+- `detectedName`: último nombre informado por Windows, o «Dispositivo sin nombre» cuando no ofrece ninguno útil. Desde 1.6.2 ese texto de reemplazo es neutro; el anterior, «Teclado sin nombre», se sigue reconociendo en archivos ya guardados y es el que se conserva para calcular la huella;
 - `customName`: alias opcional del usuario;
 - `technicalId`: identificador técnico visible para diagnóstico;
 - `lastSeenUtc`: fecha y hora UTC de la última detección.
