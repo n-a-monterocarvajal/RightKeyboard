@@ -6,10 +6,9 @@ RightKeyboard se encarga de eso.
 
 Cada teclado guarda su propia distribución. Cuando empiezas a escribir, la aplicación reconoce
 por cuál dispositivo llegó la pulsación y le pide a la ventana activa que use la que
-corresponde. No hay atajos que memorizar ni indicador que vigilar: escribes y la distribución
-ya es la correcta.
+corresponde.
 
-Vive en segundo plano, y su única presencia permanente es el icono del área de notificación.
+Funciona en segundo plano, y su única presencia permanente es el icono del área de notificación.
 Desde su menú se abre **Configuración**, donde está todo lo demás, y **Salir**.
 
 > Versión publicada: **1.6.0**. Los cambios están en el [registro](CHANGELOG.md) y el detalle
