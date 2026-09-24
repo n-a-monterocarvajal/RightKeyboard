@@ -4,7 +4,7 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [Sin publicar]
 
-## [1.6.2] - 2026-09-21
+## [1.6.2] - 2026-09-24
 
 ### Interfaz
 
