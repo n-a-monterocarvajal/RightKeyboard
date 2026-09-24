@@ -432,10 +432,17 @@ internal sealed class SettingsDialog : FluentForm
                         connected.Contains(member.Identity),
                         configuration.IgnoredDevices.Contains(member.Identity),
                         group.Layout?.Name);
+                    // Misma semántica que WinUI: la fila subordinada nombra a su
+                    // identidad técnica, no al alias que gobierna el grupo.
+                    string memberName = DeviceNaming.GetIdentityLabel(member.DetectedName, member.TechnicalId);
+                    string technicalMarker =
+                        DeviceNaming.GetSecondaryTechnicalId(member.DetectedName, member.TechnicalId) is string secondaryId
+                            ? $"Identidad técnica · {secondaryId}"
+                            : "Identidad técnica";
                     return new SettingsDeviceListRow(
                         member.Identity,
-                        $"{member.DetectedName}\r\nIdentidad técnica · {presentation.SecondaryText}",
-                        $"{member.DetectedName}. Identidad técnica. {presentation.SecondaryText.Replace(" · ", ". ")}.",
+                        $"{memberName}\r\n{technicalMarker} · {presentation.SecondaryText}",
+                        $"{memberName}. {technicalMarker.Replace(" · ", ". ")}. {presentation.SecondaryText.Replace(" · ", ". ")}.",
                         presentation,
                         IsGroupMember: true);
                 })

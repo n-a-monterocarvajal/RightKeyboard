@@ -114,6 +114,8 @@ Pendientes de `docs/notas-de-uso-1.5.4.md`: el indicador gráfico de conexión y
 
 Pendientes de `docs/notas-de-uso-1.6.0.md`: los puntos 1 a 6, recogidos sobre el artefacto, quedaron resueltos en las etapas 21 a 23; el 7 (actualizador) se difirió a la etapa 1 de `docs/plan-1.7.0.md`. El punto 8 —no se podían agrupar dispositivos ignorados— quedó **resuelto en 1.6.1** (etapa 2 de `docs/plan-1.7.0.md`), con validación física pendiente. Cierra también el punto 3 de `docs/notas-de-uso-1.5.4.md`, que llevaba sin triar desde entonces.
 
+Pendientes de `docs/notas-de-uso-1.6.1.md`: el punto 1 —las identidades agrupadas se llamaban todas «Teclado sin nombre»— quedó **resuelto en 1.6.2** (etapa 3 de `docs/plan-1.7.0.md`), con validación física pendiente. El contrato de nombres vive ahora en `RightKeyboard.Shared/DeviceNaming.cs`; al tocarlo, respetar que la huella se calcula con el literal anterior y que una prueba fija ese valor.
+
 Pendientes abiertos en `docs/notas-de-uso-1.5.7.md`, ya incorporados a `docs/plan-1.6.0.md`: la Etapa 17 (1.5.8) añadió instrumentación para decidir con evidencia física si la falta de cambio de distribución con el Escritorio en foco es una limitación de Explorer/Shell o un defecto propio. La Etapa 18 (1.5.9) añadió la prueba del árbol visual real y confirmó radio 4 en el glifo de `CheckBox`; no hizo un cuarto cambio de producción porque el defecto no se reprodujo en el árbol ni en la revisión visual actual. Ambos puntos conservan validación pendiente en la estación física.
 
 ## Puerta propuesta

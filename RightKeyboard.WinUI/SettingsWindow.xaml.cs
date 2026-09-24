@@ -2069,7 +2069,11 @@ public sealed class DeviceRow
         Identity = device.Identity;
         TargetIdentity = device.Identity;
         GroupId = groupId;
-        DisplayName = device.DetectedName;
+        // El alias lo gobierna el grupo, así que la fila subordinada nombra a su
+        // identidad técnica. El nombre detectado no siempre la identifica —dos
+        // identidades del mismo aparato lo comparten—, y entonces el
+        // identificador es lo único que las distingue.
+        DisplayName = DeviceNaming.GetIdentityLabel(device.DetectedName, device.TechnicalId);
         DetectedName = device.DetectedName;
         TechnicalId = device.TechnicalId;
         LastSeenUtc = device.LastSeenUtc;
@@ -2080,8 +2084,13 @@ public sealed class DeviceRow
             device.Connected,
             device.Ignored,
             effectiveLayout?.Name);
-        Summary = $"Identidad técnica · {presentation.SecondaryText}";
-        AccessibleName = $"{DisplayName}. Identidad técnica. {presentation.SecondaryText.Replace(" · ", ". ")}.";
+        string technicalMarker =
+            DeviceNaming.GetSecondaryTechnicalId(device.DetectedName, device.TechnicalId) is string secondaryId
+                ? $"Identidad técnica · {secondaryId}"
+                : "Identidad técnica";
+        Summary = $"{technicalMarker} · {presentation.SecondaryText}";
+        AccessibleName =
+            $"{DisplayName}. {technicalMarker.Replace(" · ", ". ")}. {presentation.SecondaryText.Replace(" · ", ". ")}.";
         SortRank = presentation.SortRank;
     }
 

@@ -20,6 +20,7 @@ y de los cambios visuales, registrada en su nota de publicación.
 |---|---|---|---|
 | 1 | 1.7.0 | Verificación de actualizaciones contra GitHub | Pendiente |
 | 2 | 1.6.1 | Agrupación de dispositivos ignorados | Hecho, validación física pendiente |
+| 3 | 1.6.2 | Nombres de identidad técnica | Hecho, validación física pendiente |
 
 ### Etapa 1 — Verificación de actualizaciones contra GitHub
 
@@ -126,6 +127,40 @@ y la vía manual —agrupar— excluía a los ignorados por diseño.
 **Pendiente:** la validación física del recorrido completo —ignorar, cambiar de
 puerto, ignorar la identidad nueva y agrupar ambas— junto con la de la
 agrupación no ignorada, abierta desde 1.5.1.
+
+### Etapa 3 — Nombres de identidad técnica (1.6.2)
+
+Punto 1 de [notas de uso 1.6.1](notas-de-uso-1.6.1.md#1-las-identidades-agrupadas-pasan-a-llamarse-teclado-sin-nombre),
+recogido al usar la versión publicada.
+
+**Problema.** La fila subordinada de un grupo mostraba el nombre detectado en crudo,
+que para un HID mal identificado era «Teclado sin nombre». Dos defectos en uno: el
+sustantivo es falso cuando lo agrupado es un mouse o un presentador, y el texto no
+identifica nada, así que las dos identidades del mismo aparato en puertos distintos
+—el caso que motiva la agrupación— quedaban indistinguibles.
+
+**Decisiones tomadas.**
+
+- **La fila subordinada nombra a su identidad técnica**, no al alias: el
+  identificador cuando el nombre detectado es genérico, el nombre detectado cuando
+  es útil. El alias sigue siendo del grupo, y mostrarlo también en el miembro
+  habría duplicado la misma información con dos valores distintos.
+- **El identificador acompaña a «Identidad técnica»** cuando el nombre detectado sí
+  es útil pero se repite entre miembros, que es el caso del mismo modelo en dos
+  puertos. Cuando la etiqueta ya es el identificador no se repite.
+- **Sustantivo neutro en toda la app.** Ante un HID sin nombre no hay señal para
+  decidir si es teclado: `DeviceClassifier` clasifica por el propio nombre. El
+  texto honesto es «Dispositivo sin nombre», y por lo mismo «Dispositivo agrupado».
+- **La huella no cambia.** `BuildFingerprint` hashea el nombre mostrado, de modo
+  que el renombrado se hace pinchando el material del hash al literal anterior. Sin
+  esa precaución se habrían invalidado las huellas guardadas y roto la recuperación
+  de ignorado y de distribución justo en los dispositivos mal nombrados. Un valor
+  dorado en las pruebas impide cambiarlo por descuido.
+- **El literal anterior se sigue reconociendo**, porque quedó guardado como
+  `detectedName` en las preferencias de los usuarios de 1.6.1 y anteriores.
+
+**Pendiente:** ver en una estación física los nombres reales de un presentador y de
+dos identidades del mismo aparato, junto a la validación de la etapa 2.
 
 ## Carriles heredados
 

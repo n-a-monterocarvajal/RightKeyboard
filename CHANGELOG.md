@@ -4,6 +4,22 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [Sin publicar]
 
+## [1.6.2] - 2026-09-24
+
+### Interfaz
+
+- Las identidades técnicas de un grupo dejan de llamarse todas «Teclado sin nombre». Cada fila subordinada se nombra por lo que de verdad la identifica: su identificador técnico cuando Windows no da un nombre útil, y el nombre detectado cuando sí lo da. Antes, agrupar dos identidades del mismo aparato en puertos distintos —el caso para el que existe la agrupación— producía dos filas con el mismo texto e imposibles de distinguir entre sí.
+- Cuando dos miembros comparten un nombre detectado útil, porque son el mismo modelo, su identificador técnico acompaña a «Identidad técnica» en la línea de estado para que sigan siendo distinguibles.
+- Un dispositivo sin nombre útil ya no se presenta como «Teclado sin nombre» sino como «Dispositivo sin nombre», en la lista, el selector y el editor. Ante un HID sin nombre RightKeyboard no puede saber si es un teclado, un mouse o un presentador —la clasificación se hace por el propio nombre—, de modo que ya no le atribuye una categoría que no ha comprobado. Un grupo sin alias se llama por lo mismo «Dispositivo agrupado».
+
+### Preferencias
+
+- El cambio de nombre es solo de presentación: la huella de dispositivo se sigue calculando con el literal anterior, de modo que las huellas ya guardadas siguen siendo válidas y la recuperación de ignorado y de distribución al cambiar de puerto no se ve afectada. Una prueba fija ese valor para que no cambie por descuido. El texto anterior se sigue reconociendo en las preferencias existentes.
+
+### Pruebas
+
+- Dieciséis casos nuevos cubren el contrato de nombres —literal actual y anterior, etiqueta por identificador, identificador secundario sin repetirse—, la estabilidad de la huella frente al cambio de nombre y que un fabricante con nombre de puntero no convierta en auto-ignorado a un dispositivo sin nombre. La suite alcanza 262 pruebas NUnit y 2 pruebas WinUI.
+
 ## [1.6.1] - 2026-09-19
 
 ### Detección de teclado
