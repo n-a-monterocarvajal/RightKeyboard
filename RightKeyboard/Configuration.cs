@@ -410,19 +410,29 @@ public sealed class Configuration
 
         LogicalDeviceGroup? governingGroup = GetGroup(governingIdentity);
         LogicalDeviceGroup? memberGroup = GetGroup(memberIdentity);
-        if (memberGroup is not null)
+        if (governingGroup is not null && memberGroup is not null &&
+            string.Equals(governingGroup.Id, memberGroup.Id, StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException("La identidad seleccionada ya pertenece a un grupo.");
+            throw new InvalidOperationException("Las identidades ya pertenecen al mismo grupo.");
         }
+
+        // El destino puede ser un grupo existente: así se suma una tercera
+        // identidad —o más— eligiendo el grupo desde el dispositivo suelto, sin
+        // tener que partir del grupo. El origen sigue gobernando alias y
+        // distribución; si ambos son grupos, se funden en uno.
         string currentDisplayName = governingGroup?.DisplayName ?? governingPreference.DisplayName;
         string displayName = overridePreference
             ? NormalizeGroupName(customName, currentDisplayName)
             : currentDisplayName;
-        string groupId = governingGroup?.Id ?? $"group:{Guid.NewGuid():N}";
+        string groupId = governingGroup?.Id ?? memberGroup?.Id ?? $"group:{Guid.NewGuid():N}";
         HashSet<string> members = new(StringComparer.OrdinalIgnoreCase) { governingIdentity, memberIdentity };
         if (governingGroup is not null)
         {
             members.UnionWith(governingGroup.MemberIdentities);
+        }
+        if (memberGroup is not null)
+        {
+            members.UnionWith(memberGroup.MemberIdentities);
         }
 
         // Un grupo lógico tiene un solo estado efectivo: o todos sus miembros
@@ -444,6 +454,10 @@ public sealed class Configuration
         if (governingGroup is not null)
         {
             RemoveGroup(governingGroup.Id);
+        }
+        if (memberGroup is not null)
+        {
+            RemoveGroup(memberGroup.Id);
         }
         LogicalDeviceGroup group = new(groupId, displayName, layout, members);
         DeviceGroups[groupId] = group;

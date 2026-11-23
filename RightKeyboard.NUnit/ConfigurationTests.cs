@@ -792,6 +792,118 @@ public sealed class ConfigurationTests
     }
 
     [Test]
+    public void GroupDevices_LooseDeviceWithExistingGroup_AddsThirdMemberToThatGroup()
+    {
+        // Desde el dispositivo suelto se elige el grupo como destino: es la vía
+        // para pasar de dos identidades a tres sin partir de la fila del grupo.
+        Configuration configuration = new();
+        KeyboardDevice first = Device("device:port-a", "MODEL-A", "Teclado A");
+        KeyboardDevice second = Device("device:port-b", "MODEL-A", "Teclado B");
+        KeyboardDevice third = Device("device:port-c", "MODEL-A", "Teclado C");
+        configuration.SetLayout(first, spanish, "Teclado escritorio");
+        configuration.TouchDevice(second);
+        configuration.TouchDevice(third);
+        string groupId = configuration.GroupDevices(first.Identity, second.Identity);
+
+        string mergedId = configuration.GroupDevices(
+            third.Identity, first.Identity, "Teclado escritorio", spanish, overridePreference: true);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(mergedId, Is.EqualTo(groupId), "El grupo existente conserva su identificador.");
+            Assert.That(configuration.DeviceGroups.Keys, Is.EquivalentTo(new[] { groupId }));
+            Assert.That(configuration.DeviceGroups[groupId].MemberIdentities,
+                Is.EquivalentTo(new[] { first.Identity, second.Identity, third.Identity }));
+            Assert.That(configuration.GetDisplayName(third), Is.EqualTo("Teclado escritorio"));
+            Assert.That(configuration.TryGetEffectiveLayout(third.Identity, out Layout? layout), Is.True);
+            Assert.That(layout, Is.SameAs(spanish));
+        });
+    }
+
+    [Test]
+    public void GroupDevices_GroupWithLooseDevice_AddsThirdMember()
+    {
+        Configuration configuration = new();
+        KeyboardDevice first = Device("device:port-a", "MODEL-A", "Teclado A");
+        KeyboardDevice second = Device("device:port-b", "MODEL-A", "Teclado B");
+        KeyboardDevice third = Device("device:port-c", "MODEL-A", "Teclado C");
+        configuration.TouchDevice(first);
+        configuration.TouchDevice(second);
+        configuration.TouchDevice(third);
+        string groupId = configuration.GroupDevices(first.Identity, second.Identity);
+
+        configuration.GroupDevices(first.Identity, third.Identity);
+
+        Assert.That(configuration.DeviceGroups[groupId].MemberIdentities,
+            Is.EquivalentTo(new[] { first.Identity, second.Identity, third.Identity }));
+    }
+
+    [Test]
+    public void GroupDevices_TwoGroups_MergeIntoTheGoverningGroup()
+    {
+        Configuration configuration = new();
+        KeyboardDevice first = Device("device:port-a", "MODEL-A", "Teclado A");
+        KeyboardDevice second = Device("device:port-b", "MODEL-A", "Teclado B");
+        KeyboardDevice third = Device("device:port-c", "MODEL-A", "Teclado C");
+        KeyboardDevice fourth = Device("device:port-d", "MODEL-A", "Teclado D");
+        foreach (KeyboardDevice device in new[] { first, second, third, fourth })
+        {
+            configuration.TouchDevice(device);
+        }
+        string governingId = configuration.GroupDevices(first.Identity, second.Identity);
+        configuration.GroupDevices(third.Identity, fourth.Identity);
+
+        string mergedId = configuration.GroupDevices(first.Identity, third.Identity);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(mergedId, Is.EqualTo(governingId));
+            Assert.That(configuration.DeviceGroups.Keys, Is.EquivalentTo(new[] { governingId }));
+            Assert.That(configuration.DeviceGroups[governingId].MemberIdentities,
+                Is.EquivalentTo(new[] { first.Identity, second.Identity, third.Identity, fourth.Identity }));
+            Assert.That(configuration.GetGroup(fourth.Identity)?.Id, Is.EqualTo(governingId));
+        });
+    }
+
+    [Test]
+    public void GroupDevices_MembersOfTheSameGroup_IsRejected()
+    {
+        Configuration configuration = new();
+        KeyboardDevice first = Device("device:port-a", "MODEL-A", "Teclado A");
+        KeyboardDevice second = Device("device:port-b", "MODEL-A", "Teclado B");
+        configuration.TouchDevice(first);
+        configuration.TouchDevice(second);
+        configuration.GroupDevices(first.Identity, second.Identity);
+
+        Assert.That(
+            () => configuration.GroupDevices(second.Identity, first.Identity),
+            Throws.InvalidOperationException.With.Message.Contains("mismo grupo"));
+    }
+
+    [Test]
+    public void GroupDevices_IgnoredLooseDeviceWithActiveGroup_IsRejectedWithoutMutation()
+    {
+        Configuration configuration = new();
+        KeyboardDevice first = Device("device:port-a", "MODEL-A", "Teclado A");
+        KeyboardDevice second = Device("device:port-b", "MODEL-A", "Teclado B");
+        KeyboardDevice third = Device("device:port-c", "MODEL-B", "Teclado C");
+        configuration.TouchDevice(first);
+        configuration.TouchDevice(second);
+        configuration.Ignore(third);
+        string groupId = configuration.GroupDevices(first.Identity, second.Identity);
+
+        Assert.That(
+            () => configuration.GroupDevices(third.Identity, first.Identity),
+            Throws.InvalidOperationException.With.Message.Contains("mismo estado"));
+        Assert.Multiple(() =>
+        {
+            Assert.That(configuration.DeviceGroups[groupId].MemberIdentities,
+                Is.EquivalentTo(new[] { first.Identity, second.Identity }));
+            Assert.That(configuration.GetGroup(third.Identity), Is.Null);
+        });
+    }
+
+    [Test]
     public void Ungroup_LastPair_DissolvesGroupAndRestoresIndividualPreferences()
     {
         Configuration configuration = new();

@@ -60,8 +60,11 @@ internal readonly record struct SettingsEditorAvailability(
     internal static bool CanGroupAsSource(SettingsEditorRowKind rowKind) =>
         rowKind is SettingsEditorRowKind.Device or SettingsEditorRowKind.Group;
 
+    // Un grupo también es destino: es la forma de sumarle una tercera identidad
+    // desde el dispositivo suelto. Un miembro no lo es, porque su grupo ya
+    // aparece como candidato y ofrecer ambos duplicaría el mismo destino.
     internal static bool CanBeGroupTarget(SettingsEditorRowKind rowKind) =>
-        rowKind == SettingsEditorRowKind.Device;
+        rowKind is SettingsEditorRowKind.Device or SettingsEditorRowKind.Group;
 
     /// <summary>
     /// Un grupo lógico tiene un solo estado efectivo, de modo que origen y
