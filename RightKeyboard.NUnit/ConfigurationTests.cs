@@ -792,21 +792,23 @@ public sealed class ConfigurationTests
     }
 
     [Test]
-    public void GroupDevices_LooseDeviceWithExistingGroup_AddsThirdMemberToThatGroup()
+    public void GroupDevices_LooseDeviceWithExistingGroup_JoinsAndAdoptsTheGroupPreference()
     {
         // Desde el dispositivo suelto se elige el grupo como destino: es la vía
         // para pasar de dos identidades a tres sin partir de la fila del grupo.
+        // El grupo existente gobierna, aunque el editor envíe el alias y la
+        // distribución del dispositivo suelto.
         Configuration configuration = new();
         KeyboardDevice first = Device("device:port-a", "MODEL-A", "Teclado A");
         KeyboardDevice second = Device("device:port-b", "MODEL-A", "Teclado B");
         KeyboardDevice third = Device("device:port-c", "MODEL-A", "Teclado C");
         configuration.SetLayout(first, spanish, "Teclado escritorio");
         configuration.TouchDevice(second);
-        configuration.TouchDevice(third);
+        configuration.TouchDevice(third, "Teclado viaje");
         string groupId = configuration.GroupDevices(first.Identity, second.Identity);
 
         string mergedId = configuration.GroupDevices(
-            third.Identity, first.Identity, "Teclado escritorio", spanish, overridePreference: true);
+            third.Identity, first.Identity, "Teclado viaje", null, overridePreference: true);
 
         Assert.Multiple(() =>
         {

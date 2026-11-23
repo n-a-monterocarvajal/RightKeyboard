@@ -6,7 +6,7 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ### Interfaz
 
-- Un grupo lógico puede tener más de dos identidades técnicas desde cualquiera de los dos extremos. Hasta ahora el desplegable «Agrupar con otra identidad» de un dispositivo suelto solo ofrecía otros dispositivos sueltos, y el servicio rechazaba un destino que ya perteneciera a un grupo, de modo que una tercera identidad solo podía sumarse seleccionando primero la fila del grupo. Ahora los grupos también figuran como destino: el dispositivo suelto se incorpora al grupo elegido, que conserva su identificador, y el origen sigue gobernando alias y distribución.
+- Un grupo lógico puede tener más de dos identidades técnicas desde cualquiera de los dos extremos. Hasta ahora el desplegable «Agrupar con otra identidad» de un dispositivo suelto solo ofrecía otros dispositivos sueltos, y el servicio rechazaba un destino que ya perteneciera a un grupo, de modo que una tercera identidad solo podía sumarse seleccionando primero la fila del grupo. Ahora los grupos también figuran como destino: el dispositivo suelto se incorpora al grupo elegido, que conserva su identificador, su alias y su distribución. El resultado es el mismo partiendo de la fila del grupo o del dispositivo suelto, y el mensaje de confirmación lo anuncia.
 - Agrupar dos grupos los funde en uno solo, gobernado por el de origen. Las identidades de un mismo grupo no se ofrecen entre sí y el servicio rechaza agruparlas.
 
 ### Pruebas

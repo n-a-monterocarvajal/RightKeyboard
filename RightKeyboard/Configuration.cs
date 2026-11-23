@@ -417,11 +417,16 @@ public sealed class Configuration
         }
 
         // El destino puede ser un grupo existente: así se suma una tercera
-        // identidad —o más— eligiendo el grupo desde el dispositivo suelto, sin
-        // tener que partir del grupo. El origen sigue gobernando alias y
-        // distribución; si ambos son grupos, se funden en uno.
-        string currentDisplayName = governingGroup?.DisplayName ?? governingPreference.DisplayName;
-        string displayName = overridePreference
+        // identidad —o más— eligiendo el grupo desde el dispositivo suelto. En
+        // ese caso el grupo existente gobierna: la identidad suelta se incorpora
+        // y adopta su alias y su distribución, igual que si se hubiera partido
+        // de la fila del grupo. Entre dos grupos, o dos sueltos, gobierna el
+        // origen.
+        bool joinsExistingGroup = governingGroup is null && memberGroup is not null;
+        LogicalDeviceGroup? effectiveGroup = joinsExistingGroup ? memberGroup : governingGroup;
+        bool applyOverride = overridePreference && !joinsExistingGroup;
+        string currentDisplayName = effectiveGroup?.DisplayName ?? governingPreference.DisplayName;
+        string displayName = applyOverride
             ? NormalizeGroupName(customName, currentDisplayName)
             : currentDisplayName;
         string groupId = governingGroup?.Id ?? memberGroup?.Id ?? $"group:{Guid.NewGuid():N}";
@@ -447,9 +452,9 @@ public sealed class Configuration
 
         Layout? layout = ignored
             ? null
-            : overridePreference
+            : applyOverride
                 ? layoutOverride
-                : governingGroup?.Layout ?? GetEffectiveLayout(governingIdentity);
+                : effectiveGroup?.Layout ?? GetEffectiveLayout(governingIdentity);
 
         if (governingGroup is not null)
         {

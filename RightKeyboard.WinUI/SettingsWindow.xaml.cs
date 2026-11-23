@@ -1446,9 +1446,15 @@ public sealed class SettingsWindow : Window
             return;
         }
 
-        string groupingMessage = row.Ignored
-            ? $"\"{AliasTextBox.Text.Trim()}\" y \"{target.DisplayName}\" pasarán a ser el mismo dispositivo ignorado. Las identidades técnicas seguirán visibles y podrán separarse."
-            : $"\"{AliasTextBox.Text.Trim()}\" gobernará el alias y la distribución compartidos con \"{target.DisplayName}\". Las identidades técnicas seguirán visibles y podrán separarse.";
+        // Un dispositivo suelto que se suma a un grupo existente adopta el alias
+        // y la distribución del grupo; en los demás casos gobierna el origen.
+        string groupingMessage = !row.IsGroup && target.IsGroup
+            ? row.Ignored
+                ? $"\"{AliasTextBox.Text.Trim()}\" se sumará al grupo ignorado \"{target.DisplayName}\". Las identidades técnicas seguirán visibles y podrán separarse."
+                : $"\"{AliasTextBox.Text.Trim()}\" se sumará al grupo \"{target.DisplayName}\" y adoptará su alias y su distribución. Las identidades técnicas seguirán visibles y podrán separarse."
+            : row.Ignored
+                ? $"\"{AliasTextBox.Text.Trim()}\" y \"{target.DisplayName}\" pasarán a ser el mismo dispositivo ignorado. Las identidades técnicas seguirán visibles y podrán separarse."
+                : $"\"{AliasTextBox.Text.Trim()}\" gobernará el alias y la distribución compartidos con \"{target.DisplayName}\". Las identidades técnicas seguirán visibles y podrán separarse.";
         if (!await ShowOverlayAsync("Agrupar identidades", groupingMessage, "Agrupar"))
         {
             return;
