@@ -294,7 +294,7 @@ public sealed class SettingsWindow : Window
         fileButtons.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         Button export = new()
         {
-            Content = "Exportar",
+            Content = CreateButtonContent(SettingsPanelVisualContract.ExportGlyph, "Exportar"),
             HorizontalAlignment = HorizontalAlignment.Stretch
         };
         export.Click += ExportButton_Click;
@@ -304,7 +304,7 @@ public sealed class SettingsWindow : Window
         fileButtons.Children.Add(export);
         Button import = new()
         {
-            Content = "Importar",
+            Content = CreateButtonContent(SettingsPanelVisualContract.ImportGlyph, "Importar"),
             HorizontalAlignment = HorizontalAlignment.Stretch
         };
         import.Click += ImportButton_Click;
@@ -336,11 +336,12 @@ public sealed class SettingsWindow : Window
         resetRow.Children.Add(resetDescription);
         Button clear = new()
         {
-            Content = "Limpiar preferencias",
+            Content = CreateButtonContent(SettingsPanelVisualContract.ClearGlyph, "Limpiar preferencias"),
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Center
         };
         clear.Click += ClearButton_Click;
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(clear, "Limpiar preferencias");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(clear, "ClearPreferencesButton");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(
             clear,
@@ -389,7 +390,11 @@ public sealed class SettingsWindow : Window
                 DiagnosticsCheckBox,
                 "DetailedDiagnosticsCheckBox");
             diagnosticsRow.Children.Add(DiagnosticsCheckBox);
-            Button openDiagnostics = new() { Content = "Abrir registros" };
+            Button openDiagnostics = new()
+            {
+                Content = CreateButtonContent(SettingsPanelVisualContract.OpenLogsGlyph, "Abrir registros")
+            };
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(openDiagnostics, "Abrir registros");
             openDiagnostics.Click += OpenDiagnostics_Click;
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(
                 openDiagnostics,
@@ -450,9 +455,9 @@ public sealed class SettingsWindow : Window
         GroupTargetComboBox.HorizontalAlignment = HorizontalAlignment.Stretch;
         GroupTargetComboBox.SelectionChanged += (_, _) => SetEditorEnabled(editorEnabled);
         editorFields.Children.Add(GroupTargetComboBox);
-        GroupButton.Content = "Agrupar identidades";
+        SetButtonContent(GroupButton, SettingsPanelVisualContract.GroupGlyph, "Agrupar identidades");
         GroupButton.Click += GroupButton_Click;
-        UngroupButton.Content = "Separar del grupo";
+        SetButtonContent(UngroupButton, SettingsPanelVisualContract.UngroupGlyph, "Separar del grupo");
         UngroupButton.Click += UngroupButton_Click;
         buttons.Add(GroupButton);
         buttons.Add(UngroupButton);
@@ -460,9 +465,9 @@ public sealed class SettingsWindow : Window
         GroupButtonsPanel.Children.Add(UngroupButton);
         editorFields.Children.Add(GroupButtonsPanel);
         StackPanel editorButtons = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
-        SaveButton.Content = "Guardar cambios";
+        SetButtonContent(SaveButton, SettingsPanelVisualContract.SaveGlyph, "Guardar cambios");
         SaveButton.Click += SaveButton_Click;
-        ForgetButton.Content = "Olvidar dispositivo";
+        SetButtonContent(ForgetButton, SettingsPanelVisualContract.ForgetGlyph, "Olvidar dispositivo");
         ForgetButton.Click += ForgetButton_Click;
         buttons.Add(SaveButton);
         buttons.Add(ForgetButton);
@@ -533,6 +538,38 @@ public sealed class SettingsWindow : Window
         };
         separators.Add(separator);
         return separator;
+    }
+
+    // Glifo y texto de un botón de acción. El contenido deja de ser una cadena, así
+    // que el nombre accesible se fija explícitamente con el texto visible; el glifo
+    // hereda el Foreground del botón, de modo que sigue los estados deshabilitado,
+    // hover y destructivo sin pinceles propios.
+    private static void SetButtonContent(Button button, string glyph, string text)
+    {
+        button.Content = CreateButtonContent(glyph, text);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, text);
+    }
+
+    private static StackPanel CreateButtonContent(string glyph, string text)
+    {
+        StackPanel content = new()
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = SettingsPanelVisualContract.ButtonIconSpacing,
+            HorizontalAlignment = HorizontalAlignment.Center
+        };
+        FontIcon icon = new()
+        {
+            Glyph = glyph,
+            FontSize = SettingsPanelVisualContract.ButtonIconSize,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetAccessibilityView(
+            icon,
+            Microsoft.UI.Xaml.Automation.Peers.AccessibilityView.Raw);
+        content.Children.Add(icon);
+        content.Children.Add(new TextBlock { Text = text, VerticalAlignment = VerticalAlignment.Center });
+        return content;
     }
 
     private static void ApplyDestructiveButtonResources(Button button)
@@ -1411,15 +1448,16 @@ public sealed class SettingsWindow : Window
 
     private async void ForgetButton_Click(object sender, RoutedEventArgs e)
     {
-        if (SelectedRow is not DeviceRow row || row.IsGroup || row.IsGroupMember)
+        if (SelectedRow is not DeviceRow row || row.IsGroupMember)
         {
             return;
         }
 
-        if (!await ShowOverlayAsync(
-                "Olvidar dispositivo",
-                $"Se olvidarán el nombre y la preferencia de \"{row.DisplayName}\".",
-                "Olvidar"))
+        string title = row.IsGroup ? "Olvidar grupo" : "Olvidar dispositivo";
+        string message = row.IsGroup
+            ? $"Se olvidarán el grupo \"{row.DisplayName}\" y sus {row.MemberCount} identidades técnicas, con su nombre y su preferencia. Volverán a detectarse como dispositivos nuevos."
+            : $"Se olvidarán el nombre y la preferencia de \"{row.DisplayName}\".";
+        if (!await ShowOverlayAsync(title, message, "Olvidar"))
         {
             return;
         }
@@ -1427,7 +1465,9 @@ public sealed class SettingsWindow : Window
         try
         {
             SetBusy(true);
-            ApplySnapshot(await client.ForgetAsync(row.TargetIdentity));
+            ApplySnapshot(row.IsGroup
+                ? await client.ForgetGroupAsync(row.TargetIdentity)
+                : await client.ForgetAsync(row.TargetIdentity));
         }
         catch (Exception error)
         {
@@ -1446,9 +1486,15 @@ public sealed class SettingsWindow : Window
             return;
         }
 
-        string groupingMessage = row.Ignored
-            ? $"\"{AliasTextBox.Text.Trim()}\" y \"{target.DisplayName}\" pasarán a ser el mismo dispositivo ignorado. Las identidades técnicas seguirán visibles y podrán separarse."
-            : $"\"{AliasTextBox.Text.Trim()}\" gobernará el alias y la distribución compartidos con \"{target.DisplayName}\". Las identidades técnicas seguirán visibles y podrán separarse.";
+        // Un dispositivo suelto que se suma a un grupo existente adopta el alias
+        // y la distribución del grupo; en los demás casos gobierna el origen.
+        string groupingMessage = !row.IsGroup && target.IsGroup
+            ? row.Ignored
+                ? $"\"{AliasTextBox.Text.Trim()}\" se sumará al grupo ignorado \"{target.DisplayName}\". Las identidades técnicas seguirán visibles y podrán separarse."
+                : $"\"{AliasTextBox.Text.Trim()}\" se sumará al grupo \"{target.DisplayName}\" y adoptará su alias y su distribución. Las identidades técnicas seguirán visibles y podrán separarse."
+            : row.Ignored
+                ? $"\"{AliasTextBox.Text.Trim()}\" y \"{target.DisplayName}\" pasarán a ser el mismo dispositivo ignorado. Las identidades técnicas seguirán visibles y podrán separarse."
+                : $"\"{AliasTextBox.Text.Trim()}\" gobernará el alias y la distribución compartidos con \"{target.DisplayName}\". Las identidades técnicas seguirán visibles y podrán separarse.";
         if (!await ShowOverlayAsync("Agrupar identidades", groupingMessage, "Agrupar"))
         {
             return;
@@ -1981,6 +2027,12 @@ public sealed class SettingsWindow : Window
             : Visibility.Collapsed;
         SaveButton.IsEnabled = availability.SaveEnabled;
         ForgetButton.IsEnabled = availability.ForgetEnabled;
+        // El botón dice qué olvidará: el grupo entero o el dispositivo suelto.
+        string forgetText = rowKind == SettingsEditorRowKind.Group ? "Olvidar grupo" : "Olvidar dispositivo";
+        if (Microsoft.UI.Xaml.Automation.AutomationProperties.GetName(ForgetButton) != forgetText)
+        {
+            SetButtonContent(ForgetButton, SettingsPanelVisualContract.ForgetGlyph, forgetText);
+        }
         GroupTargetComboBox.IsEnabled = availability.GroupTargetEnabled;
         GroupButton.IsEnabled = availability.GroupButtonEnabled;
         GroupTargetComboBox.Visibility = availability.ShowGrouping ? Visibility.Visible : Visibility.Collapsed;

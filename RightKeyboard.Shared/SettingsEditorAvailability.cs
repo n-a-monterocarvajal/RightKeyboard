@@ -44,7 +44,9 @@ internal readonly record struct SettingsEditorAvailability(
             LayoutEnabled: logicalPreference && !ignored,
             IgnoredEnabled: logicalPreference,
             SaveEnabled: logicalPreference,
-            ForgetEnabled: editorEnabled && rowKind == SettingsEditorRowKind.Device,
+            // Olvidar un grupo olvida todas sus identidades; una identidad suelta
+            // de un grupo se separa primero, para no dejar el grupo a medias.
+            ForgetEnabled: editorEnabled && rowKind is SettingsEditorRowKind.Device or SettingsEditorRowKind.Group,
             GroupTargetEnabled: groupTargetEnabled,
             GroupButtonEnabled: groupTargetEnabled && hasSelectedGroupTarget,
             UngroupEnabled: editorEnabled && rowKind == SettingsEditorRowKind.GroupMember,
@@ -60,8 +62,11 @@ internal readonly record struct SettingsEditorAvailability(
     internal static bool CanGroupAsSource(SettingsEditorRowKind rowKind) =>
         rowKind is SettingsEditorRowKind.Device or SettingsEditorRowKind.Group;
 
+    // Un grupo también es destino: es la forma de sumarle una tercera identidad
+    // desde el dispositivo suelto. Un miembro no lo es, porque su grupo ya
+    // aparece como candidato y ofrecer ambos duplicaría el mismo destino.
     internal static bool CanBeGroupTarget(SettingsEditorRowKind rowKind) =>
-        rowKind == SettingsEditorRowKind.Device;
+        rowKind is SettingsEditorRowKind.Device or SettingsEditorRowKind.Group;
 
     /// <summary>
     /// Un grupo lógico tiene un solo estado efectivo, de modo que origen y

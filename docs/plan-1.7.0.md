@@ -21,6 +21,7 @@ y de los cambios visuales, registrada en su nota de publicación.
 | 1 | 1.7.0 | Verificación de actualizaciones contra GitHub | Pendiente |
 | 2 | 1.6.1 | Agrupación de dispositivos ignorados | Hecho, validación física pendiente |
 | 3 | 1.6.2 | Nombres de identidad técnica | Hecho, validación física pendiente |
+| 4 | 1.6.3 | Grupos de más de dos identidades, olvidar grupo y glifos en botones | Hecho, validación física pendiente |
 
 ### Etapa 1 — Verificación de actualizaciones contra GitHub
 

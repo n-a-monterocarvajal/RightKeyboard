@@ -390,6 +390,24 @@ public sealed class Configuration
         }
     }
 
+    /// <summary>
+    /// Olvida todas las identidades del grupo lógico al que pertenece
+    /// <paramref name="identity"/>, o solo esa identidad si no está agrupada.
+    /// Devuelve las identidades olvidadas.
+    /// </summary>
+    public IReadOnlyList<string> ForgetGroup(string identity)
+    {
+        string[] identities = GetGroup(identity) is LogicalDeviceGroup group
+            ? group.MemberIdentities.ToArray()
+            : [identity];
+        foreach (string member in identities)
+        {
+            Forget(member);
+        }
+
+        return identities;
+    }
+
     public string GroupDevices(
         string governingIdentity,
         string memberIdentity,
@@ -410,19 +428,34 @@ public sealed class Configuration
 
         LogicalDeviceGroup? governingGroup = GetGroup(governingIdentity);
         LogicalDeviceGroup? memberGroup = GetGroup(memberIdentity);
-        if (memberGroup is not null)
+        if (governingGroup is not null && memberGroup is not null &&
+            string.Equals(governingGroup.Id, memberGroup.Id, StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException("La identidad seleccionada ya pertenece a un grupo.");
+            throw new InvalidOperationException("Las identidades ya pertenecen al mismo grupo.");
         }
-        string currentDisplayName = governingGroup?.DisplayName ?? governingPreference.DisplayName;
-        string displayName = overridePreference
+
+        // El destino puede ser un grupo existente: así se suma una tercera
+        // identidad —o más— eligiendo el grupo desde el dispositivo suelto. En
+        // ese caso el grupo existente gobierna: la identidad suelta se incorpora
+        // y adopta su alias y su distribución, igual que si se hubiera partido
+        // de la fila del grupo. Entre dos grupos, o dos sueltos, gobierna el
+        // origen.
+        bool joinsExistingGroup = governingGroup is null && memberGroup is not null;
+        LogicalDeviceGroup? effectiveGroup = joinsExistingGroup ? memberGroup : governingGroup;
+        bool applyOverride = overridePreference && !joinsExistingGroup;
+        string currentDisplayName = effectiveGroup?.DisplayName ?? governingPreference.DisplayName;
+        string displayName = applyOverride
             ? NormalizeGroupName(customName, currentDisplayName)
             : currentDisplayName;
-        string groupId = governingGroup?.Id ?? $"group:{Guid.NewGuid():N}";
+        string groupId = governingGroup?.Id ?? memberGroup?.Id ?? $"group:{Guid.NewGuid():N}";
         HashSet<string> members = new(StringComparer.OrdinalIgnoreCase) { governingIdentity, memberIdentity };
         if (governingGroup is not null)
         {
             members.UnionWith(governingGroup.MemberIdentities);
+        }
+        if (memberGroup is not null)
+        {
+            members.UnionWith(memberGroup.MemberIdentities);
         }
 
         // Un grupo lógico tiene un solo estado efectivo: o todos sus miembros
@@ -437,13 +470,17 @@ public sealed class Configuration
 
         Layout? layout = ignored
             ? null
-            : overridePreference
+            : applyOverride
                 ? layoutOverride
-                : governingGroup?.Layout ?? GetEffectiveLayout(governingIdentity);
+                : effectiveGroup?.Layout ?? GetEffectiveLayout(governingIdentity);
 
         if (governingGroup is not null)
         {
             RemoveGroup(governingGroup.Id);
+        }
+        if (memberGroup is not null)
+        {
+            RemoveGroup(memberGroup.Id);
         }
         LogicalDeviceGroup group = new(groupId, displayName, layout, members);
         DeviceGroups[groupId] = group;

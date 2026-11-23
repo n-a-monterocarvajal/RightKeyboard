@@ -34,4 +34,18 @@ internal static class SettingsPanelVisualContract
 
     // Glifo Fluent «Info», en lugar del separador tipográfico que precedía al aviso.
     internal const string InformationGlyph = "";
+
+    // Glifos de los botones con texto, de Segoe Fluent Icons (con respaldo en Segoe
+    // MDL2 Assets en Windows 10). Acompañan a la palabra, no la sustituyen: el texto
+    // sigue siendo el nombre accesible del botón.
+    internal const double ButtonIconSize = 16;
+    internal const double ButtonIconSpacing = 8;
+    internal const string GroupGlyph = "\uE71B";        // Link
+    internal const string UngroupGlyph = "\uECC9";      // RemoveFrom
+    internal const string SaveGlyph = "\uE74E";         // Save
+    internal const string ForgetGlyph = "\uE74D";       // Delete
+    internal const string ExportGlyph = "\uEDE1";       // Export
+    internal const string ImportGlyph = "\uE8B5";       // Import
+    internal const string ClearGlyph = "\uEA99";        // Broom
+    internal const string OpenLogsGlyph = "\uED25";     // OpenFolderHorizontal
 }

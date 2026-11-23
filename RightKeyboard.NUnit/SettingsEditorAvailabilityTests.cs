@@ -31,6 +31,55 @@ public sealed class SettingsEditorAvailabilityTests
             Is.True);
     }
 
+    // El tipo de fila es interno, así que los casos lo nombran como texto.
+    [TestCase(nameof(SettingsEditorRowKind.Device), true)]
+    [TestCase(nameof(SettingsEditorRowKind.Group), true)]
+    [TestCase(nameof(SettingsEditorRowKind.GroupMember), false)]
+    [TestCase(nameof(SettingsEditorRowKind.None), false)]
+    public void Create_Olvidar_SeOfreceParaDispositivosYGruposCompletos(string rowKind, bool expected)
+    {
+        SettingsEditorAvailability availability = SettingsEditorAvailability.Create(
+            editorEnabled: true,
+            Enum.Parse<SettingsEditorRowKind>(rowKind),
+            ignored: false,
+            hasSelectedGroupTarget: false);
+
+        Assert.That(availability.ForgetEnabled, Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void CanBeGroupTarget_GrupoLogico_PuedeSerDestino()
+    {
+        // Es la vía para sumar una tercera identidad desde el dispositivo suelto.
+        Assert.That(
+            SettingsEditorAvailability.CanBeGroupTarget(SettingsEditorRowKind.Group),
+            Is.True);
+    }
+
+    [Test]
+    public void CanBeGroupTarget_MiembroDeGrupo_NoEsDestino()
+    {
+        // Su grupo ya figura como candidato; ofrecer también el miembro lo duplicaría.
+        Assert.That(
+            SettingsEditorAvailability.CanBeGroupTarget(SettingsEditorRowKind.GroupMember),
+            Is.False);
+    }
+
+    [Test]
+    public void IsGroupTargetCandidate_OrigenSuelto_OfreceGrupos()
+    {
+        Assert.That(
+            SettingsEditorAvailability.IsGroupTargetCandidate(
+                candidateCanBeGroupTarget: true,
+                candidateGroupId: "grupo-1",
+                candidateTargetIdentity: "Escritorio2",
+                candidateIgnored: false,
+                selectedGroupId: null,
+                selectedTargetIdentity: "Notebook",
+                selectedIgnored: false),
+            Is.True);
+    }
+
     [Test]
     public void Create_GrupoLogico_OfreceLaCasillaIgnorar()
     {
@@ -145,7 +194,7 @@ public sealed class SettingsEditorAvailabilityTests
     [Test]
     public void IsGroupTargetCandidate_CandidatoNoAgrupable_NoEsDestino()
     {
-        // p. ej. un grupo o un miembro de grupo.
+        // p. ej. un miembro de grupo.
         Assert.That(
             SettingsEditorAvailability.IsGroupTargetCandidate(
                 candidateCanBeGroupTarget: false,

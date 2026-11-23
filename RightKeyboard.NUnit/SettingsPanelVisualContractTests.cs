@@ -12,6 +12,32 @@ public sealed class SettingsPanelVisualContractTests
     }
 
     [Test]
+    public void BotonesDeAccion_TienenGlifosDistintosDelAreaPrivadaDeLaFuente()
+    {
+        string[] glyphs =
+        [
+            SettingsPanelVisualContract.GroupGlyph,
+            SettingsPanelVisualContract.UngroupGlyph,
+            SettingsPanelVisualContract.SaveGlyph,
+            SettingsPanelVisualContract.ForgetGlyph,
+            SettingsPanelVisualContract.ExportGlyph,
+            SettingsPanelVisualContract.ImportGlyph,
+            SettingsPanelVisualContract.ClearGlyph,
+            SettingsPanelVisualContract.OpenLogsGlyph
+        ];
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(glyphs, Is.Unique, "Cada acción se distingue por su propio glifo.");
+            Assert.That(
+                glyphs,
+                Has.All.Matches<string>(glyph => glyph.Length == 1 && glyph[0] is >= '\uE000' and <= '\uF8FF'),
+                "Segoe Fluent Icons publica sus glifos en el área de uso privado.");
+            Assert.That(SettingsPanelVisualContract.ButtonIconSize, Is.EqualTo(SettingsPanelVisualContract.ReloadIconSize));
+        });
+    }
+
+    [Test]
     public void Recargar_ExplicaElEfectoEnLaListaDeDispositivos()
     {
         Assert.That(
