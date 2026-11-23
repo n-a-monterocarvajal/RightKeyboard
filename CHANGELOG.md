@@ -4,16 +4,18 @@ Todos los cambios relevantes del proyecto se documentan en este archivo y se des
 
 ## [Sin publicar]
 
+## [1.6.3] - 2026-11-23
+
 ### Interfaz
 
 - Un grupo lógico puede tener más de dos identidades técnicas desde cualquiera de los dos extremos. Hasta ahora el desplegable «Agrupar con otra identidad» de un dispositivo suelto solo ofrecía otros dispositivos sueltos, y el servicio rechazaba un destino que ya perteneciera a un grupo, de modo que una tercera identidad solo podía sumarse seleccionando primero la fila del grupo. Ahora los grupos también figuran como destino: el dispositivo suelto se incorpora al grupo elegido, que conserva su identificador, su alias y su distribución. El resultado es el mismo partiendo de la fila del grupo o del dispositivo suelto, y el mensaje de confirmación lo anuncia.
+- Agrupar dos grupos los funde en uno solo, gobernado por el de origen. Las identidades de un mismo grupo no se ofrecen entre sí y el servicio rechaza agruparlas.
 - Seleccionar un grupo lógico habilita «Olvidar grupo», que olvida de una vez todas sus identidades técnicas con su alias, su distribución y su estado ignorado. Antes había que separarlas una a una y olvidarlas después. La operación usa una acción IPC nueva, `forget-group`, de modo que un residente anterior la rechaza en lugar de olvidar solo una identidad. Una identidad suelta de un grupo sigue sin poder olvidarse por separado: primero se separa.
 - Los botones de acción de la Configuración WinUI llevan un glifo de Segoe Fluent Icons junto a la palabra: Agrupar (vínculo), Separar (quitar de), Guardar, Olvidar, Exportar, Importar, Limpiar preferencias (escoba) y Abrir registros (carpeta). El glifo hereda el color del botón, de modo que acompaña los estados deshabilitado y destructivo, y el texto sigue siendo su nombre accesible.
-- Agrupar dos grupos los funde en uno solo, gobernado por el de origen. Las identidades de un mismo grupo no se ofrecen entre sí y el servicio rechaza agruparlas.
 
 ### Pruebas
 
-- Dieciséis casos nuevos cubren el olvido de un grupo completo —incluida la firma HID compartida, que se retira con el último miembro—, la disponibilidad de «Olvidar» por tipo de fila, los glifos de los botones, la tercera identidad sumada desde el dispositivo suelto y desde el grupo, la fusión de dos grupos, el rechazo dentro del mismo grupo y de estados ignorados distintos, y los grupos como destino del desplegable.
+- Dieciséis casos nuevos cubren el olvido de un grupo completo —incluida la firma HID compartida, que se retira con el último miembro—, la disponibilidad de «Olvidar» por tipo de fila, los glifos de los botones, la tercera identidad sumada desde el dispositivo suelto y desde el grupo, la fusión de dos grupos, el rechazo dentro del mismo grupo y de estados ignorados distintos, y los grupos como destino del desplegable. La suite alcanza 278 pruebas NUnit y 2 pruebas WinUI.
 
 ## [1.6.2] - 2026-09-24
 

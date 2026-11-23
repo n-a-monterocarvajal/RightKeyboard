@@ -34,6 +34,6 @@ public sealed class SharedContractsTests
     [Test]
     public void VersionCompartida_CierraEnUnoSeisDos()
     {
-        Assert.That(VersionPresentation.Current, Is.EqualTo("1.6.2"));
+        Assert.That(VersionPresentation.Current, Is.EqualTo("1.6.3"));
     }
 }

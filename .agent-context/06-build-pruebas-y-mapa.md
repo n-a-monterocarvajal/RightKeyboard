@@ -27,7 +27,7 @@ dotnet build .\RightKeyboard.sln --configuration Release
 powershell -ExecutionPolicy Bypass -File .\scripts\run-tests.ps1 -Configuration Release -NoBuild
 ```
 
-Tras 1.6.2: 262/262 pruebas NUnit y 2/2 pruebas WinUI de árbol visual. El script ejecuta NUnit con `dotnet test` y la aplicación de prueba WinUI directamente, porque el repositorio mantiene VSTest para NUnit y Microsoft Testing Platform para el proceso XAML.
+Tras 1.6.3: 278/278 pruebas NUnit y 2/2 pruebas WinUI de árbol visual. El script ejecuta NUnit con `dotnet test` y la aplicación de prueba WinUI directamente, porque el repositorio mantiene VSTest para NUnit y Microsoft Testing Platform para el proceso XAML.
 
 La puerta de las etapas 6-7 exige además la variante diagnóstica:
 
@@ -159,7 +159,7 @@ desde 1.5.5.2 el workflow puede crearla con `publish=yes`.
 | `RightKeyboard.WinUI/SettingsWindow.xaml.cs` | Configuración WinUI normal |
 | `RightKeyboard.WinUI/LayoutSelectionWindow.cs` | Selector WinUI normal y foco |
 | `RightKeyboard.WinUI/SettingsIpcClient.cs` | Cliente named pipe |
-| `RightKeyboard.NUnit/` | 262 pruebas unitarias/interop/DTO, arquitectura compartida y dibujo WinForms tras 1.6.2 |
+| `RightKeyboard.NUnit/` | 278 pruebas unitarias/interop/DTO, arquitectura compartida y dibujo WinForms tras 1.6.3 |
 | `RightKeyboard.WinUI.Tests/` | 2 pruebas en una aplicación WinUI y comprobación del árbol visual real |
 | `installer/RightKeyboard.iss` | Instalación/actualización/desinstalación por usuario |
 | `scripts/` | Publicación, instalador, SHA-256, prototipo histórico |
