@@ -7,6 +7,10 @@ internal static class SettingsIpcProtocol
     internal const string SnapshotAction = "snapshot";
     internal const string SaveAction = "save";
     internal const string ForgetAction = "forget";
+    // Olvida todas las identidades del grupo de Identity. Es una acción nueva y no un
+    // cambio de "forget", de modo que un residente anterior la rechaza como desconocida
+    // en lugar de olvidar solo una identidad.
+    internal const string ForgetGroupAction = "forget-group";
     internal const string ClearAction = "clear";
     internal const string ActivityAction = "activity";
     internal const string DiagnosticsAction = "diagnostics";

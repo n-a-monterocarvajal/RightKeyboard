@@ -390,6 +390,24 @@ public sealed class Configuration
         }
     }
 
+    /// <summary>
+    /// Olvida todas las identidades del grupo lógico al que pertenece
+    /// <paramref name="identity"/>, o solo esa identidad si no está agrupada.
+    /// Devuelve las identidades olvidadas.
+    /// </summary>
+    public IReadOnlyList<string> ForgetGroup(string identity)
+    {
+        string[] identities = GetGroup(identity) is LogicalDeviceGroup group
+            ? group.MemberIdentities.ToArray()
+            : [identity];
+        foreach (string member in identities)
+        {
+            Forget(member);
+        }
+
+        return identities;
+    }
+
     public string GroupDevices(
         string governingIdentity,
         string memberIdentity,

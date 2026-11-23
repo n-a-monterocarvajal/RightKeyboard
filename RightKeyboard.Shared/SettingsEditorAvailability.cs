@@ -44,7 +44,9 @@ internal readonly record struct SettingsEditorAvailability(
             LayoutEnabled: logicalPreference && !ignored,
             IgnoredEnabled: logicalPreference,
             SaveEnabled: logicalPreference,
-            ForgetEnabled: editorEnabled && rowKind == SettingsEditorRowKind.Device,
+            // Olvidar un grupo olvida todas sus identidades; una identidad suelta
+            // de un grupo se separa primero, para no dejar el grupo a medias.
+            ForgetEnabled: editorEnabled && rowKind is SettingsEditorRowKind.Device or SettingsEditorRowKind.Group,
             GroupTargetEnabled: groupTargetEnabled,
             GroupButtonEnabled: groupTargetEnabled && hasSelectedGroupTarget,
             UngroupEnabled: editorEnabled && rowKind == SettingsEditorRowKind.GroupMember,

@@ -173,6 +173,19 @@ internal sealed class SettingsIpcServer : IDisposable
                 LogSignatureRemoval(forgottenSignature, "dispositivo_olvidado");
                 configuration.Save();
                 break;
+            case SettingsIpcProtocol.ForgetGroupAction:
+                RequireIdentity(request);
+                string[] groupMembers = configuration.GetGroup(request.Identity!) is LogicalDeviceGroup forgottenGroup
+                    ? forgottenGroup.MemberIdentities.ToArray()
+                    : [request.Identity!];
+                string?[] groupSignatures = groupMembers.Select(TrackedSignature).ToArray();
+                configuration.ForgetGroup(request.Identity!);
+                foreach (string? signature in groupSignatures.Distinct())
+                {
+                    LogSignatureRemoval(signature, "grupo_olvidado");
+                }
+                configuration.Save();
+                break;
             case SettingsIpcProtocol.GroupAction:
                 RequireIdentity(request);
                 string targetIdentity = RequireTargetIdentity(request);

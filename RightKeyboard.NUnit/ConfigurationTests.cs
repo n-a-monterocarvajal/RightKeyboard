@@ -906,6 +906,70 @@ public sealed class ConfigurationTests
     }
 
     [Test]
+    public void ForgetGroup_ForgetsEveryMemberAndTheGroup()
+    {
+        Configuration configuration = new();
+        KeyboardDevice first = Device("device:port-a", "MODEL-A", "Teclado A");
+        KeyboardDevice second = Device("device:port-b", "MODEL-A", "Teclado B");
+        KeyboardDevice third = Device("device:port-c", "MODEL-A", "Teclado C");
+        KeyboardDevice loose = Device("device:port-d", "MODEL-B", "Teclado suelto");
+        configuration.SetLayout(first, spanish, "Teclado escritorio");
+        configuration.TouchDevice(second);
+        configuration.TouchDevice(third);
+        configuration.TouchDevice(loose);
+        configuration.GroupDevices(first.Identity, second.Identity);
+        configuration.GroupDevices(first.Identity, third.Identity);
+
+        IReadOnlyList<string> forgotten = configuration.ForgetGroup(second.Identity);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(forgotten, Is.EquivalentTo(new[] { first.Identity, second.Identity, third.Identity }));
+            Assert.That(configuration.DeviceGroups, Is.Empty);
+            Assert.That(configuration.Devices.Keys, Is.EquivalentTo(new[] { loose.Identity }));
+            Assert.That(configuration.LayoutMappings, Is.Empty);
+        });
+    }
+
+    [Test]
+    public void ForgetGroup_IgnoredGroupSharingASignature_RemovesTheSignatureWithTheLastMember()
+    {
+        Configuration configuration = new();
+        KeyboardDevice frontPort = Device("device:port-a", "", "Control", signature: BaseusSignature);
+        KeyboardDevice backPort = Device("device:port-b", "", "Control", signature: BaseusSignature);
+        configuration.Ignore(frontPort, extendToSignature: true);
+        configuration.Ignore(backPort, extendToSignature: true);
+        configuration.GroupDevices(frontPort.Identity, backPort.Identity);
+
+        configuration.ForgetGroup(frontPort.Identity);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(configuration.Devices, Is.Empty);
+            Assert.That(configuration.IgnoredDevices, Is.Empty);
+            Assert.That(configuration.IgnoredSignatures, Is.Empty);
+        });
+    }
+
+    [Test]
+    public void ForgetGroup_LooseDevice_ForgetsOnlyThatDevice()
+    {
+        Configuration configuration = new();
+        KeyboardDevice first = Device("device:port-a", "MODEL-A", "Teclado A");
+        KeyboardDevice second = Device("device:port-b", "MODEL-B", "Teclado B");
+        configuration.TouchDevice(first);
+        configuration.TouchDevice(second);
+
+        IReadOnlyList<string> forgotten = configuration.ForgetGroup(first.Identity);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(forgotten, Is.EqualTo(new[] { first.Identity }));
+            Assert.That(configuration.Devices.Keys, Is.EquivalentTo(new[] { second.Identity }));
+        });
+    }
+
+    [Test]
     public void Ungroup_LastPair_DissolvesGroupAndRestoresIndividualPreferences()
     {
         Configuration configuration = new();

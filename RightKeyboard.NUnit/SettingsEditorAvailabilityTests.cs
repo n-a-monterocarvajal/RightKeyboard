@@ -31,6 +31,22 @@ public sealed class SettingsEditorAvailabilityTests
             Is.True);
     }
 
+    // El tipo de fila es interno, así que los casos lo nombran como texto.
+    [TestCase(nameof(SettingsEditorRowKind.Device), true)]
+    [TestCase(nameof(SettingsEditorRowKind.Group), true)]
+    [TestCase(nameof(SettingsEditorRowKind.GroupMember), false)]
+    [TestCase(nameof(SettingsEditorRowKind.None), false)]
+    public void Create_Olvidar_SeOfreceParaDispositivosYGruposCompletos(string rowKind, bool expected)
+    {
+        SettingsEditorAvailability availability = SettingsEditorAvailability.Create(
+            editorEnabled: true,
+            Enum.Parse<SettingsEditorRowKind>(rowKind),
+            ignored: false,
+            hasSelectedGroupTarget: false);
+
+        Assert.That(availability.ForgetEnabled, Is.EqualTo(expected));
+    }
+
     [Test]
     public void CanBeGroupTarget_GrupoLogico_PuedeSerDestino()
     {
